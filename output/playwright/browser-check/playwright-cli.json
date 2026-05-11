@@ -1,0 +1,11 @@
+﻿{
+  "browser": {
+    "launchOptions": {
+      "executablePath": "C:\\Users\\angel\\AppData\\Local\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe",
+      "headless": true
+    },
+    "contextOptions": {
+      "viewport": { "width": 1440, "height": 1024 }
+    }
+  }
+}

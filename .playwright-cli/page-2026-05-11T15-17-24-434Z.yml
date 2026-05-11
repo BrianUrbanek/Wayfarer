@@ -1,0 +1,612 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Wayfarer analyst console
+      - generic [ref=e7]: Columbus debug engine
+    - heading "Wayfarer" [level=1] [ref=e8]
+    - paragraph [ref=e9]: Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and pseudo-cohort reports at scale.
+  - region "Dashboard controls" [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]: Seed
+      - spinbutton "Seed" [ref=e13]: "48291"
+    - generic [ref=e14]:
+      - generic [ref=e15]: Users
+      - spinbutton "Users" [ref=e16]: "48"
+    - generic [ref=e17]:
+      - generic [ref=e18]: Islands
+      - spinbutton "Islands" [ref=e19]: "18"
+    - button "Regenerate dataset" [ref=e20] [cursor=pointer]
+    - button "Hide debug" [ref=e21] [cursor=pointer]
+    - button "Select user" [active] [ref=e22] [cursor=pointer]
+    - button "Select island" [ref=e23] [cursor=pointer]
+    - button "Select cohort" [ref=e24] [cursor=pointer]
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - heading "Population Summary" [level=2] [ref=e27]
+      - generic [ref=e28]:
+        - article [ref=e29]:
+          - generic [ref=e30]: Total users
+          - generic [ref=e31]: "48"
+        - article [ref=e32]:
+          - generic [ref=e33]: Seeded anchors
+          - generic [ref=e34]: "5"
+        - article [ref=e35]:
+          - generic [ref=e36]: Generated users
+          - generic [ref=e37]: "48"
+        - article [ref=e38]:
+          - generic [ref=e39]: Islands
+          - generic [ref=e40]: "18"
+        - article [ref=e41]:
+          - generic [ref=e42]: High signal users
+          - generic [ref=e43]: "17"
+        - article [ref=e44]:
+          - generic [ref=e45]: Retag candidates
+          - generic [ref=e46]: "4"
+        - article [ref=e47]:
+          - generic [ref=e48]: Inverse profiles
+          - generic [ref=e49]: "7"
+        - article [ref=e50]:
+          - generic [ref=e51]: Unknown / noisy
+          - generic [ref=e52]: "20"
+        - article [ref=e53]:
+          - generic [ref=e54]: Pseudo-cohort reports
+          - generic [ref=e55]: "1"
+      - generic [ref=e57]:
+        - generic [ref=e58]: High-signal share
+        - generic [ref=e61]: 35%
+    - generic [ref=e62]:
+      - heading "Selected User Summary" [level=2] [ref=e63]
+      - generic [ref=e64]:
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - paragraph [ref=e67]: Selected user
+            - heading "User 1" [level=3] [ref=e68]
+          - generic [ref=e69]:
+            - button "Open detail" [ref=e70] [cursor=pointer]
+            - button "Select user" [ref=e71] [cursor=pointer]
+        - generic [ref=e72]:
+          - generic [ref=e73]: Narrative
+          - generic [ref=e74]: Tactical
+          - generic [ref=e75]: Fast Sessions
+        - generic [ref=e76]:
+          - article [ref=e77]:
+            - generic [ref=e78]: Identity/Behavior Fit
+            - generic [ref=e79]: "0.888"
+            - generic [ref=e80]: Do this player’s declared tags and observed ratings point toward the same cohort pattern?
+          - article [ref=e81]:
+            - generic [ref=e82]: Rating Evidence
+            - generic [ref=e83]: "1.000"
+            - generic [ref=e84]: How much rating data supports this judgment?
+          - article [ref=e85]:
+            - generic [ref=e86]: Usable Signal
+            - generic [ref=e87]: "0.888"
+            - generic [ref=e88]: How much weight the system should currently give this player’s ratings.
+        - generic [ref=e89]:
+          - article [ref=e90]:
+            - generic [ref=e91]: Declared top cohort
+            - generic [ref=e92]: Competitive / Skill Expression
+            - generic [ref=e93]: 26% match
+          - article [ref=e94]:
+            - generic [ref=e95]: Behavior top cohort
+            - generic [ref=e96]: Competitive / Skill Expression
+            - generic [ref=e97]: 39% match
+          - article [ref=e98]:
+            - generic [ref=e99]: Inverse top cohort
+            - generic [ref=e100]: Exploration / Narrative
+            - generic [ref=e101]: 94% match
+        - generic [ref=e102]:
+          - generic [ref=e103]: HIGH_SIGNAL
+          - generic [ref=e104]: "High signal: declared identity and observed behavior agree."
+    - generic [ref=e105]:
+      - heading "Selected Island Summary" [level=2] [ref=e106]
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Selected island
+            - heading "Island 1" [level=3] [ref=e111]
+          - generic [ref=e112]:
+            - button "Open detail" [ref=e113] [cursor=pointer]
+            - button "Select island" [ref=e114] [cursor=pointer]
+        - generic [ref=e115]:
+          - article [ref=e116]:
+            - generic [ref=e117]: User rating
+            - generic [ref=e118]: "1"
+            - generic [ref=e119]: Visible rating from the selected user.
+          - article [ref=e120]:
+            - generic [ref=e121]: Comparison cohort
+            - generic [ref=e122]: Competitive / Skill Expression
+            - generic [ref=e123]: The cohort used for island comparison.
+          - article [ref=e124]:
+            - generic [ref=e125]: Cohort rating
+            - generic [ref=e126]: "1"
+            - generic [ref=e127]: The selected cohort’s rating on this island.
+        - generic [ref=e128]:
+          - generic [ref=e129]: "User rated: 18"
+          - generic [ref=e130]: Island comparison updates with selection
+    - generic [ref=e131]:
+      - heading "Model Explanation" [level=2] [ref=e132]
+      - generic [ref=e133]:
+        - generic [ref=e135]:
+          - paragraph [ref=e136]: Model explanation
+          - heading "Why the model scored this user the way it did" [level=3] [ref=e137]
+        - region "Declared distribution" [ref=e138]:
+          - heading "Declared distribution" [level=3] [ref=e140]
+          - list [ref=e141]:
+            - listitem [ref=e142]:
+              - generic [ref=e143]:
+                - generic [ref=e144]: Competitive / Skill Expression
+                - generic [ref=e145]: 26%
+            - listitem [ref=e148]:
+              - generic [ref=e149]:
+                - generic [ref=e150]: Roleplay / Social
+                - generic [ref=e151]: 0%
+            - listitem [ref=e154]:
+              - generic [ref=e155]:
+                - generic [ref=e156]: Brain Rot / Casual
+                - generic [ref=e157]: 26%
+            - listitem [ref=e160]:
+              - generic [ref=e161]:
+                - generic [ref=e162]: Exploration / Narrative
+                - generic [ref=e163]: 22%
+            - listitem [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]: Tactical / Team Coordination
+                - generic [ref=e169]: 26%
+        - region "Behavior distribution" [ref=e172]:
+          - heading "Behavior distribution" [level=3] [ref=e174]
+          - list [ref=e175]:
+            - listitem [ref=e176]:
+              - generic [ref=e177]:
+                - generic [ref=e178]: Competitive / Skill Expression
+                - generic [ref=e179]: 39%
+            - listitem [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]: Roleplay / Social
+                - generic [ref=e185]: 0%
+            - listitem [ref=e188]:
+              - generic [ref=e189]:
+                - generic [ref=e190]: Brain Rot / Casual
+                - generic [ref=e191]: 29%
+            - listitem [ref=e194]:
+              - generic [ref=e195]:
+                - generic [ref=e196]: Exploration / Narrative
+                - generic [ref=e197]: 0%
+            - listitem [ref=e200]:
+              - generic [ref=e201]:
+                - generic [ref=e202]: Tactical / Team Coordination
+                - generic [ref=e203]: 32%
+        - region "Inverse behavior distribution" [ref=e206]:
+          - heading "Inverse behavior distribution" [level=3] [ref=e208]
+          - list [ref=e209]:
+            - listitem [ref=e210]:
+              - generic [ref=e211]:
+                - generic [ref=e212]: Competitive / Skill Expression
+                - generic [ref=e213]: 0%
+            - listitem [ref=e216]:
+              - generic [ref=e217]:
+                - generic [ref=e218]: Roleplay / Social
+                - generic [ref=e219]: 6%
+            - listitem [ref=e222]:
+              - generic [ref=e223]:
+                - generic [ref=e224]: Brain Rot / Casual
+                - generic [ref=e225]: 0%
+            - listitem [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]: Exploration / Narrative
+                - generic [ref=e231]: 94%
+            - listitem [ref=e234]:
+              - generic [ref=e235]:
+                - generic [ref=e236]: Tactical / Team Coordination
+                - generic [ref=e237]: 0%
+        - generic [ref=e240]:
+          - heading "Diagnosis reasons" [level=4] [ref=e241]
+          - list [ref=e242]:
+            - listitem [ref=e243]: effectiveSignal=0.888
+            - listitem [ref=e244]: declaredTop=cohort-competitive:0.259
+            - listitem [ref=e245]: behaviorTop=cohort-competitive:0.388
+            - listitem [ref=e246]: inverseTop=cohort-exploration:0.940
+          - generic [ref=e247]:
+            - generic [ref=e248]: "Suggested cohort: none"
+            - generic [ref=e249]: "Suggested tags: none"
+    - generic [ref=e250]:
+      - heading "Island Comparison" [level=2] [ref=e251]
+      - table [ref=e253]:
+        - rowgroup [ref=e254]:
+          - row "Island User Cohort Match" [ref=e255]:
+            - columnheader "Island" [ref=e256]
+            - columnheader "User" [ref=e257]
+            - columnheader "Cohort" [ref=e258]
+            - columnheader "Match" [ref=e259]
+        - rowgroup [ref=e260]:
+          - row "Island 1 1 1 Match" [ref=e261] [cursor=pointer]:
+            - cell "Island 1" [ref=e262]
+            - cell "1" [ref=e263]
+            - cell "1" [ref=e264]
+            - cell "Match" [ref=e265]
+          - row "Island 2 -1 -1 Match" [ref=e266] [cursor=pointer]:
+            - cell "Island 2" [ref=e267]
+            - cell "-1" [ref=e268]
+            - cell "-1" [ref=e269]
+            - cell "Match" [ref=e270]
+          - row "Island 3 -1 0 Mismatch" [ref=e271] [cursor=pointer]:
+            - cell "Island 3" [ref=e272]
+            - cell "-1" [ref=e273]
+            - cell "0" [ref=e274]
+            - cell "Mismatch" [ref=e275]
+          - row "Island 4 1 1 Match" [ref=e276] [cursor=pointer]:
+            - cell "Island 4" [ref=e277]
+            - cell "1" [ref=e278]
+            - cell "1" [ref=e279]
+            - cell "Match" [ref=e280]
+          - row "Island 5 0 0 Match" [ref=e281] [cursor=pointer]:
+            - cell "Island 5" [ref=e282]
+            - cell "0" [ref=e283]
+            - cell "0" [ref=e284]
+            - cell "Match" [ref=e285]
+          - row "Island 6 -1 0 Mismatch" [ref=e286] [cursor=pointer]:
+            - cell "Island 6" [ref=e287]
+            - cell "-1" [ref=e288]
+            - cell "0" [ref=e289]
+            - cell "Mismatch" [ref=e290]
+          - row "Island 7 -1 -1 Match" [ref=e291] [cursor=pointer]:
+            - cell "Island 7" [ref=e292]
+            - cell "-1" [ref=e293]
+            - cell "-1" [ref=e294]
+            - cell "Match" [ref=e295]
+          - row "Island 8 0 -1 Mismatch" [ref=e296] [cursor=pointer]:
+            - cell "Island 8" [ref=e297]
+            - cell "0" [ref=e298]
+            - cell "-1" [ref=e299]
+            - cell "Mismatch" [ref=e300]
+          - row "Island 9 0 1 Mismatch" [ref=e301] [cursor=pointer]:
+            - cell "Island 9" [ref=e302]
+            - cell "0" [ref=e303]
+            - cell "1" [ref=e304]
+            - cell "Mismatch" [ref=e305]
+          - row "Island 10 0 0 Match" [ref=e306] [cursor=pointer]:
+            - cell "Island 10" [ref=e307]
+            - cell "0" [ref=e308]
+            - cell "0" [ref=e309]
+            - cell "Match" [ref=e310]
+          - row "Island 11 -1 -1 Match" [ref=e311] [cursor=pointer]:
+            - cell "Island 11" [ref=e312]
+            - cell "-1" [ref=e313]
+            - cell "-1" [ref=e314]
+            - cell "Match" [ref=e315]
+          - row "Island 12 -1 -1 Match" [ref=e316] [cursor=pointer]:
+            - cell "Island 12" [ref=e317]
+            - cell "-1" [ref=e318]
+            - cell "-1" [ref=e319]
+            - cell "Match" [ref=e320]
+          - row "Island 13 0 1 Mismatch" [ref=e321] [cursor=pointer]:
+            - cell "Island 13" [ref=e322]
+            - cell "0" [ref=e323]
+            - cell "1" [ref=e324]
+            - cell "Mismatch" [ref=e325]
+          - row "Island 14 0 -1 Mismatch" [ref=e326] [cursor=pointer]:
+            - cell "Island 14" [ref=e327]
+            - cell "0" [ref=e328]
+            - cell "-1" [ref=e329]
+            - cell "Mismatch" [ref=e330]
+          - row "Island 15 1 1 Match" [ref=e331] [cursor=pointer]:
+            - cell "Island 15" [ref=e332]
+            - cell "1" [ref=e333]
+            - cell "1" [ref=e334]
+            - cell "Match" [ref=e335]
+          - row "Island 16 -1 -1 Match" [ref=e336] [cursor=pointer]:
+            - cell "Island 16" [ref=e337]
+            - cell "-1" [ref=e338]
+            - cell "-1" [ref=e339]
+            - cell "Match" [ref=e340]
+          - row "Island 17 -1 -1 Match" [ref=e341] [cursor=pointer]:
+            - cell "Island 17" [ref=e342]
+            - cell "-1" [ref=e343]
+            - cell "-1" [ref=e344]
+            - cell "Match" [ref=e345]
+          - row "Island 18 0 0 Match" [ref=e346] [cursor=pointer]:
+            - cell "Island 18" [ref=e347]
+            - cell "0" [ref=e348]
+            - cell "0" [ref=e349]
+            - cell "Match" [ref=e350]
+    - generic [ref=e351]:
+      - heading "Pseudo-Cohort Reports" [level=2] [ref=e352]
+      - button "Select report row" [ref=e354] [cursor=pointer]
+      - generic [ref=e355]:
+        - generic [ref=e356]:
+          - generic [ref=e357]:
+            - heading "Top Consistent Pseudo-Cohorts" [level=3] [ref=e358]
+            - paragraph [ref=e359]: High agreement, meaningful evidence, and low known-cohort fit.
+          - generic [ref=e360]:
+            - strong [ref=e361]: No consistent pseudo-cohorts
+            - paragraph [ref=e362]: Increase user count or vary the generator seed.
+        - generic [ref=e363]:
+          - generic [ref=e364]:
+            - heading "Top Inconsistent Pseudo-Cohorts" [level=3] [ref=e365]
+            - paragraph [ref=e366]: Tag combinations whose members do not rate coherently.
+          - table [ref=e368]:
+            - rowgroup [ref=e369]:
+              - row "Tag combo Users Consistency Known fit Effective signal Priority" [ref=e370]:
+                - columnheader "Tag combo" [ref=e371]
+                - columnheader "Users" [ref=e372]
+                - columnheader "Consistency" [ref=e373]
+                - columnheader "Known fit" [ref=e374]
+                - columnheader "Effective signal" [ref=e375]
+                - columnheader "Priority" [ref=e376]
+            - rowgroup [ref=e377]:
+              - row "Systems Mastery | Tactical | Team Coordination 3 18% 100% 45% medium" [ref=e378] [cursor=pointer]:
+                - cell "Systems Mastery | Tactical | Team Coordination" [ref=e379]
+                - cell "3" [ref=e380]
+                - cell "18%" [ref=e381]:
+                  - generic [ref=e385]: 18%
+                - cell "100%" [ref=e386]
+                - cell "45%" [ref=e387]
+                - cell "medium" [ref=e388]:
+                  - generic [ref=e389]: medium
+    - generic [ref=e390]:
+      - heading "Debug Data" [level=2] [ref=e391]
+      - generic [ref=e392]:
+        - article [ref=e393]:
+          - generic [ref=e394]: Hidden seed
+          - generic [ref=e395]: Competitive / Skill Expression
+          - generic [ref=e396]: Debug and validation only.
+        - article [ref=e397]:
+          - generic [ref=e398]: Hidden tag alignment
+          - generic [ref=e399]: "3"
+          - generic [ref=e400]: Debug and validation only.
+        - article [ref=e401]:
+          - generic [ref=e402]: Hidden rating alignment
+          - generic [ref=e403]: "6"
+          - generic [ref=e404]: Debug and validation only.
+        - article [ref=e405]:
+          - generic [ref=e406]: Hidden vs inferred
+          - generic [ref=e407]: Recovered hidden seed
+          - generic [ref=e408]: Hidden data is not a model input.
+  - dialog "Select User" [ref=e409]:
+    - generic [ref=e410]:
+      - generic [ref=e411]:
+        - paragraph [ref=e412]: Selection
+        - heading "Select User" [level=2] [ref=e413]
+      - button "Close" [ref=e414] [cursor=pointer]
+    - generic [ref=e416]:
+      - searchbox "Search users" [ref=e417]
+      - generic [ref=e418]:
+        - button "User 1 HIGH_SIGNAL Narrative · Tactical · Fast Sessions" [ref=e419] [cursor=pointer]:
+          - generic [ref=e420]:
+            - strong [ref=e421]: User 1
+            - generic [ref=e422]: HIGH_SIGNAL
+          - paragraph [ref=e423]: Narrative · Tactical · Fast Sessions
+        - button "User 2 AMBIGUOUS Social · Casual · Low Pressure" [ref=e424] [cursor=pointer]:
+          - generic [ref=e425]:
+            - strong [ref=e426]: User 2
+            - generic [ref=e427]: AMBIGUOUS
+          - paragraph [ref=e428]: Social · Casual · Low Pressure
+        - button "User 3 HIGH_SIGNAL Low Pressure · Skill Expression · Brain Rot" [ref=e429] [cursor=pointer]:
+          - generic [ref=e430]:
+            - strong [ref=e431]: User 3
+            - generic [ref=e432]: HIGH_SIGNAL
+          - paragraph [ref=e433]: Low Pressure · Skill Expression · Brain Rot
+        - button "User 4 AMBIGUOUS Low Pressure · Weird · Fast Sessions" [ref=e434] [cursor=pointer]:
+          - generic [ref=e435]:
+            - strong [ref=e436]: User 4
+            - generic [ref=e437]: AMBIGUOUS
+          - paragraph [ref=e438]: Low Pressure · Weird · Fast Sessions
+        - button "User 5 UNKNOWN_OR_NOISY Team Coordination · Tactical · Social" [ref=e439] [cursor=pointer]:
+          - generic [ref=e440]:
+            - strong [ref=e441]: User 5
+            - generic [ref=e442]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e443]: Team Coordination · Tactical · Social
+        - button "User 6 HIGH_SIGNAL Fast Sessions · Tactical · Skill Expression" [ref=e444] [cursor=pointer]:
+          - generic [ref=e445]:
+            - strong [ref=e446]: User 6
+            - generic [ref=e447]: HIGH_SIGNAL
+          - paragraph [ref=e448]: Fast Sessions · Tactical · Skill Expression
+        - button "User 7 MISMATCH_RETAG Tactical · Skill Expression · Competitive" [ref=e449] [cursor=pointer]:
+          - generic [ref=e450]:
+            - strong [ref=e451]: User 7
+            - generic [ref=e452]: MISMATCH_RETAG
+          - paragraph [ref=e453]: Tactical · Skill Expression · Competitive
+        - button "User 8 HIGH_SIGNAL Slow Sessions · Exploration · Fast Sessions" [ref=e454] [cursor=pointer]:
+          - generic [ref=e455]:
+            - strong [ref=e456]: User 8
+            - generic [ref=e457]: HIGH_SIGNAL
+          - paragraph [ref=e458]: Slow Sessions · Exploration · Fast Sessions
+        - button "User 9 HIGH_SIGNAL Exploration · Weird · Narrative" [ref=e459] [cursor=pointer]:
+          - generic [ref=e460]:
+            - strong [ref=e461]: User 9
+            - generic [ref=e462]: HIGH_SIGNAL
+          - paragraph [ref=e463]: Exploration · Weird · Narrative
+        - button "User 10 INVERSE_PROFILE Systems Mastery · Weird · Competitive" [ref=e464] [cursor=pointer]:
+          - generic [ref=e465]:
+            - strong [ref=e466]: User 10
+            - generic [ref=e467]: INVERSE_PROFILE
+          - paragraph [ref=e468]: Systems Mastery · Weird · Competitive
+        - button "User 11 INVERSE_PROFILE Roleplay · Exploration · Systems Mastery" [ref=e469] [cursor=pointer]:
+          - generic [ref=e470]:
+            - strong [ref=e471]: User 11
+            - generic [ref=e472]: INVERSE_PROFILE
+          - paragraph [ref=e473]: Roleplay · Exploration · Systems Mastery
+        - button "User 12 UNKNOWN_OR_NOISY Social · Roleplay · Casual" [ref=e474] [cursor=pointer]:
+          - generic [ref=e475]:
+            - strong [ref=e476]: User 12
+            - generic [ref=e477]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e478]: Social · Roleplay · Casual
+        - button "User 13 UNKNOWN_OR_NOISY Low Pressure · Slow Sessions · Tactical" [ref=e479] [cursor=pointer]:
+          - generic [ref=e480]:
+            - strong [ref=e481]: User 13
+            - generic [ref=e482]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e483]: Low Pressure · Slow Sessions · Tactical
+        - button "User 14 MISMATCH_RETAG Narrative · Exploration · Low Pressure" [ref=e484] [cursor=pointer]:
+          - generic [ref=e485]:
+            - strong [ref=e486]: User 14
+            - generic [ref=e487]: MISMATCH_RETAG
+          - paragraph [ref=e488]: Narrative · Exploration · Low Pressure
+        - button "User 15 HIGH_SIGNAL Team Coordination · Competitive · Low Pressure" [ref=e489] [cursor=pointer]:
+          - generic [ref=e490]:
+            - strong [ref=e491]: User 15
+            - generic [ref=e492]: HIGH_SIGNAL
+          - paragraph [ref=e493]: Team Coordination · Competitive · Low Pressure
+        - button "User 16 UNKNOWN_OR_NOISY Narrative · Low Pressure · Casual" [ref=e494] [cursor=pointer]:
+          - generic [ref=e495]:
+            - strong [ref=e496]: User 16
+            - generic [ref=e497]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e498]: Narrative · Low Pressure · Casual
+        - button "User 17 AMBIGUOUS Social · Skill Expression · Low Pressure" [ref=e499] [cursor=pointer]:
+          - generic [ref=e500]:
+            - strong [ref=e501]: User 17
+            - generic [ref=e502]: AMBIGUOUS
+          - paragraph [ref=e503]: Social · Skill Expression · Low Pressure
+        - button "User 18 UNKNOWN_OR_NOISY Narrative · Systems Mastery · Brain Rot" [ref=e504] [cursor=pointer]:
+          - generic [ref=e505]:
+            - strong [ref=e506]: User 18
+            - generic [ref=e507]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e508]: Narrative · Systems Mastery · Brain Rot
+        - button "User 19 HIGH_SIGNAL Weird · Narrative · Casual" [ref=e509] [cursor=pointer]:
+          - generic [ref=e510]:
+            - strong [ref=e511]: User 19
+            - generic [ref=e512]: HIGH_SIGNAL
+          - paragraph [ref=e513]: Weird · Narrative · Casual
+        - button "User 20 MISMATCH_RETAG Tactical · Team Coordination · Systems Mastery" [ref=e514] [cursor=pointer]:
+          - generic [ref=e515]:
+            - strong [ref=e516]: User 20
+            - generic [ref=e517]: MISMATCH_RETAG
+          - paragraph [ref=e518]: Tactical · Team Coordination · Systems Mastery
+        - button "User 21 HIGH_SIGNAL Team Coordination · Fast Sessions · Weird" [ref=e519] [cursor=pointer]:
+          - generic [ref=e520]:
+            - strong [ref=e521]: User 21
+            - generic [ref=e522]: HIGH_SIGNAL
+          - paragraph [ref=e523]: Team Coordination · Fast Sessions · Weird
+        - button "User 22 AMBIGUOUS Roleplay · Tactical · Casual" [ref=e524] [cursor=pointer]:
+          - generic [ref=e525]:
+            - strong [ref=e526]: User 22
+            - generic [ref=e527]: AMBIGUOUS
+          - paragraph [ref=e528]: Roleplay · Tactical · Casual
+        - button "User 23 INVERSE_PROFILE Team Coordination · Tactical · Narrative" [ref=e529] [cursor=pointer]:
+          - generic [ref=e530]:
+            - strong [ref=e531]: User 23
+            - generic [ref=e532]: INVERSE_PROFILE
+          - paragraph [ref=e533]: Team Coordination · Tactical · Narrative
+        - button "User 24 INVERSE_PROFILE Weird · Team Coordination · Fast Sessions" [ref=e534] [cursor=pointer]:
+          - generic [ref=e535]:
+            - strong [ref=e536]: User 24
+            - generic [ref=e537]: INVERSE_PROFILE
+          - paragraph [ref=e538]: Weird · Team Coordination · Fast Sessions
+        - button "User 25 LOW_SIGNAL Casual · Slow Sessions · Exploration" [ref=e539] [cursor=pointer]:
+          - generic [ref=e540]:
+            - strong [ref=e541]: User 25
+            - generic [ref=e542]: LOW_SIGNAL
+          - paragraph [ref=e543]: Casual · Slow Sessions · Exploration
+        - button "User 26 HIGH_SIGNAL Systems Mastery · Fast Sessions · Casual" [ref=e544] [cursor=pointer]:
+          - generic [ref=e545]:
+            - strong [ref=e546]: User 26
+            - generic [ref=e547]: HIGH_SIGNAL
+          - paragraph [ref=e548]: Systems Mastery · Fast Sessions · Casual
+        - button "User 27 AMBIGUOUS Exploration · Casual · Systems Mastery" [ref=e549] [cursor=pointer]:
+          - generic [ref=e550]:
+            - strong [ref=e551]: User 27
+            - generic [ref=e552]: AMBIGUOUS
+          - paragraph [ref=e553]: Exploration · Casual · Systems Mastery
+        - button "User 28 INVERSE_PROFILE Narrative · Fast Sessions · Roleplay" [ref=e554] [cursor=pointer]:
+          - generic [ref=e555]:
+            - strong [ref=e556]: User 28
+            - generic [ref=e557]: INVERSE_PROFILE
+          - paragraph [ref=e558]: Narrative · Fast Sessions · Roleplay
+        - button "User 29 HIGH_SIGNAL Exploration · Weird · Narrative" [ref=e559] [cursor=pointer]:
+          - generic [ref=e560]:
+            - strong [ref=e561]: User 29
+            - generic [ref=e562]: HIGH_SIGNAL
+          - paragraph [ref=e563]: Exploration · Weird · Narrative
+        - button "User 30 UNKNOWN_OR_NOISY Systems Mastery · Team Coordination · Tactical" [ref=e564] [cursor=pointer]:
+          - generic [ref=e565]:
+            - strong [ref=e566]: User 30
+            - generic [ref=e567]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e568]: Systems Mastery · Team Coordination · Tactical
+        - button "User 31 INVERSE_PROFILE Narrative · Casual · Roleplay" [ref=e569] [cursor=pointer]:
+          - generic [ref=e570]:
+            - strong [ref=e571]: User 31
+            - generic [ref=e572]: INVERSE_PROFILE
+          - paragraph [ref=e573]: Narrative · Casual · Roleplay
+        - button "User 32 HIGH_SIGNAL Roleplay · Fast Sessions · Narrative" [ref=e574] [cursor=pointer]:
+          - generic [ref=e575]:
+            - strong [ref=e576]: User 32
+            - generic [ref=e577]: HIGH_SIGNAL
+          - paragraph [ref=e578]: Roleplay · Fast Sessions · Narrative
+        - button "User 33 UNKNOWN_OR_NOISY Brain Rot · Roleplay · Exploration" [ref=e579] [cursor=pointer]:
+          - generic [ref=e580]:
+            - strong [ref=e581]: User 33
+            - generic [ref=e582]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e583]: Brain Rot · Roleplay · Exploration
+        - button "User 34 UNKNOWN_OR_NOISY Low Pressure · Casual · Team Coordination" [ref=e584] [cursor=pointer]:
+          - generic [ref=e585]:
+            - strong [ref=e586]: User 34
+            - generic [ref=e587]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e588]: Low Pressure · Casual · Team Coordination
+        - button "User 35 UNKNOWN_OR_NOISY Tactical · Systems Mastery · Exploration" [ref=e589] [cursor=pointer]:
+          - generic [ref=e590]:
+            - strong [ref=e591]: User 35
+            - generic [ref=e592]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e593]: Tactical · Systems Mastery · Exploration
+        - button "User 36 MISMATCH_RETAG Competitive · Skill Expression · Fast Sessions" [ref=e594] [cursor=pointer]:
+          - generic [ref=e595]:
+            - strong [ref=e596]: User 36
+            - generic [ref=e597]: MISMATCH_RETAG
+          - paragraph [ref=e598]: Competitive · Skill Expression · Fast Sessions
+        - button "User 37 HIGH_SIGNAL Roleplay · Social · Slow Sessions" [ref=e599] [cursor=pointer]:
+          - generic [ref=e600]:
+            - strong [ref=e601]: User 37
+            - generic [ref=e602]: HIGH_SIGNAL
+          - paragraph [ref=e603]: Roleplay · Social · Slow Sessions
+        - button "User 38 HIGH_SIGNAL Fast Sessions · Casual · Tactical" [ref=e604] [cursor=pointer]:
+          - generic [ref=e605]:
+            - strong [ref=e606]: User 38
+            - generic [ref=e607]: HIGH_SIGNAL
+          - paragraph [ref=e608]: Fast Sessions · Casual · Tactical
+        - button "User 39 HIGH_SIGNAL Weird · Low Pressure · Fast Sessions" [ref=e609] [cursor=pointer]:
+          - generic [ref=e610]:
+            - strong [ref=e611]: User 39
+            - generic [ref=e612]: HIGH_SIGNAL
+          - paragraph [ref=e613]: Weird · Low Pressure · Fast Sessions
+        - button "User 40 UNKNOWN_OR_NOISY Fast Sessions · Low Pressure · Competitive" [ref=e614] [cursor=pointer]:
+          - generic [ref=e615]:
+            - strong [ref=e616]: User 40
+            - generic [ref=e617]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e618]: Fast Sessions · Low Pressure · Competitive
+        - button "User 41 HIGH_SIGNAL Systems Mastery · Fast Sessions · Tactical" [ref=e619] [cursor=pointer]:
+          - generic [ref=e620]:
+            - strong [ref=e621]: User 41
+            - generic [ref=e622]: HIGH_SIGNAL
+          - paragraph [ref=e623]: Systems Mastery · Fast Sessions · Tactical
+        - button "User 42 AMBIGUOUS Team Coordination · Brain Rot · Roleplay" [ref=e624] [cursor=pointer]:
+          - generic [ref=e625]:
+            - strong [ref=e626]: User 42
+            - generic [ref=e627]: AMBIGUOUS
+          - paragraph [ref=e628]: Team Coordination · Brain Rot · Roleplay
+        - button "User 43 HIGH_SIGNAL Casual · Fast Sessions · Tactical" [ref=e629] [cursor=pointer]:
+          - generic [ref=e630]:
+            - strong [ref=e631]: User 43
+            - generic [ref=e632]: HIGH_SIGNAL
+          - paragraph [ref=e633]: Casual · Fast Sessions · Tactical
+        - button "User 44 AMBIGUOUS Low Pressure · Slow Sessions · Brain Rot" [ref=e634] [cursor=pointer]:
+          - generic [ref=e635]:
+            - strong [ref=e636]: User 44
+            - generic [ref=e637]: AMBIGUOUS
+          - paragraph [ref=e638]: Low Pressure · Slow Sessions · Brain Rot
+        - button "User 45 UNKNOWN_OR_NOISY Tactical · Team Coordination · Systems Mastery" [ref=e639] [cursor=pointer]:
+          - generic [ref=e640]:
+            - strong [ref=e641]: User 45
+            - generic [ref=e642]: UNKNOWN_OR_NOISY
+          - paragraph [ref=e643]: Tactical · Team Coordination · Systems Mastery
+        - button "User 46 LOW_SIGNAL Fast Sessions · Competitive · Systems Mastery" [ref=e644] [cursor=pointer]:
+          - generic [ref=e645]:
+            - strong [ref=e646]: User 46
+            - generic [ref=e647]: LOW_SIGNAL
+          - paragraph [ref=e648]: Fast Sessions · Competitive · Systems Mastery
+        - button "User 47 HIGH_SIGNAL Slow Sessions · Social · Fast Sessions" [ref=e649] [cursor=pointer]:
+          - generic [ref=e650]:
+            - strong [ref=e651]: User 47
+            - generic [ref=e652]: HIGH_SIGNAL
+          - paragraph [ref=e653]: Slow Sessions · Social · Fast Sessions
+        - button "User 48 INVERSE_PROFILE Low Pressure · Exploration · Roleplay" [ref=e654] [cursor=pointer]:
+          - generic [ref=e655]:
+            - strong [ref=e656]: User 48
+            - generic [ref=e657]: INVERSE_PROFILE
+          - paragraph [ref=e658]: Low Pressure · Exploration · Roleplay

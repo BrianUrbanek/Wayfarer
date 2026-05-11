@@ -1,0 +1,363 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Wayfarer analyst console
+      - generic [ref=e7]: Columbus debug engine
+    - heading "Wayfarer" [level=1] [ref=e8]
+    - paragraph [ref=e9]: Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and pseudo-cohort reports at scale.
+  - region "Dashboard controls" [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]: Seed
+      - spinbutton "Seed" [ref=e13]: "48291"
+    - generic [ref=e14]:
+      - generic [ref=e15]: Users
+      - spinbutton "Users" [ref=e16]: "48"
+    - generic [ref=e17]:
+      - generic [ref=e18]: Islands
+      - spinbutton "Islands" [ref=e19]: "18"
+    - button "Regenerate dataset" [ref=e20] [cursor=pointer]
+    - button "Hide debug" [ref=e21] [cursor=pointer]
+    - button "Select user" [ref=e22] [cursor=pointer]
+    - button "Select island" [ref=e23] [cursor=pointer]
+    - button "Select cohort" [ref=e24] [cursor=pointer]
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - heading "Population Summary" [level=2] [ref=e27]
+      - generic [ref=e28]:
+        - article [ref=e29]:
+          - generic [ref=e30]: Total users
+          - generic [ref=e31]: "48"
+        - article [ref=e32]:
+          - generic [ref=e33]: Seeded anchors
+          - generic [ref=e34]: "5"
+        - article [ref=e35]:
+          - generic [ref=e36]: Generated users
+          - generic [ref=e37]: "48"
+        - article [ref=e38]:
+          - generic [ref=e39]: Islands
+          - generic [ref=e40]: "18"
+        - article [ref=e41]:
+          - generic [ref=e42]: High signal users
+          - generic [ref=e43]: "17"
+        - article [ref=e44]:
+          - generic [ref=e45]: Retag candidates
+          - generic [ref=e46]: "4"
+        - article [ref=e47]:
+          - generic [ref=e48]: Inverse profiles
+          - generic [ref=e49]: "7"
+        - article [ref=e50]:
+          - generic [ref=e51]: Unknown / noisy
+          - generic [ref=e52]: "20"
+        - article [ref=e53]:
+          - generic [ref=e54]: Pseudo-cohort reports
+          - generic [ref=e55]: "1"
+      - generic [ref=e57]:
+        - generic [ref=e58]: High-signal share
+        - generic [ref=e61]: 35%
+    - generic [ref=e62]:
+      - heading "Selected User Summary" [level=2] [ref=e63]
+      - generic [ref=e64]:
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - paragraph [ref=e67]: Selected user
+            - heading "User 10" [level=3] [ref=e659]
+          - generic [ref=e69]:
+            - button "Open detail" [ref=e70] [cursor=pointer]
+            - button "Select user" [ref=e71] [cursor=pointer]
+        - generic [ref=e72]:
+          - generic [ref=e660]: Systems Mastery
+          - generic [ref=e661]: Weird
+          - generic [ref=e662]: Competitive
+        - generic [ref=e76]:
+          - article [ref=e77]:
+            - generic [ref=e78]: Identity/Behavior Fit
+            - generic [ref=e79]: "0.715"
+            - generic [ref=e80]: Do this player’s declared tags and observed ratings point toward the same cohort pattern?
+          - article [ref=e81]:
+            - generic [ref=e82]: Rating Evidence
+            - generic [ref=e83]: "1.000"
+            - generic [ref=e84]: How much rating data supports this judgment?
+          - article [ref=e85]:
+            - generic [ref=e86]: Usable Signal
+            - generic [ref=e87]: "0.715"
+            - generic [ref=e88]: How much weight the system should currently give this player’s ratings.
+        - generic [ref=e89]:
+          - article [ref=e90]:
+            - generic [ref=e91]: Declared top cohort
+            - generic [ref=e92]: Competitive / Skill Expression
+            - generic [ref=e93]: 35% match
+          - article [ref=e94]:
+            - generic [ref=e95]: Behavior top cohort
+            - generic [ref=e96]: Competitive / Skill Expression
+            - generic [ref=e97]: 35% match
+          - article [ref=e98]:
+            - generic [ref=e99]: Inverse top cohort
+            - generic [ref=e100]: Exploration / Narrative
+            - generic [ref=e101]: 100% match
+        - generic [ref=e102]:
+          - generic [ref=e103]: INVERSE_PROFILE
+          - generic [ref=e104]: Observed behavior is strongly anti-correlated with a known cohort.
+    - generic [ref=e105]:
+      - heading "Selected Island Summary" [level=2] [ref=e106]
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Selected island
+            - heading "Island 1" [level=3] [ref=e111]
+          - generic [ref=e112]:
+            - button "Open detail" [ref=e113] [cursor=pointer]
+            - button "Select island" [ref=e114] [cursor=pointer]
+        - generic [ref=e115]:
+          - article [ref=e116]:
+            - generic [ref=e117]: User rating
+            - generic [ref=e118]: "-1"
+            - generic [ref=e119]: Visible rating from the selected user.
+          - article [ref=e120]:
+            - generic [ref=e121]: Comparison cohort
+            - generic [ref=e122]: Competitive / Skill Expression
+            - generic [ref=e123]: The cohort used for island comparison.
+          - article [ref=e124]:
+            - generic [ref=e125]: Cohort rating
+            - generic [ref=e126]: "1"
+            - generic [ref=e127]: The selected cohort’s rating on this island.
+        - generic [ref=e128]:
+          - generic [ref=e129]: "User rated: 18"
+          - generic [ref=e130]: Island comparison updates with selection
+    - generic [ref=e131]:
+      - heading "Model Explanation" [level=2] [ref=e132]
+      - generic [ref=e133]:
+        - generic [ref=e135]:
+          - paragraph [ref=e136]: Model explanation
+          - heading "Why the model scored this user the way it did" [level=3] [ref=e137]
+        - region "Declared distribution" [ref=e138]:
+          - heading "Declared distribution" [level=3] [ref=e140]
+          - list [ref=e141]:
+            - listitem [ref=e142]:
+              - generic [ref=e143]:
+                - generic [ref=e144]: Competitive / Skill Expression
+                - generic [ref=e145]: 35%
+            - listitem [ref=e148]:
+              - generic [ref=e149]:
+                - generic [ref=e150]: Roleplay / Social
+                - generic [ref=e151]: 0%
+            - listitem [ref=e154]:
+              - generic [ref=e155]:
+                - generic [ref=e156]: Brain Rot / Casual
+                - generic [ref=e157]: 0%
+            - listitem [ref=e160]:
+              - generic [ref=e161]:
+                - generic [ref=e162]: Exploration / Narrative
+                - generic [ref=e163]: 30%
+            - listitem [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]: Tactical / Team Coordination
+                - generic [ref=e169]: 35%
+        - region "Behavior distribution" [ref=e172]:
+          - heading "Behavior distribution" [level=3] [ref=e174]
+          - list [ref=e175]:
+            - listitem [ref=e176]:
+              - generic [ref=e177]:
+                - generic [ref=e178]: Competitive / Skill Expression
+                - generic [ref=e179]: 35%
+            - listitem [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]: Roleplay / Social
+                - generic [ref=e185]: 12%
+            - listitem [ref=e188]:
+              - generic [ref=e189]:
+                - generic [ref=e190]: Brain Rot / Casual
+                - generic [ref=e191]: 26%
+            - listitem [ref=e194]:
+              - generic [ref=e195]:
+                - generic [ref=e196]: Exploration / Narrative
+                - generic [ref=e197]: 0%
+            - listitem [ref=e200]:
+              - generic [ref=e201]:
+                - generic [ref=e202]: Tactical / Team Coordination
+                - generic [ref=e203]: 28%
+        - region "Inverse behavior distribution" [ref=e206]:
+          - heading "Inverse behavior distribution" [level=3] [ref=e208]
+          - list [ref=e209]:
+            - listitem [ref=e210]:
+              - generic [ref=e211]:
+                - generic [ref=e212]: Competitive / Skill Expression
+                - generic [ref=e213]: 0%
+            - listitem [ref=e216]:
+              - generic [ref=e217]:
+                - generic [ref=e218]: Roleplay / Social
+                - generic [ref=e219]: 0%
+            - listitem [ref=e222]:
+              - generic [ref=e223]:
+                - generic [ref=e224]: Brain Rot / Casual
+                - generic [ref=e225]: 0%
+            - listitem [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]: Exploration / Narrative
+                - generic [ref=e231]: 100%
+            - listitem [ref=e234]:
+              - generic [ref=e235]:
+                - generic [ref=e236]: Tactical / Team Coordination
+                - generic [ref=e237]: 0%
+        - generic [ref=e240]:
+          - heading "Diagnosis reasons" [level=4] [ref=e241]
+          - list [ref=e242]:
+            - listitem [ref=e663]: effectiveSignal=0.715
+            - listitem [ref=e664]: declaredTop=cohort-competitive:0.349
+            - listitem [ref=e665]: behaviorTop=cohort-competitive:0.349
+            - listitem [ref=e666]: inverseTop=cohort-exploration:1.000
+          - generic [ref=e247]:
+            - generic [ref=e248]: "Suggested cohort: Exploration / Narrative"
+            - generic [ref=e249]: "Suggested tags: Exploration, Weird, Narrative, Low Pressure"
+    - generic [ref=e250]:
+      - heading "Island Comparison" [level=2] [ref=e251]
+      - table [ref=e253]:
+        - rowgroup [ref=e254]:
+          - row "Island User Cohort Match" [ref=e255]:
+            - columnheader "Island" [ref=e256]
+            - columnheader "User" [ref=e257]
+            - columnheader "Cohort" [ref=e258]
+            - columnheader "Match" [ref=e259]
+        - rowgroup [ref=e260]:
+          - row "Island 1 -1 1 Mismatch" [ref=e667] [cursor=pointer]:
+            - cell "Island 1" [ref=e262]
+            - cell "-1" [ref=e668]
+            - cell "1" [ref=e264]
+            - cell "Mismatch" [ref=e669]
+          - row "Island 2 -1 -1 Match" [ref=e266] [cursor=pointer]:
+            - cell "Island 2" [ref=e267]
+            - cell "-1" [ref=e268]
+            - cell "-1" [ref=e269]
+            - cell "Match" [ref=e270]
+          - row "Island 3 -1 0 Mismatch" [ref=e271] [cursor=pointer]:
+            - cell "Island 3" [ref=e272]
+            - cell "-1" [ref=e273]
+            - cell "0" [ref=e274]
+            - cell "Mismatch" [ref=e275]
+          - row "Island 4 1 1 Match" [ref=e276] [cursor=pointer]:
+            - cell "Island 4" [ref=e277]
+            - cell "1" [ref=e278]
+            - cell "1" [ref=e279]
+            - cell "Match" [ref=e280]
+          - row "Island 5 1 0 Mismatch" [ref=e670] [cursor=pointer]:
+            - cell "Island 5" [ref=e282]
+            - cell "1" [ref=e671]
+            - cell "0" [ref=e284]
+            - cell "Mismatch" [ref=e672]
+          - row "Island 6 0 0 Match" [ref=e673] [cursor=pointer]:
+            - cell "Island 6" [ref=e287]
+            - cell "0" [ref=e674]
+            - cell "0" [ref=e289]
+            - cell "Match" [ref=e675]
+          - row "Island 7 -1 -1 Match" [ref=e291] [cursor=pointer]:
+            - cell "Island 7" [ref=e292]
+            - cell "-1" [ref=e293]
+            - cell "-1" [ref=e294]
+            - cell "Match" [ref=e295]
+          - row "Island 8 0 -1 Mismatch" [ref=e296] [cursor=pointer]:
+            - cell "Island 8" [ref=e297]
+            - cell "0" [ref=e298]
+            - cell "-1" [ref=e299]
+            - cell "Mismatch" [ref=e300]
+          - row "Island 9 1 1 Match" [ref=e676] [cursor=pointer]:
+            - cell "Island 9" [ref=e302]
+            - cell "1" [ref=e677]
+            - cell "1" [ref=e304]
+            - cell "Match" [ref=e678]
+          - row "Island 10 1 0 Mismatch" [ref=e679] [cursor=pointer]:
+            - cell "Island 10" [ref=e307]
+            - cell "1" [ref=e680]
+            - cell "0" [ref=e309]
+            - cell "Mismatch" [ref=e681]
+          - row "Island 11 0 -1 Mismatch" [ref=e682] [cursor=pointer]:
+            - cell "Island 11" [ref=e312]
+            - cell "0" [ref=e683]
+            - cell "-1" [ref=e314]
+            - cell "Mismatch" [ref=e684]
+          - row "Island 12 1 -1 Mismatch" [ref=e685] [cursor=pointer]:
+            - cell "Island 12" [ref=e317]
+            - cell "1" [ref=e686]
+            - cell "-1" [ref=e319]
+            - cell "Mismatch" [ref=e687]
+          - row "Island 13 1 1 Match" [ref=e688] [cursor=pointer]:
+            - cell "Island 13" [ref=e322]
+            - cell "1" [ref=e689]
+            - cell "1" [ref=e324]
+            - cell "Match" [ref=e690]
+          - row "Island 14 0 -1 Mismatch" [ref=e326] [cursor=pointer]:
+            - cell "Island 14" [ref=e327]
+            - cell "0" [ref=e328]
+            - cell "-1" [ref=e329]
+            - cell "Mismatch" [ref=e330]
+          - row "Island 15 1 1 Match" [ref=e331] [cursor=pointer]:
+            - cell "Island 15" [ref=e332]
+            - cell "1" [ref=e333]
+            - cell "1" [ref=e334]
+            - cell "Match" [ref=e335]
+          - row "Island 16 1 -1 Mismatch" [ref=e691] [cursor=pointer]:
+            - cell "Island 16" [ref=e337]
+            - cell "1" [ref=e692]
+            - cell "-1" [ref=e339]
+            - cell "Mismatch" [ref=e693]
+          - row "Island 17 0 -1 Mismatch" [ref=e694] [cursor=pointer]:
+            - cell "Island 17" [ref=e342]
+            - cell "0" [ref=e695]
+            - cell "-1" [ref=e344]
+            - cell "Mismatch" [ref=e696]
+          - row "Island 18 1 0 Mismatch" [ref=e697] [cursor=pointer]:
+            - cell "Island 18" [ref=e347]
+            - cell "1" [ref=e698]
+            - cell "0" [ref=e349]
+            - cell "Mismatch" [ref=e699]
+    - generic [ref=e351]:
+      - heading "Pseudo-Cohort Reports" [level=2] [ref=e352]
+      - button "Select report row" [ref=e354] [cursor=pointer]
+      - generic [ref=e355]:
+        - generic [ref=e356]:
+          - generic [ref=e357]:
+            - heading "Top Consistent Pseudo-Cohorts" [level=3] [ref=e358]
+            - paragraph [ref=e359]: High agreement, meaningful evidence, and low known-cohort fit.
+          - generic [ref=e360]:
+            - strong [ref=e361]: No consistent pseudo-cohorts
+            - paragraph [ref=e362]: Increase user count or vary the generator seed.
+        - generic [ref=e363]:
+          - generic [ref=e364]:
+            - heading "Top Inconsistent Pseudo-Cohorts" [level=3] [ref=e365]
+            - paragraph [ref=e366]: Tag combinations whose members do not rate coherently.
+          - table [ref=e368]:
+            - rowgroup [ref=e369]:
+              - row "Tag combo Users Consistency Known fit Effective signal Priority" [ref=e370]:
+                - columnheader "Tag combo" [ref=e371]
+                - columnheader "Users" [ref=e372]
+                - columnheader "Consistency" [ref=e373]
+                - columnheader "Known fit" [ref=e374]
+                - columnheader "Effective signal" [ref=e375]
+                - columnheader "Priority" [ref=e376]
+            - rowgroup [ref=e377]:
+              - row "Systems Mastery | Tactical | Team Coordination 3 18% 100% 45% medium" [ref=e378] [cursor=pointer]:
+                - cell "Systems Mastery | Tactical | Team Coordination" [ref=e379]
+                - cell "3" [ref=e380]
+                - cell "18%" [ref=e381]:
+                  - generic [ref=e385]: 18%
+                - cell "100%" [ref=e386]
+                - cell "45%" [ref=e387]
+                - cell "medium" [ref=e388]:
+                  - generic [ref=e389]: medium
+    - generic [ref=e390]:
+      - heading "Debug Data" [level=2] [ref=e391]
+      - generic [ref=e392]:
+        - article [ref=e393]:
+          - generic [ref=e394]: Hidden seed
+          - generic [ref=e395]: Tactical / Team Coordination
+          - generic [ref=e396]: Debug and validation only.
+        - article [ref=e397]:
+          - generic [ref=e398]: Hidden tag alignment
+          - generic [ref=e399]: "7"
+          - generic [ref=e400]: Debug and validation only.
+        - article [ref=e401]:
+          - generic [ref=e402]: Hidden rating alignment
+          - generic [ref=e403]: "6"
+          - generic [ref=e404]: Debug and validation only.
+        - article [ref=e405]:
+          - generic [ref=e406]: Hidden vs inferred
+          - generic [ref=e407]: Different visible fit
+          - generic [ref=e408]: Hidden data is not a model input.
