@@ -64,8 +64,17 @@ export function diagnoseInference(
   let type: DiagnosisType = 'AMBIGUOUS';
   let suggestedCohortId: CohortId | undefined;
 
+  // Precedence matters:
+  // 1) strong agreement, 2) structured inverse profile, 3) explicit retag mismatch,
+  // 4) unstructured/noisy behavior, 5) lower-confidence signal mismatch, 6) fallback ambiguity.
   if (input.effectiveSignal >= thresholds.highSignal) {
     type = 'HIGH_SIGNAL';
+  } else if (
+    input.inverseTop.score >= thresholds.strongInverse &&
+    input.behaviorTop.score < thresholds.mediumCohortMatch
+  ) {
+    type = 'INVERSE_PROFILE';
+    suggestedCohortId = input.inverseTop.cohortId ?? undefined;
   } else if (
     input.declaredTop.cohortId !== null &&
     input.behaviorTop.cohortId !== null &&
@@ -76,17 +85,16 @@ export function diagnoseInference(
     type = 'MISMATCH_RETAG';
     suggestedCohortId = input.behaviorTop.cohortId;
   } else if (
-    input.inverseTop.score >= thresholds.strongInverse &&
-    input.behaviorTop.score < thresholds.mediumCohortMatch
-  ) {
-    type = 'INVERSE_PROFILE';
-    suggestedCohortId = input.inverseTop.cohortId ?? undefined;
-  } else if (
     input.behaviorTop.score < thresholds.mediumCohortMatch &&
     input.inverseTop.score < thresholds.strongInverse
   ) {
     type = 'UNKNOWN_OR_NOISY';
-  } else if (input.effectiveSignal < thresholds.lowSignal) {
+  } else if (
+    input.effectiveSignal < thresholds.lowSignal &&
+    (input.declaredTop.score >= thresholds.mediumCohortMatch ||
+      input.behaviorTop.score >= thresholds.mediumCohortMatch ||
+      input.inverseTop.score >= thresholds.mediumCohortMatch)
+  ) {
     type = 'LOW_SIGNAL';
   }
 
@@ -101,7 +109,7 @@ export function diagnoseInference(
     type,
     message:
       type === 'HIGH_SIGNAL'
-        ? 'Declared identity and observed behavior agree.'
+        ? 'High signal: declared identity and observed behavior agree.'
         : type === 'MISMATCH_RETAG'
           ? `Observed behavior aligns more strongly with ${suggestedCohortId ?? 'another cohort'}.`
           : type === 'INVERSE_PROFILE'
