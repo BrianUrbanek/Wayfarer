@@ -140,4 +140,13 @@ describe('simulation layer', () => {
     expect(secondTurn.ratingEvents.length).toBeGreaterThan(firstTurn.ratingEvents.length);
     expect(secondTurn.turnHistory).toHaveLength(3);
   });
+
+  it('derives rater signal profiles and island affinity reports from sparse turns', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+
+    expect(next.raterSignalProfiles.size).toBe(next.users.length);
+    expect(next.islandAffinityReports.size).toBe(next.islands.length);
+  });
 });

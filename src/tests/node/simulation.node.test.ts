@@ -143,4 +143,13 @@ describe('simulation layer', () => {
     assert.ok(secondTurn.ratingEvents.length > firstTurn.ratingEvents.length);
     assert.equal(secondTurn.turnHistory.length, 3);
   });
+
+  it('derives rater signal profiles and island affinity reports from sparse turns', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+
+    assert.equal(next.raterSignalProfiles.size, next.users.length);
+    assert.equal(next.islandAffinityReports.size, next.islands.length);
+  });
 });

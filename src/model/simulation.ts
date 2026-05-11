@@ -1,5 +1,7 @@
 import { analyzePseudoCohorts, type PseudoCohortAnalysis } from './pseudoCohorts.js';
 import { computeInference } from './inference.js';
+import { buildIslandAffinityReports, type IslandAffinityReport } from './affinity.js';
+import { buildRaterSignalProfiles, type RaterSignalProfile } from './raterSignal.js';
 import { createSeededRandom, type SeededRng } from '../generator/seededRandom.js';
 import type {
   CohortAnchor,
@@ -42,6 +44,8 @@ export interface SimulationState {
   islands: Island[];
   ratingEvents: RatingEvent[];
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>;
+  raterSignalProfiles: ReadonlyMap<UserId, RaterSignalProfile>;
+  islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>;
   pseudoCohortAnalysis: PseudoCohortAnalysis;
   turnHistory: SimulationTurnSummary[];
 }
@@ -225,6 +229,13 @@ function recomputeState(
     islands,
     allTags
   );
+  const raterSignalAnalysis = buildRaterSignalProfiles(users, inferenceByUserId, cohorts);
+  const islandAffinityAnalysis = buildIslandAffinityReports(
+    ratingEvents,
+    raterSignalAnalysis.byUserId,
+    cohorts,
+    islands
+  );
   const pseudoCohortAnalysis = analyzePseudoCohorts(users, inferenceByUserId);
 
   return {
@@ -248,6 +259,8 @@ function recomputeState(
     })),
     ratingEvents: ratingEvents.map((event) => ({ ...event })),
     inferenceByUserId,
+    raterSignalProfiles: raterSignalAnalysis.byUserId,
+    islandAffinityReports: islandAffinityAnalysis.byIslandId,
     pseudoCohortAnalysis,
     turnHistory: turnHistory.map((summary) => ({
       ...summary,

@@ -12,6 +12,7 @@ import { DistributionList } from './ui/components/DistributionList';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
+import type { CohortAffinityEstimate } from './model/affinity';
 import type { PseudoCohortReport } from './model/pseudoCohorts';
 import {
   advancePassiveTurn,
@@ -32,6 +33,7 @@ type DrawerState =
   | { type: 'user'; id: string }
   | { type: 'island'; id: string }
   | { type: 'pseudo'; key: string }
+  | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
 
 function buildDataset(seed: number, numUsers: number, numIslands: number) {
@@ -60,6 +62,15 @@ function labelForCohortFactory(cohorts: CohortAnchor[]) {
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatDecimal(value: number, digits = 3): string {
+  return value.toFixed(digits);
+}
+
+function formatSignedDecimal(value: number, digits = 3): string {
+  const prefix = value > 0 ? '+' : '';
+  return `${prefix}${value.toFixed(digits)}`;
 }
 
 function formatRating(value: string | number | null): string {
@@ -101,6 +112,10 @@ function comparisonLabel(user: User | null, selectedCohort: CohortAnchor | null,
 
 function countNonNullRatings(user: User): number {
   return Object.values(user.ratings).filter((value) => value !== null).length;
+}
+
+function compareByNumeric(left: number, right: number): number {
+  return right - left;
 }
 
 function computeExactMatchRate(user: User, cohort: CohortAnchor, islandIds: string[]) {
@@ -256,6 +271,16 @@ export default function App() {
   }, [comparisonCohortId, dataset.cohorts, selectedInference]);
 
   const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, labelForCohort);
+  const selectedRaterSignalProfile = selectedUser ? dataset.raterSignalProfiles.get(selectedUser.id) ?? null : null;
+  const selectedIslandAffinityReport = selectedIsland ? dataset.islandAffinityReports.get(selectedIsland.id) ?? null : null;
+  const selectedIslandRatingCount = selectedIslandAffinityReport?.estimates[0]?.rawCount ?? 0;
+  const selectedIslandEffectiveWeight =
+    selectedIslandAffinityReport?.topPositive?.effectiveWeight ??
+    selectedIslandAffinityReport?.topNegative?.effectiveWeight ??
+    selectedIslandAffinityReport?.estimates[0]?.effectiveWeight ??
+    0;
+  const selectedIslandPositiveAffinity = selectedIslandAffinityReport?.topPositive?.affinity ?? 0;
+  const selectedIslandNegativeAffinity = selectedIslandAffinityReport?.topNegative?.affinity ?? 0;
 
   const inferenceTypes = useMemo(() => {
     return new Map(
@@ -294,6 +319,45 @@ export default function App() {
       ]
     : [];
 
+  const signalRows = useMemo(() => {
+    if (!selectedRaterSignalProfile) {
+      return [];
+    }
+
+    return dataset.cohorts
+      .map((cohort) => ({
+        cohort,
+        weight: selectedRaterSignalProfile.cohortWeights[cohort.id] ?? 0,
+        evidence: selectedRaterSignalProfile.cohortEvidence[cohort.id] ?? 0,
+        similarity: selectedRaterSignalProfile.cohortSimilarities[cohort.id] ?? {
+          value: 0,
+          evidence: 0,
+          overlapCount: 0
+        }
+      }))
+      .sort((left, right) => compareByNumeric(left.weight, right.weight));
+  }, [dataset.cohorts, selectedRaterSignalProfile]);
+
+  const affinityRows = useMemo(() => {
+    if (!selectedIslandAffinityReport) {
+      return [];
+    }
+
+    return selectedIslandAffinityReport.estimates
+      .map((estimate) => ({
+        cohort: dataset.cohorts.find((entry) => entry.id === estimate.cohortId) ?? null,
+        estimate
+      }))
+      .filter((row): row is { cohort: CohortAnchor; estimate: CohortAffinityEstimate } => row.cohort !== null)
+      .sort((left, right) => compareByNumeric(left.estimate.affinity, right.estimate.affinity));
+  }, [dataset.cohorts, selectedIslandAffinityReport]);
+
+  const selectedAffinityDetail =
+    drawerState?.type === 'affinity'
+      ? dataset.islandAffinityReports.get(drawerState.islandId)?.estimates.find((estimate) => estimate.cohortId === drawerState.cohortId) ??
+        null
+      : null;
+
   const selectedIslandRows = useMemo(() => {
     return dataset.cohorts.map((cohort) => ({
       cohort,
@@ -326,7 +390,7 @@ export default function App() {
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
       const inference = dataset.inferenceByUserId.get(user.id);
-      const tags = user.declaredTags.slice(0, 3).join(' Â· ');
+      const tags = user.declaredTags.slice(0, 3).join(' · ');
 
       return {
         id: user.id,
@@ -358,7 +422,7 @@ export default function App() {
       ...dataset.cohorts.map((cohort) => ({
         id: cohort.id,
         label: cohort.label,
-        description: cohort.tags.join(' Â· '),
+        description: cohort.tags.join(' · '),
         badge: cohort.source
       }))
     ];
@@ -368,7 +432,7 @@ export default function App() {
     return dataset.pseudoCohortAnalysis.allReports.map((report) => ({
       id: report.key,
       label: report.tags.join(' | '),
-      description: `${report.userCount} users Â· ${report.reportType}`,
+      description: `${report.userCount} users · ${report.reportType}`,
       badge: report.analystPriority
     }));
   }, [dataset.pseudoCohortAnalysis.allReports]);
@@ -407,6 +471,90 @@ export default function App() {
       label: 'Priority',
       render: (report) => <Badge tone={pseudoPriorityTone(report.analystPriority)}>{report.analystPriority}</Badge>,
       align: 'center'
+    }
+  ];
+
+  const signalColumns: ReportTableColumn<{
+    cohort: CohortAnchor;
+    weight: number;
+    evidence: number;
+    similarity: {
+      value: number;
+      evidence: number;
+      overlapCount: number;
+    };
+  }>[] = [
+    {
+      key: 'cohort',
+      label: 'Cohort',
+      render: (row) => (
+        <div className="table-cell-stack">
+          <strong>{row.cohort.label}</strong>
+          <span className="muted">{row.cohort.tags.join(' | ')}</span>
+        </div>
+      )
+    },
+    {
+      key: 'weight',
+      label: 'Signal',
+      render: (row) => <ProgressBar value={row.weight} label={formatSignedDecimal(row.weight)} tone="accent" />
+    },
+    {
+      key: 'evidence',
+      label: 'Evidence',
+      render: (row) => formatPercent(row.evidence),
+      align: 'right'
+    },
+    {
+      key: 'similarity',
+      label: 'Similarity',
+      render: (row) => formatSignedDecimal(row.similarity.value),
+      align: 'right'
+    },
+    {
+      key: 'overlap',
+      label: 'Overlap',
+      render: (row) => row.similarity.overlapCount,
+      align: 'right'
+    }
+  ];
+
+  const affinityColumns: ReportTableColumn<{
+    cohort: CohortAnchor;
+    estimate: CohortAffinityEstimate;
+  }>[] = [
+    {
+      key: 'cohort',
+      label: 'Cohort',
+      render: (row) => (
+        <div className="table-cell-stack">
+          <strong>{row.cohort.label}</strong>
+          <span className="muted">{row.cohort.tags.join(' | ')}</span>
+        </div>
+      )
+    },
+    {
+      key: 'affinity',
+      label: 'Affinity',
+      render: (row) => <ProgressBar value={(row.estimate.affinity + 1) / 2} label={formatSignedDecimal(row.estimate.affinity)} tone={row.estimate.affinity >= 0 ? 'success' : 'danger'} />
+    },
+    {
+      key: 'confidence',
+      label: 'Confidence',
+      render: (row) => formatPercent(row.estimate.confidence),
+      align: 'right'
+    },
+    {
+      key: 'evidence',
+      label: 'Evidence',
+      render: (row) => formatDecimal(row.estimate.effectiveWeight),
+      align: 'right'
+    },
+    {
+      key: 'ratings',
+      label: 'Ratings',
+      render: (row) => row.estimate.rawCount,
+      align: 'right'
     }
   ];
 
@@ -481,6 +629,39 @@ export default function App() {
         ))}
       </div>
 
+      <section className="detail-block">
+        <div className="section-heading">
+          <h4>Rater signal profile</h4>
+          <p>Cohort-local signal only. No tag-level trust weights are calculated here.</p>
+        </div>
+        <div className="metric-grid metric-grid--compact">
+          <MetricCard
+            label="Overall signal"
+            value={formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)}
+            helper="Strongest cohort-local signal score."
+            tone="accent"
+          />
+          <MetricCard
+            label="Signal evidence"
+            value={formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
+            helper="Evidence supporting the strongest positive cohort signal."
+          />
+          <MetricCard
+            label="Top cohort"
+            value={labelForCohort(selectedRaterSignalProfile?.topCohortId ?? null)}
+            helper="The cohort with the strongest visible behavioral signal."
+            tone="success"
+          />
+        </div>
+        <ReportTable
+          columns={signalColumns}
+          rows={signalRows}
+          getRowKey={(row) => row.cohort.id}
+          emptyTitle="No signal profile"
+          emptyDescription="This user has not yet accumulated enough overlap to form cohort-local signal."
+        />
+      </section>
+
       <div className="summary-inline">
         <Badge tone={diagnosisTone(selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS')}>
           {selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
@@ -534,6 +715,53 @@ export default function App() {
         <Badge tone="neutral">User rated: {selectedUserRatings}</Badge>
         <Badge tone="accent">Island comparison updates with selection</Badge>
       </div>
+
+      <section className="detail-block">
+        <div className="section-heading">
+          <h4>Cohort-local island affinity</h4>
+          <p>Weighted by rater signal only. Higher-signal raters count more for their strongest cohort.</p>
+        </div>
+        <div className="metric-grid metric-grid--compact">
+          <MetricCard
+            label="Top positive affinity"
+            value={selectedIslandAffinityReport?.topPositive ? labelForCohort(selectedIslandAffinityReport.topPositive.cohortId) : 'none'}
+            helper={
+              selectedIslandAffinityReport?.topPositive
+                ? `${formatSignedDecimal(selectedIslandPositiveAffinity)} affinity`
+                : 'No positive cohort estimate yet.'
+            }
+            tone="success"
+          />
+          <MetricCard
+            label="Top negative affinity"
+            value={selectedIslandAffinityReport?.topNegative ? labelForCohort(selectedIslandAffinityReport.topNegative.cohortId) : 'none'}
+            helper={
+              selectedIslandAffinityReport?.topNegative
+                ? `${formatSignedDecimal(selectedIslandNegativeAffinity)} affinity`
+                : 'No negative cohort estimate yet.'
+            }
+            tone="danger"
+          />
+          <MetricCard
+            label="Affinity evidence"
+            value={formatDecimal(selectedIslandEffectiveWeight)}
+            helper="Effective rater signal contributing to the island's top estimate."
+          />
+          <MetricCard
+            label="Weighted ratings"
+            value={selectedIslandRatingCount}
+            helper="Sparse events contributing to island/cohort affinity reports."
+          />
+        </div>
+        <ReportTable
+          columns={affinityColumns}
+          rows={affinityRows}
+          getRowKey={(row) => row.cohort.id}
+          onRowClick={(row) => setDrawerState({ type: 'affinity', islandId: selectedIsland.id, cohortId: row.cohort.id })}
+          emptyTitle="No island affinity"
+          emptyDescription="Select a different island or take more turns to accumulate weighted evidence."
+        />
+      </section>
     </div>
   ) : null;
 
@@ -555,9 +783,17 @@ export default function App() {
         <p>{selectedUserRatings} islands rated</p>
       </section>
       <section className="detail-block">
+        <h4>Rater signal</h4>
+        <p>
+          Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} · Evidence:{' '}
+          {formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
+        </p>
+        <p className="muted">Top cohort: {labelForCohort(selectedRaterSignalProfile?.topCohortId ?? null)}</p>
+      </section>
+      <section className="detail-block">
         <h4>Diagnosis</h4>
         <p>{selectedInference.diagnosis.message}</p>
-        <p className="muted">{selectedInference.diagnosis.reasons.join(' Â· ')}</p>
+        <p className="muted">{selectedInference.diagnosis.reasons.join(' | ')}</p>
       </section>
       <section className="detail-block">
         <h4>Debug</h4>
@@ -579,6 +815,17 @@ export default function App() {
         <h4>Visible ratings</h4>
         <p>User: {formatRating(selectedComparisonUserRating)}</p>
         <p>Cohort: {formatRating(selectedComparisonCohortRating)}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Cohort affinity</h4>
+        <ReportTable
+          columns={affinityColumns}
+          rows={affinityRows}
+          getRowKey={(row) => row.cohort.id}
+          onRowClick={(row) => setDrawerState({ type: 'affinity', islandId: selectedIsland.id, cohortId: row.cohort.id })}
+          emptyTitle="No island affinity"
+          emptyDescription="No weighted affinity exists for this island yet."
+        />
       </section>
       <section className="detail-block">
         <h4>Seeded cohort ratings</h4>
@@ -618,6 +865,57 @@ export default function App() {
       <section className="detail-block">
         <h4>Users</h4>
         <p className="muted">{selectedPseudoDetail.users.join(', ')}</p>
+      </section>
+    </div>
+  ) : null;
+
+  const selectedAffinityReport = drawerState?.type === 'affinity'
+    ? dataset.islandAffinityReports.get(drawerState.islandId) ?? null
+    : null;
+
+  const selectedAffinityCohort = drawerState?.type === 'affinity'
+    ? dataset.cohorts.find((cohort) => cohort.id === drawerState.cohortId) ?? null
+    : null;
+
+  const affinityDrawerContent = selectedAffinityDetail && selectedAffinityReport && selectedAffinityCohort ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>{selectedAffinityCohort.label}</h4>
+        <p className="muted">{selectedAffinityCohort.tags.join(' | ')}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Affinity summary</h4>
+        <p>Observed mean: {formatSignedDecimal(selectedAffinityDetail.observedMean)}</p>
+        <p>Affinity: {formatSignedDecimal(selectedAffinityDetail.affinity)}</p>
+        <p>Confidence: {formatPercent(selectedAffinityDetail.confidence)}</p>
+        <p>Effective weight: {formatDecimal(selectedAffinityDetail.effectiveWeight)}</p>
+        <p>Disagreement: {formatPercent(selectedAffinityDetail.disagreement)}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Ratings on this island</h4>
+        <p>Raw count: {selectedAffinityDetail.rawCount}</p>
+        <p>Positive: {selectedAffinityDetail.positiveCount}</p>
+        <p>Neutral: {selectedAffinityDetail.neutralCount}</p>
+        <p>Negative: {selectedAffinityDetail.negativeCount}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Rater contributions</h4>
+        <div className="detail-mini-table">
+          {selectedAffinityDetail.contributions.length > 0 ? (
+            selectedAffinityDetail.contributions.map((contribution) => (
+              <div key={`${contribution.userId}-${contribution.rating}-${contribution.raterSignal}`} className="detail-mini-table__row">
+                <span>{contribution.userId}</span>
+                <Badge tone={contribution.rating === 1 ? 'success' : contribution.rating === -1 ? 'danger' : 'warning'}>
+                  {formatRating(contribution.rating)}
+                </Badge>
+                <span className="muted">{formatDecimal(contribution.raterSignal)}</span>
+                <strong>{formatSignedDecimal(contribution.weightedContribution)}</strong>
+              </div>
+            ))
+          ) : (
+            <p className="muted">No weighted contributions yet.</p>
+          )}
+        </div>
       </section>
     </div>
   ) : null;
@@ -1142,6 +1440,20 @@ export default function App() {
         onClose={() => setDrawerState(null)}
       >
         {pseudoDrawerContent}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'affinity'}
+        title={
+          drawerState?.type === 'affinity'
+            ? `Affinity detail: ${dataset.islands.find((island) => island.id === drawerState.islandId)?.label ?? drawerState.islandId} / ${
+                selectedAffinityCohort?.label ?? drawerState.cohortId
+              }`
+            : 'Affinity detail'
+        }
+        onClose={() => setDrawerState(null)}
+      >
+        {affinityDrawerContent}
       </Drawer>
     </main>
   );

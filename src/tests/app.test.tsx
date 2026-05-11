@@ -9,6 +9,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Wayfarer analyst console');
     expect(html).toContain('Population Summary');
     expect(html).toContain('Selected User Summary');
+    expect(html).toContain('Rater signal profile');
+    expect(html).toContain('Cohort-local island affinity');
     expect(html).toContain('Model Explanation');
     expect(html).toContain('Island Comparison');
     expect(html).toContain('Pseudo-Cohort Reports');

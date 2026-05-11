@@ -783,6 +783,15 @@ select {
   gap: 12px;
 }
 
+.table-cell-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.table-cell-stack strong {
+  font-size: 0.95rem;
+}
+
 .section-toolbar {
   display: flex;
   justify-content: flex-end;
