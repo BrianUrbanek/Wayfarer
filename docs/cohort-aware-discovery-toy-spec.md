@@ -6,7 +6,7 @@ Build a toy implementation for testing and demonstrating a cohort-aware discover
 
 The prototype is not intended to model production behavior perfectly. Its purpose is to create a controlled synthetic dataset with known hidden structure, then test whether the algorithm can infer meaningful cohort alignment, signal quality, mismatch, retagging suggestions, and possible unknown-cohort behavior using only visible player tags and ratings.
 
-The planned implementation target is Godot, because it provides a simple IDE and GUI environment for visualizing graph-shaped, stateful systems.
+The current v0 implementation target is a browser-based TypeScript app, because that gives Codex a simple, testable development loop with standard command-line validation. Godot remains a possible later visualization target if the prototype benefits from a more game-like or spatial presentation, but it is not the initial implementation target.
 
 ## Core Concept
 
@@ -462,7 +462,7 @@ That should be high signal, even if there is no single perfect moderator match.
 
 Long-term, signal should compare the declared mixture profile to the observed behavioral mixture profile.
 
-## UI / Godot Prototype Requirements
+## UI / Browser Prototype Requirements
 
 The prototype should prioritize legibility over polish.
 
