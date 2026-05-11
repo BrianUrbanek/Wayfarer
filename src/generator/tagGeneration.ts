@@ -1,5 +1,5 @@
-import type { CohortAnchor, TagId } from '../model/types';
-import type { SeededRng } from './seededRandom';
+import type { CohortAnchor, TagId } from '../model/types.js';
+import type { SeededRng } from './seededRandom.js';
 
 function uniqueSample<T>(values: readonly T[], count: number, rng: SeededRng): T[] {
   if (count <= 0 || values.length === 0) {

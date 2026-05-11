@@ -1,6 +1,6 @@
-import type { CohortAnchor, Island, IslandId, MaybeRating, Rating } from '../model/types';
-import { ratingsToVector } from '../model/vectors';
-import type { SeededRng } from './seededRandom';
+import type { CohortAnchor, Island, IslandId, MaybeRating, Rating } from '../model/types.js';
+import { ratingsToVector } from '../model/vectors.js';
+import type { SeededRng } from './seededRandom.js';
 
 function invertRating(rating: Rating): Rating {
   if (rating === 1) {

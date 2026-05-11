@@ -1,4 +1,4 @@
-import type { MaybeRating, SimilarityResult } from './types';
+import type { MaybeRating, SimilarityResult } from './types.js';
 
 export function cosineSimilarity(a: readonly number[], b: readonly number[]): number {
   const length = Math.max(a.length, b.length);

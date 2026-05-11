@@ -1,4 +1,4 @@
-import { cosineSimilarity, pearsonCorrelation } from './similarity';
+import { cosineSimilarity, pearsonCorrelation } from './similarity.js';
 import type {
   CohortAnchor,
   CohortId,
@@ -7,9 +7,9 @@ import type {
   SimilarityResult,
   TagId,
   User
-} from './types';
-import { ratingsToVector, tagsToVector } from './vectors';
-import { DEFAULT_THRESHOLDS, diagnoseInference, type DiagnosisThresholds } from './diagnostics';
+} from './types.js';
+import { ratingsToVector, tagsToVector } from './vectors.js';
+import { DEFAULT_THRESHOLDS, diagnoseInference, type DiagnosisThresholds } from './diagnostics.js';
 
 export interface CohortSimilarity {
   cohortId: CohortId;

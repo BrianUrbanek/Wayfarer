@@ -1,4 +1,4 @@
-import type { TagId } from '../model/types';
+import type { TagId } from '../model/types.js';
 
 export const DEFAULT_TAGS: TagId[] = [
   'Competitive',

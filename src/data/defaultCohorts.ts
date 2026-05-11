@@ -1,4 +1,4 @@
-import type { CohortAnchor } from '../model/types';
+import type { CohortAnchor } from '../model/types.js';
 
 export function createDefaultCohorts(): CohortAnchor[] {
   return [

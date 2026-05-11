@@ -1,4 +1,4 @@
-import type { CohortAnchor, CohortMatch, CohortId, Diagnosis, DiagnosisType, TagId } from './types';
+import type { CohortAnchor, CohortMatch, CohortId, Diagnosis, DiagnosisType, TagId } from './types.js';
 
 export interface DiagnosisThresholds {
   highSignal: number;
@@ -79,7 +79,7 @@ export function diagnoseInference(
     input.declaredTop.cohortId !== null &&
     input.behaviorTop.cohortId !== null &&
     input.declaredTop.score >= thresholds.strongCohortMatch &&
-    input.behaviorTop.score >= thresholds.strongCohortMatch &&
+    input.behaviorTop.score >= thresholds.mediumCohortMatch &&
     input.declaredTop.cohortId !== input.behaviorTop.cohortId
   ) {
     type = 'MISMATCH_RETAG';

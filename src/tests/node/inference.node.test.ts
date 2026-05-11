@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import {
   computeBehaviorDistribution,
   computeBehavioralSimilarities,
@@ -9,8 +10,8 @@ import {
   computeInverseBehaviorDistribution,
   computeInverseBehavioralSimilarities,
   topCohortMatch
-} from '../model/inference';
-import type { CohortAnchor, Island, MaybeRating, User } from '../model/types';
+} from '../../model/inference.js';
+import type { CohortAnchor, Island, MaybeRating, User } from '../../model/types.js';
 
 function buildFixture() {
   const islands: Island[] = [
@@ -91,24 +92,20 @@ describe('inference pipeline', () => {
 
   it('matches Cohort A when tags and ratings both align', () => {
     const user = buildVisibleUser('Cohort A user', cohortA.tags, ratingVectorFromCohort(cohortA));
-
     const inference = computeInference(user, dataset.cohorts, dataset.allTags, dataset.islands);
-
-    expect(topCohortMatch(inference.declaredDistribution).cohortId).toBe(cohortA.id);
-    expect(topCohortMatch(inference.behaviorDistribution).cohortId).toBe(cohortA.id);
-    expect(inference.diagnosis.type).toBe('HIGH_SIGNAL');
-    expect(inference.effectiveSignal).toBeGreaterThanOrEqual(0.75);
+    assert.equal(topCohortMatch(inference.declaredDistribution).cohortId, cohortA.id);
+    assert.equal(topCohortMatch(inference.behaviorDistribution).cohortId, cohortA.id);
+    assert.equal(inference.diagnosis.type, 'HIGH_SIGNAL');
+    assert.ok(inference.effectiveSignal >= 0.75);
   });
 
   it('prefers retag mismatch when declared and behavioral top cohorts differ', () => {
     const user = buildVisibleUser('Mismatch user', cohortA.tags, ratingVectorFromCohort(cohortB));
-
     const inference = computeInference(user, dataset.cohorts, dataset.allTags, dataset.islands);
-
-    expect(topCohortMatch(inference.declaredDistribution).cohortId).toBe(cohortA.id);
-    expect(topCohortMatch(inference.behaviorDistribution).cohortId).toBe(cohortB.id);
-    expect(inference.diagnosis.type).toBe('MISMATCH_RETAG');
-    expect(inference.diagnosis.suggestedCohortId).toBe(cohortB.id);
+    assert.equal(topCohortMatch(inference.declaredDistribution).cohortId, cohortA.id);
+    assert.equal(topCohortMatch(inference.behaviorDistribution).cohortId, cohortB.id);
+    assert.equal(inference.diagnosis.type, 'MISMATCH_RETAG');
+    assert.equal(inference.diagnosis.suggestedCohortId, cohortB.id);
   });
 
   it('ignores hidden seed when visible tags and ratings match Cohort B', () => {
@@ -120,10 +117,9 @@ describe('inference pipeline', () => {
     );
 
     const inference = computeInference(visibleMatch, dataset.cohorts, dataset.allTags, dataset.islands);
-
-    expect(topCohortMatch(inference.declaredDistribution).cohortId).toBe(cohortB.id);
-    expect(topCohortMatch(inference.behaviorDistribution).cohortId).toBe(cohortB.id);
-    expect(inference.diagnosis.type).toBe('HIGH_SIGNAL');
+    assert.equal(topCohortMatch(inference.declaredDistribution).cohortId, cohortB.id);
+    assert.equal(topCohortMatch(inference.behaviorDistribution).cohortId, cohortB.id);
+    assert.equal(inference.diagnosis.type, 'HIGH_SIGNAL');
   });
 
   it('recognizes a strongly inverted rating profile', () => {
@@ -150,16 +146,14 @@ describe('inference pipeline', () => {
       })
     );
     const user = buildVisibleUser('Inverse user', inverseA.tags, invertedRatings);
-
     const inference = computeInference(
       user,
       inverseFixture.cohorts,
       inverseFixture.allTags,
       inverseFixture.islands
     );
-
-    expect(topCohortMatch(inference.inverseBehaviorDistribution).cohortId).toBe(inverseA.id);
-    expect(inference.diagnosis.type).toBe('INVERSE_PROFILE');
+    assert.equal(topCohortMatch(inference.inverseBehaviorDistribution).cohortId, inverseA.id);
+    assert.equal(inference.diagnosis.type, 'INVERSE_PROFILE');
   });
 
   it('treats sparse noisy ratings as unknown or ambiguous', () => {
@@ -167,10 +161,8 @@ describe('inference pipeline', () => {
       dataset.islands.map((island) => [island.id, null as MaybeRating])
     );
     const user = buildVisibleUser('Random user', cohortC.tags, randomRatings);
-
     const inference = computeInference(user, dataset.cohorts, dataset.allTags, dataset.islands);
-
-    expect(['UNKNOWN_OR_NOISY', 'AMBIGUOUS']).toContain(inference.diagnosis.type);
+    assert.ok(['UNKNOWN_OR_NOISY', 'AMBIGUOUS'].includes(inference.diagnosis.type));
   });
 
   it('keeps blended A/B users medium-to-high signal without forcing a single cohort', () => {
@@ -182,18 +174,15 @@ describe('inference pipeline', () => {
       'i-4': -1
     };
     const user = buildVisibleUser('Blended user', blendedTags, blendedRatings);
-
     const inference = computeInference(user, dataset.cohorts, dataset.allTags, dataset.islands);
-
-    expect(inference.effectiveSignal).toBeGreaterThan(0.5);
-    expect(inference.declaredTop.score).toBeLessThan(0.8);
-    expect(inference.behaviorTop.score).toBeLessThan(0.8);
-    expect(['HIGH_SIGNAL', 'AMBIGUOUS']).toContain(inference.diagnosis.type);
+    assert.ok(inference.effectiveSignal > 0.5);
+    assert.ok(inference.declaredTop.score < 0.8);
+    assert.ok(inference.behaviorTop.score < 0.8);
+    assert.ok(['HIGH_SIGNAL', 'AMBIGUOUS'].includes(inference.diagnosis.type));
   });
 
   it('exposes intermediate helper outputs', () => {
     const user = buildVisibleUser('Helper user', cohortA.tags, ratingVectorFromCohort(cohortA));
-
     const declaredSimilarities = computeDeclaredSimilarities(user, dataset.cohorts, dataset.allTags);
     const behavioralSimilarities = computeBehavioralSimilarities(user, dataset.cohorts, dataset.islands);
     const inverseBehavioralSimilarities = computeInverseBehavioralSimilarities(
@@ -208,13 +197,12 @@ describe('inference pipeline', () => {
       declaredEvidence: 1,
       behavioralEvidence: 1
     });
-
-    expect(declaredSimilarities).toHaveLength(dataset.cohorts.length);
-    expect(behavioralSimilarities).toHaveLength(dataset.cohorts.length);
-    expect(inverseBehavioralSimilarities).toHaveLength(dataset.cohorts.length);
-    expect(declaredDistribution).toHaveLength(dataset.cohorts.length);
-    expect(behaviorDistribution).toHaveLength(dataset.cohorts.length);
-    expect(inverseBehaviorDistribution).toHaveLength(dataset.cohorts.length);
-    expect(signal.signalFit).toBeGreaterThan(0.8);
+    assert.equal(declaredSimilarities.length, dataset.cohorts.length);
+    assert.equal(behavioralSimilarities.length, dataset.cohorts.length);
+    assert.equal(inverseBehavioralSimilarities.length, dataset.cohorts.length);
+    assert.equal(declaredDistribution.length, dataset.cohorts.length);
+    assert.equal(behaviorDistribution.length, dataset.cohorts.length);
+    assert.equal(inverseBehaviorDistribution.length, dataset.cohorts.length);
+    assert.ok(signal.signalFit > 0.8);
   });
 });

@@ -1,5 +1,5 @@
-import type { CohortAnchor, CohortId, Island, IslandClass, Rating } from '../model/types';
-import type { SeededRng } from './seededRandom';
+import type { CohortAnchor, CohortId, Island, IslandClass, Rating } from '../model/types.js';
+import type { SeededRng } from './seededRandom.js';
 
 export interface IslandGenerationOptions {
   rng: SeededRng;

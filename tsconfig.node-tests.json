@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": false,
+    "isolatedModules": false,
+    "noEmit": false,
+    "outDir": "dist-node-tests",
+    "rootDir": "src",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/model/**/*.ts",
+    "src/generator/**/*.ts",
+    "src/data/**/*.ts",
+    "src/tests/node/**/*.ts"
+  ]
+}

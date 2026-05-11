@@ -5,11 +5,11 @@ import type {
   IslandClass,
   TagId,
   User
-} from '../model/types';
-import { generateIslands } from './islandGeneration';
-import { generateAlignedRatings, materializeCohortRatings } from './ratingGeneration';
-import { createSeededRandom } from './seededRandom';
-import { generateSeedLikeUserTags } from './tagGeneration';
+} from '../model/types.js';
+import { generateIslands } from './islandGeneration.js';
+import { generateAlignedRatings, materializeCohortRatings } from './ratingGeneration.js';
+import { createSeededRandom } from './seededRandom.js';
+import { generateSeedLikeUserTags } from './tagGeneration.js';
 
 export type AlignmentDistribution =
   | number

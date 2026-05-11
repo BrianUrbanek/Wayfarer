@@ -1,4 +1,4 @@
-import type { Island, IslandId, MaybeRating, TagId } from './types';
+import type { Island, IslandId, MaybeRating, TagId } from './types.js';
 
 export function tagsToVector(tags: TagId[], allTags: TagId[]): number[] {
   const tagSet = new Set(tags);

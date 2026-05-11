@@ -7,7 +7,10 @@
     "dev": "vite --configLoader runner",
     "build": "tsc -b && vite build --configLoader runner",
     "preview": "vite preview",
-    "test": "vitest run --configLoader runner"
+    "test": "vitest run --configLoader runner",
+    "clean:node-tests": "node -e \"require('fs').rmSync('dist-node-tests',{recursive:true,force:true})\"",
+    "build:node-tests": "tsc -p tsconfig.node-tests.json",
+    "test:node": "npm run clean:node-tests && npm run build:node-tests && node dist-node-tests/tests/node/index.node.test.js"
   },
   "dependencies": {
     "react": "^18.3.1",
