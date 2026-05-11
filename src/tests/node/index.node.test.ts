@@ -4,5 +4,6 @@ import './diagnostics.node.test.js';
 import './inference.node.test.js';
 import './raterSignal.node.test.js';
 import './affinity.node.test.js';
+import './recommendations.node.test.js';
 import './pseudoCohorts.node.test.js';
 import './simulation.node.test.js';

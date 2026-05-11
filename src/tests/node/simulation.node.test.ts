@@ -4,7 +4,9 @@ import { DEFAULT_TAGS } from '../../data/defaultTags.js';
 import { createDefaultCohorts } from '../../data/defaultCohorts.js';
 import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { computeInference } from '../../model/inference.js';
+import { recommendIslandsForUser } from '../../model/recommendations.js';
 import {
+  advanceActiveTurn,
   advancePassiveTurn,
   createInitialSimulationState,
   deriveVisibleUsersFromEvents,
@@ -69,6 +71,16 @@ describe('simulation layer', () => {
       assert.equal(before?.ratings[event.islandId] ?? null, null);
       assert.equal(after?.ratings[event.islandId] ?? null, event.rating);
     }
+  });
+
+  it('keeps passive turn events marked as passive', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+    const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
+
+    assert.ok(freshEvents.length > 0);
+    assert.equal(freshEvents.every((event) => event.source === 'passive'), true);
   });
 
   it('preserves neutral 0 ratings separately from unrated nulls', () => {
@@ -151,5 +163,38 @@ describe('simulation layer', () => {
 
     assert.equal(next.raterSignalProfiles.size, next.users.length);
     assert.equal(next.islandAffinityReports.size, next.islands.length);
+  });
+
+  it('routes active turns from pre-turn recommendations and marks events as active', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
+    const preTurnRecommendations = new Map(
+      state.users.map((user) => [
+        user.id,
+        recommendIslandsForUser(
+          user,
+          state.islandAffinityReports,
+          state.raterSignalProfiles,
+          state.islands,
+          { explorationWeight: 0.55, minPredictedFitFloor: -1, topLimit: 8 }
+        ).recommendations.map((recommendation) => recommendation.islandId)
+      ])
+    );
+    const next = advanceActiveTurn(state, {
+      activeUsersPerTurn: 4,
+      routedIslandsPerActiveUser: 3,
+      explorationWeight: 0.55,
+      minPredictedFitFloor: -1
+    });
+    const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
+
+    assert.equal(next.turnHistory.at(-1)?.mode, 'active');
+    assert.ok(freshEvents.length > 0);
+    assert.equal(freshEvents.every((event) => event.source === 'active'), true);
+
+    for (const event of freshEvents) {
+      assert.equal(state.users.find((user) => user.id === event.userId)?.ratings[event.islandId] ?? null, null);
+      assert.ok((preTurnRecommendations.get(event.userId) ?? []).includes(event.islandId));
+    }
   });
 });

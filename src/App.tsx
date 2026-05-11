@@ -14,7 +14,9 @@ import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
 import type { CohortAffinityEstimate } from './model/affinity';
 import type { PseudoCohortReport } from './model/pseudoCohorts';
+import { recommendIslandsForUser, type IslandRecommendation } from './model/recommendations';
 import {
+  advanceActiveTurn,
   advancePassiveTurn,
   createInitialSimulationState,
   type SimulationState
@@ -33,8 +35,11 @@ type DrawerState =
   | { type: 'user'; id: string }
   | { type: 'island'; id: string }
   | { type: 'pseudo'; key: string }
+  | { type: 'recommendation'; userId: string; islandId: string }
   | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
+
+type TurnMode = 'passive' | 'active';
 
 function buildDataset(seed: number, numUsers: number, numIslands: number) {
   return generateColumbusDataset({
@@ -192,6 +197,10 @@ export default function App() {
   const [initialRatingsPerUser, setInitialRatingsPerUser] = useState(4);
   const [activeUsersPerTurn, setActiveUsersPerTurn] = useState(6);
   const [maxRatingsPerActiveUser, setMaxRatingsPerActiveUser] = useState(3);
+  const [turnMode, setTurnMode] = useState<TurnMode>('passive');
+  const [explorationWeight, setExplorationWeight] = useState(0.55);
+  const [minPredictedFitFloor, setMinPredictedFitFloor] = useState(0.2);
+  const [routedIslandsPerActiveUser, setRoutedIslandsPerActiveUser] = useState(2);
   const [turnBatchCount, setTurnBatchCount] = useState(5);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
@@ -300,6 +309,34 @@ export default function App() {
   );
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
+  const routingOptions = useMemo(
+    () => ({
+      explorationWeight,
+      minPredictedFitFloor,
+      topLimit: Math.max(8, routedIslandsPerActiveUser * 2)
+    }),
+    [explorationWeight, minPredictedFitFloor, routedIslandsPerActiveUser]
+  );
+
+  const selectedUserRecommendations = useMemo(() => {
+    if (!selectedUser) {
+      return [] as IslandRecommendation[];
+    }
+
+    return recommendIslandsForUser(
+      selectedUser,
+      dataset.islandAffinityReports,
+      dataset.raterSignalProfiles,
+      dataset.islands,
+      routingOptions
+    ).recommendations;
+  }, [dataset.islandAffinityReports, dataset.islands, dataset.raterSignalProfiles, routingOptions, selectedUser]);
+
+  const selectedRecommendationDetail =
+    drawerState?.type === 'recommendation' && selectedUser
+      ? selectedUserRecommendations.find((recommendation) => recommendation.islandId === drawerState.islandId) ?? null
+      : null;
+
   const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1] ?? null;
   const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
   const selectedUserTopCohorts = selectedInference
@@ -558,6 +595,48 @@ export default function App() {
     }
   ];
 
+  const recommendationColumns: ReportTableColumn<IslandRecommendation>[] = [
+    {
+      key: 'island',
+      label: 'Island',
+      render: (row) => (
+        <div className="table-cell-stack">
+          <strong>{dataset.islands.find((island) => island.id === row.islandId)?.label ?? row.islandId}</strong>
+          <span className="muted">{row.explanation}</span>
+        </div>
+      )
+    },
+    {
+      key: 'kind',
+      label: 'Kind',
+      render: (row) => <Badge tone={row.recommendationKind === 'SAFE_FIT' ? 'success' : 'warning'}>{row.recommendationKind === 'SAFE_FIT' ? 'Safe fit' : 'Discovery probe'}</Badge>,
+      align: 'center'
+    },
+    {
+      key: 'fit',
+      label: 'Predicted fit',
+      render: (row) => <ProgressBar value={(row.predictedFit + 1) / 2} label={formatSignedDecimal(row.predictedFit)} tone={row.predictedFit >= 0 ? 'success' : 'danger'} />
+    },
+    {
+      key: 'support',
+      label: 'Support',
+      render: (row) => formatPercent(row.affinitySupport),
+      align: 'right'
+    },
+    {
+      key: 'discovery',
+      label: 'Discovery',
+      render: (row) => formatPercent(row.discoveryValue),
+      align: 'right'
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      render: (row) => formatDecimal(row.recommendationScore),
+      align: 'right'
+    }
+  ];
+
   const selectedUserSummary = selectedInference ? (
     <div className="stack">
       <div className="summary-header">
@@ -670,6 +749,74 @@ export default function App() {
       </div>
     </div>
   ) : null;
+
+  const discoveryRoutingSummary = selectedUser ? (
+    <div className="stack">
+      <div className="summary-header">
+        <div>
+          <p className="eyebrow">Discovery routing</p>
+          <h3>Recommended unrated islands</h3>
+        </div>
+        <div className="summary-header__actions">
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={() =>
+              setDrawerState(
+                selectedUserRecommendations[0]
+                  ? {
+                      type: 'recommendation',
+                      userId: selectedUser.id,
+                      islandId: selectedUserRecommendations[0].islandId
+                    }
+                  : null
+              )
+            }
+          >
+            Open top recommendation
+          </button>
+          <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
+            Select user
+          </button>
+        </div>
+      </div>
+
+      <div className="metric-grid metric-grid--compact">
+        <MetricCard
+          label="Turn mode"
+          value={turnMode === 'active' ? 'Active discovery' : 'Passive random'}
+          helper="Recommendations only route unrated islands, then the next turn updates the event log."
+          tone={turnMode === 'active' ? 'accent' : 'neutral'}
+        />
+        <MetricCard
+          label="Exploration weight"
+          value={formatDecimal(explorationWeight, 2)}
+          helper="How much discovery value can influence the final route score."
+        />
+        <MetricCard
+          label="Fit floor"
+          value={formatDecimal(minPredictedFitFloor, 2)}
+          helper="Minimum predicted fit required before an island can be routed."
+        />
+        <MetricCard
+          label="Route count"
+          value={routedIslandsPerActiveUser}
+          helper="How many unrated islands each active user can receive per active turn."
+        />
+      </div>
+
+      <ReportTable
+        columns={recommendationColumns}
+        rows={selectedUserRecommendations}
+        getRowKey={(row) => row.islandId}
+        onRowClick={(row) => setDrawerState({ type: 'recommendation', userId: selectedUser.id, islandId: row.islandId })}
+        emptyTitle="No unrated recommendations"
+        emptyDescription="The current user has no unrated islands that clear the predicted-fit floor."
+      />
+    </div>
+  ) : (
+    <EmptyState title="Select a user" description="Discovery routing appears once a user is selected." />
+  );
 
   const selectedIslandSummary = selectedIsland ? (
     <div className="stack">
@@ -846,6 +993,44 @@ export default function App() {
   const selectedPseudoDetail = drawerState?.type === 'pseudo'
     ? dataset.pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key) ?? null
     : null;
+
+  const selectedRecommendation = selectedRecommendationDetail;
+  const recommendationDrawerContent = selectedRecommendation ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>{dataset.islands.find((island) => island.id === selectedRecommendation.islandId)?.label ?? selectedRecommendation.islandId}</h4>
+        <p className="muted">{selectedRecommendation.recommendationKind === 'SAFE_FIT' ? 'Safe fit' : 'Discovery probe'}</p>
+        <p>{selectedRecommendation.explanation}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Recommendation metrics</h4>
+        <p>Predicted fit: {formatSignedDecimal(selectedRecommendation.predictedFit)}</p>
+        <p>Affinity support: {formatPercent(selectedRecommendation.affinitySupport)}</p>
+        <p>Discovery value: {formatPercent(selectedRecommendation.discoveryValue)}</p>
+        <p>Final score: {formatDecimal(selectedRecommendation.recommendationScore)}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Top cohort affinities</h4>
+        <div className="detail-mini-table">
+          {selectedRecommendation.topCohorts.map((entry) => (
+            <div key={entry.cohortId} className="detail-mini-table__row">
+              <span>{labelForCohort(entry.cohortId)}</span>
+              <span className="muted">
+                {formatSignedDecimal(entry.affinity)} · confidence {formatPercent(entry.confidence)} · evidence {formatDecimal(entry.effectiveWeight)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="detail-block">
+        <h4>Routing note</h4>
+        <p>
+          This recommendation is based on the user&apos;s current sparse ratings and the island&apos;s cohort-local affinity
+          report before the next turn. The same routing path can feed either passive or active discovery turns.
+        </p>
+      </section>
+    </div>
+  ) : null;
 
   const pseudoDrawerContent = selectedPseudoDetail ? (
     <div className="detail-stack">
@@ -1057,6 +1242,22 @@ export default function App() {
     setSeed(Math.floor(Math.random() * 1_000_000_000));
   };
 
+  const advanceCurrentTurn = (state: SimulationState) => {
+    if (turnMode === 'active') {
+      return advanceActiveTurn(state, {
+        activeUsersPerTurn,
+        routedIslandsPerActiveUser,
+        explorationWeight,
+        minPredictedFitFloor
+      });
+    }
+
+    return advancePassiveTurn(state, {
+      activeUsersPerTurn,
+      maxRatingsPerActiveUser
+    });
+  };
+
   return (
     <main className="app-shell analyst-console">
       <header className="hero">
@@ -1116,6 +1317,46 @@ export default function App() {
             />
           </label>
           <label className="control">
+            <span>Turn mode</span>
+            <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+              <option value="passive">Passive / random</option>
+              <option value="active">Active discovery</option>
+            </select>
+          </label>
+          <label className="control">
+            <span>Exploration weight</span>
+            <input
+              type="number"
+              value={explorationWeight}
+              onChange={(event) => setExplorationWeight(Number(event.target.value))}
+              min={0}
+              max={2}
+              step={0.05}
+            />
+          </label>
+          <label className="control">
+            <span>Fit floor</span>
+            <input
+              type="number"
+              value={minPredictedFitFloor}
+              onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
+              min={-1}
+              max={1}
+              step={0.05}
+            />
+          </label>
+          <label className="control">
+            <span>Routed / active user</span>
+            <input
+              type="number"
+              value={routedIslandsPerActiveUser}
+              onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
+              min={1}
+              max={8}
+              step={1}
+            />
+          </label>
+          <label className="control">
             <span>Active users / turn</span>
             <input
               type="number"
@@ -1127,7 +1368,7 @@ export default function App() {
             />
           </label>
           <label className="control">
-            <span>Ratings / user</span>
+            <span>Passive ratings / user</span>
             <input
               type="number"
               value={maxRatingsPerActiveUser}
@@ -1156,14 +1397,7 @@ export default function App() {
           <button
             type="button"
             className="button"
-            onClick={() =>
-              setSimulationState((state) =>
-                advancePassiveTurn(state, {
-                  activeUsersPerTurn,
-                  maxRatingsPerActiveUser
-                })
-              )
-            }
+            onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}
           >
             Take 1 Turn
           </button>
@@ -1175,10 +1409,7 @@ export default function App() {
                 let next = state;
 
                 for (let index = 0; index < turnBatchCount; index += 1) {
-                  next = advancePassiveTurn(next, {
-                    activeUsersPerTurn,
-                    maxRatingsPerActiveUser
-                  });
+                  next = advanceCurrentTurn(next);
                 }
 
                 return next;
@@ -1203,15 +1434,25 @@ export default function App() {
         <Panel title="Turn Summary" className="panel--full">
           <div className="metric-grid metric-grid--compact">
             <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
+            <MetricCard
+              label="Mode"
+              value={currentTurnSummary?.mode === 'active' ? 'Active discovery' : 'Passive random'}
+              helper="How the most recent turn created rating events."
+            />
             <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
             <MetricCard label="Ratings this turn" value={currentTurnSummary?.ratingsCreated ?? 0} />
             <MetricCard label="Active users this turn" value={currentTurnSummary?.activeUserIds.length ?? 0} />
             <MetricCard label="New islands rated" value={currentTurnSummary?.newlyRatedIslandIds.length ?? 0} />
+            <MetricCard label="Safe fits routed" value={currentTurnSummary?.recommendationKinds.SAFE_FIT ?? 0} />
+            <MetricCard
+              label="Discovery probes"
+              value={currentTurnSummary?.recommendationKinds.DISCOVERY_PROBE ?? 0}
+            />
           </div>
           <div className="summary-inline">
             {(dataset.turnHistory.slice(-3) ?? []).map((turn) => (
               <Badge key={turn.turn} tone="neutral">
-                Turn {turn.turn}: {turn.ratingsCreated} ratings
+                Turn {turn.turn}: {turn.mode === 'active' ? 'active' : 'passive'} · {turn.ratingsCreated} ratings
               </Badge>
             ))}
           </div>
@@ -1243,6 +1484,10 @@ export default function App() {
 
         <Panel title="Selected User Summary">
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
+        </Panel>
+
+        <Panel title="Discovery Routing" className="panel--wide">
+          {discoveryRoutingSummary}
         </Panel>
 
         <Panel title="Selected Island Summary">
@@ -1440,6 +1685,20 @@ export default function App() {
         onClose={() => setDrawerState(null)}
       >
         {pseudoDrawerContent}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'recommendation'}
+        title={
+          drawerState?.type === 'recommendation'
+            ? `Recommendation detail: ${
+                dataset.islands.find((island) => island.id === drawerState.islandId)?.label ?? drawerState.islandId
+              }`
+            : 'Recommendation detail'
+        }
+        onClose={() => setDrawerState(null)}
+      >
+        {recommendationDrawerContent}
       </Drawer>
 
       <Drawer
