@@ -5,9 +5,10 @@ interface ModalProps extends PropsWithChildren {
   open: boolean;
   title: string;
   onClose: () => void;
+  placement?: 'center' | 'top';
 }
 
-export function Modal({ open, title, onClose, children }: ModalProps) {
+export function Modal({ open, title, onClose, children, placement = 'center' }: ModalProps) {
   useEffect(() => {
     if (!open) {
       return;
@@ -41,9 +42,13 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
   }
 
   return (
-    <div className="overlay overlay--modal" role="presentation" onMouseDown={onClose}>
+    <div
+      className={`overlay overlay--modal ${placement === 'top' ? 'overlay--modal-top' : ''}`}
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <div
-        className="modal"
+        className={`modal ${placement === 'top' ? 'modal--top' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

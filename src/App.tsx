@@ -3,6 +3,7 @@ import { Badge } from './ui/components/Badge';
 import { Drawer } from './ui/components/Drawer';
 import { EmptyState } from './ui/components/EmptyState';
 import { MetricCard } from './ui/components/MetricCard';
+import { Modal } from './ui/components/Modal';
 import { Panel } from './ui/components/Panel';
 import { ProgressBar } from './ui/components/ProgressBar';
 import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
@@ -352,7 +353,7 @@ export default function App() {
       {
         id: 'auto',
         label: 'Behavior top (auto)',
-        description: 'Use the current userâ€™s strongest behavioral match.'
+        description: "Use the current user's strongest behavioral match."
       },
       ...dataset.cohorts.map((cohort) => ({
         id: cohort.id,
@@ -438,7 +439,7 @@ export default function App() {
         <MetricCard
           label="Identity/Behavior Fit"
           value={selectedInference.signalFit.toFixed(3)}
-          helper="Do this playerâ€™s declared tags and observed ratings point toward the same cohort pattern?"
+          helper="Do this player's declared tags and observed ratings point toward the same cohort pattern?"
           tone="accent"
         />
         <MetricCard
@@ -450,7 +451,7 @@ export default function App() {
         <MetricCard
           label="Usable Signal"
           value={selectedInference.effectiveSignal.toFixed(3)}
-          helper="How much weight the system should currently give this playerâ€™s ratings."
+          helper="How much weight the system should currently give this player's ratings."
           tone="success"
         />
       </div>
@@ -507,7 +508,7 @@ export default function App() {
       </div>
 
       <div className="metric-grid metric-grid--compact">
-        <MetricCard label="User rating" value={selectedComparisonUserRating ?? 'â€”'} helper="Visible rating from the selected user." />
+        <MetricCard label="User rating" value={formatRating(selectedComparisonUserRating)} helper="Visible rating from the selected user." />
         <MetricCard
           label="Comparison cohort"
           value={selectedComparisonLabel}
@@ -515,15 +516,15 @@ export default function App() {
         />
         <MetricCard
           label="Cohort rating"
-          value={selectedComparisonCohortRating ?? 'â€”'}
-          helper="The selected cohortâ€™s rating on this island."
+          value={formatRating(selectedComparisonCohortRating)}
+          helper="The selected cohort's rating on this island."
         />
         <MetricCard
           label="Exact match rate"
           value={
             exactMatchRate
               ? `${exactMatchRate.matches}/${exactMatchRate.rated} (${formatPercent(exactMatchRate.rate)})`
-              : 'â€”'
+              : 'Unrated'
           }
           helper="Matches across islands both the user and comparison cohort rated."
         />
@@ -576,8 +577,8 @@ export default function App() {
       </section>
       <section className="detail-block">
         <h4>Visible ratings</h4>
-        <p>User: {selectedComparisonUserRating ?? 'â€”'}</p>
-        <p>Cohort: {selectedComparisonCohortRating ?? 'â€”'}</p>
+        <p>User: {formatRating(selectedComparisonUserRating)}</p>
+        <p>Cohort: {formatRating(selectedComparisonCohortRating)}</p>
       </section>
       <section className="detail-block">
         <h4>Seeded cohort ratings</h4>
@@ -586,7 +587,7 @@ export default function App() {
             <div key={cohort.id} className="detail-mini-table__row">
               <span>{cohort.label}</span>
               <Badge tone={rating === 1 ? 'success' : rating === -1 ? 'danger' : 'warning'}>
-                {rating ?? 'â€”'}
+                {formatRating(rating)}
               </Badge>
             </div>
           ))}
@@ -773,125 +774,129 @@ export default function App() {
       </header>
 
       <section className="control-strip" aria-label="Dashboard controls">
-        <label className="control">
-          <span>Seed</span>
-          <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-        </label>
-        <label className="control">
-          <span>Users</span>
-          <input
-            type="number"
-            value={numUsers}
-            onChange={(event) => setNumUsers(Number(event.target.value))}
-            min={1}
-            max={400}
-            step={1}
-          />
-        </label>
-        <label className="control">
-          <span>Islands</span>
-          <input
-            type="number"
-            value={numIslands}
-            onChange={(event) => setNumIslands(Number(event.target.value))}
-            min={4}
-            max={96}
-            step={1}
-          />
-        </label>
-        <label className="control">
-          <span>Initial ratings</span>
-          <input
-            type="number"
-            value={initialRatingsPerUser}
-            onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
-            min={1}
-            max={12}
-            step={1}
-          />
-        </label>
-        <label className="control">
-          <span>Active users / turn</span>
-          <input
-            type="number"
-            value={activeUsersPerTurn}
-            onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
-            min={1}
-            max={96}
-            step={1}
-          />
-        </label>
-        <label className="control">
-          <span>Ratings / user</span>
-          <input
-            type="number"
-            value={maxRatingsPerActiveUser}
-            onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
-            min={1}
-            max={8}
-            step={1}
-          />
-        </label>
-        <label className="control">
-          <span>Turn batch</span>
-          <input
-            type="number"
-            value={turnBatchCount}
-            onChange={(event) => setTurnBatchCount(Number(event.target.value))}
-            min={1}
-            max={20}
-            step={1}
-          />
-        </label>
-        <button type="button" className="button" onClick={randomizeSeed}>
-          Regenerate dataset
-        </button>
-        <button
-          type="button"
-          className="button"
-          onClick={() =>
-            setSimulationState((state) =>
-              advancePassiveTurn(state, {
-                activeUsersPerTurn,
-                maxRatingsPerActiveUser
-              })
-            )
-          }
-        >
-          Take 1 Turn
-        </button>
-        <button
-          type="button"
-          className="button"
-          onClick={() =>
-            setSimulationState((state) => {
-              let next = state;
-
-              for (let index = 0; index < turnBatchCount; index += 1) {
-                next = advancePassiveTurn(next, {
+        <div className="control-strip__fields">
+          <label className="control">
+            <span>Seed</span>
+            <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+          </label>
+          <label className="control">
+            <span>Users</span>
+            <input
+              type="number"
+              value={numUsers}
+              onChange={(event) => setNumUsers(Number(event.target.value))}
+              min={1}
+              max={400}
+              step={1}
+            />
+          </label>
+          <label className="control">
+            <span>Islands</span>
+            <input
+              type="number"
+              value={numIslands}
+              onChange={(event) => setNumIslands(Number(event.target.value))}
+              min={4}
+              max={96}
+              step={1}
+            />
+          </label>
+          <label className="control">
+            <span>Initial ratings</span>
+            <input
+              type="number"
+              value={initialRatingsPerUser}
+              onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
+              min={1}
+              max={12}
+              step={1}
+            />
+          </label>
+          <label className="control">
+            <span>Active users / turn</span>
+            <input
+              type="number"
+              value={activeUsersPerTurn}
+              onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
+              min={1}
+              max={96}
+              step={1}
+            />
+          </label>
+          <label className="control">
+            <span>Ratings / user</span>
+            <input
+              type="number"
+              value={maxRatingsPerActiveUser}
+              onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
+              min={1}
+              max={8}
+              step={1}
+            />
+          </label>
+          <label className="control">
+            <span>Turn batch</span>
+            <input
+              type="number"
+              value={turnBatchCount}
+              onChange={(event) => setTurnBatchCount(Number(event.target.value))}
+              min={1}
+              max={20}
+              step={1}
+            />
+          </label>
+        </div>
+        <div className="control-strip__actions">
+          <button type="button" className="button" onClick={randomizeSeed}>
+            Regenerate dataset
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={() =>
+              setSimulationState((state) =>
+                advancePassiveTurn(state, {
                   activeUsersPerTurn,
                   maxRatingsPerActiveUser
-                });
-              }
+                })
+              )
+            }
+          >
+            Take 1 Turn
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={() =>
+              setSimulationState((state) => {
+                let next = state;
 
-              return next;
-            })
-          }
-        >
-          Take X Turns
-        </button>
-        <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
-          Reset Simulation
-        </button>
-        <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
-          {showDebug ? 'Hide debug' : 'Show debug'}
-        </button>
-        <button type="button" className="button button--ghost" onClick={() => setShowAbout((value) => !value)}>
-          {showAbout ? 'Hide about' : 'About / Prior Art'}
-        </button>
-        {openSelectionButton('user', 'Select user')}
-        {openSelectionButton('island', 'Select island')}
-        {openSelectionButton('cohort', 'Select cohort')}
+                for (let index = 0; index < turnBatchCount; index += 1) {
+                  next = advancePassiveTurn(next, {
+                    activeUsersPerTurn,
+                    maxRatingsPerActiveUser
+                  });
+                }
+
+                return next;
+              })
+            }
+          >
+            Take X Turns
+          </button>
+          <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
+            Reset Simulation
+          </button>
+          <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
+            {showDebug ? 'Hide debug' : 'Show debug'}
+          </button>
+          <button type="button" className="button button--ghost" onClick={() => setShowAbout((value) => !value)}>
+            {showAbout ? 'Hide about' : 'About / Prior Art'}
+          </button>
+          {openSelectionButton('user', 'Select user')}
+          {openSelectionButton('island', 'Select island')}
+          {openSelectionButton('cohort', 'Select cohort')}
+        </div>
       </section>
 
       <section className="summary-grid">
@@ -1026,31 +1031,40 @@ export default function App() {
           </Panel>
         ) : null}
 
-        {showAbout ? (
-          <Panel title="About / Prior Art" className="panel--wide">
-            <div className="stack">
-              <p>
-                Wayfarer is an amateur proof-of-concept, not a production recommender system and not a
-                formal academic claim.
-              </p>
-              <p>
-                It explores cohort-local trust propagation for sparse UGC discovery: trusted seed
-                reviewers define initial cohort anchors, and players who behave like those anchors
-                on known content earn cohort-local predictive signal for under-reviewed islands.
-              </p>
-              <p>
-                That makes it adjacent to trust-aware collaborative filtering and TrustSVD, both of
-                which suggest that trust-weighted rating evidence can help when data is sparse.
-                Wayfarerâ€™s product-shaped twist is narrower: the propagated unit is not global
-                reputation or explicit social trust, but cohort-local predictive signal.
-              </p>
-              <p>
-                This is worth prototyping, not proven.
-              </p>
-            </div>
-          </Panel>
-        ) : null}
       </section>
+
+      <Modal open={showAbout} title="About / Prior Art" placement="top" onClose={() => setShowAbout(false)}>
+        <div className="stack about-copy">
+          <p>Wayfarer is adjacent to known work in trust-aware recommender systems.</p>
+          <p>
+            For example, Massa and Avesani&apos;s trust-aware collaborative filtering explored using propagated
+            trust to improve recommender coverage while preserving prediction quality, especially when ordinary
+            similarity matching becomes sparse. TrustSVD later incorporated explicit and implicit trust influence
+            into a matrix-factorization recommender to address sparsity and cold-start problems.
+          </p>
+          <p>
+            Those systems are useful landmarks. They suggest that trust and rating behavior can help recommender
+            systems when ordinary rating coverage is thin.
+          </p>
+          <p>Wayfarer explores a different product-shaped version of that idea.</p>
+          <p>
+            Instead of using explicit social trust links or global user reputation, Wayfarer starts with trusted
+            cohort anchors: seed reviewers chosen because they represent meaningful taste groups in a UGC
+            ecosystem. Ordinary users earn cohort-local signal by rating known islands similarly to those anchors.
+            Their later ratings then extend the effective reach of those anchors into sparse, under-reviewed
+            content.
+          </p>
+          <p>
+            So the propagated unit is not &ldquo;Alice trusts Bob&rdquo; or &ldquo;Bob is globally reputable.&rdquo;
+            It is narrower:
+          </p>
+          <p className="about-copy__quote">Bob appears to be a reliable signal source for this cohort&apos;s taste.</p>
+          <p>
+            That makes Wayfarer an exploration of cohort-local trust propagation for UGC discovery, not a claim to
+            have invented trust-aware recommendation from scratch.
+          </p>
+        </div>
+      </Modal>
 
       <SelectionModal
         open={modalKind === 'user'}
