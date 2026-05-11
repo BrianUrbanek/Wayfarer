@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Badge } from './ui/components/Badge';
 import { Drawer } from './ui/components/Drawer';
 import { EmptyState } from './ui/components/EmptyState';
@@ -11,11 +11,12 @@ import { DistributionList } from './ui/components/DistributionList';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
-import { computeInference } from './model/inference';
+import type { PseudoCohortReport } from './model/pseudoCohorts';
 import {
-  analyzePseudoCohorts,
-  type PseudoCohortReport
-} from './model/pseudoCohorts';
+  advancePassiveTurn,
+  createInitialSimulationState,
+  type SimulationState
+} from './model/simulation';
 import type { CohortAnchor, Island, User } from './model/types';
 
 const INITIAL_CONFIG = {
@@ -62,7 +63,7 @@ function formatPercent(value: number): string {
 
 function formatRating(value: string | number | null): string {
   if (value === null || value === undefined) {
-    return '—';
+    return 'Unrated';
   }
 
   return String(value);
@@ -172,30 +173,41 @@ export default function App() {
   const [seed, setSeed] = useState(INITIAL_CONFIG.seed);
   const [numUsers, setNumUsers] = useState(INITIAL_CONFIG.numUsers);
   const [numIslands, setNumIslands] = useState(INITIAL_CONFIG.numIslands);
+  const [initialRatingsPerUser, setInitialRatingsPerUser] = useState(4);
+  const [activeUsersPerTurn, setActiveUsersPerTurn] = useState(6);
+  const [maxRatingsPerActiveUser, setMaxRatingsPerActiveUser] = useState(3);
+  const [turnBatchCount, setTurnBatchCount] = useState(5);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
   const [showDebug, setShowDebug] = useState(true);
+  const [showAbout, setShowAbout] = useState(true);
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
-  const dataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
+  const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
 
-  const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
-
-  const inferenceByUserId = useMemo(() => {
-    return new Map(
-      dataset.users.map((user) => [
-        user.id,
-        computeInference(user, dataset.cohorts, dataset.allTags, dataset.islands)
-      ])
-    );
-  }, [dataset]);
-
-  const pseudoCohortAnalysis = useMemo(
-    () => analyzePseudoCohorts(dataset.users, inferenceByUserId),
-    [dataset.users, inferenceByUserId]
+  const initialSimulationState = useMemo(
+    () =>
+      createInitialSimulationState({
+        seed,
+        allTags: latentDataset.allTags,
+        latentUsers: latentDataset.users,
+        cohorts: latentDataset.cohorts,
+        islands: latentDataset.islands,
+        initialRatingsPerUser
+      }),
+    [initialRatingsPerUser, latentDataset, seed]
   );
+
+  const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
+
+  useEffect(() => {
+    setSimulationState(initialSimulationState);
+  }, [initialSimulationState]);
+
+  const dataset = simulationState;
+  const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
 
   useEffect(() => {
     if (!dataset.users.length) {
@@ -227,7 +239,7 @@ export default function App() {
     return dataset.islands.find((island) => island.id === selectedIslandId) ?? dataset.islands[0] ?? null;
   }, [dataset.islands, selectedIslandId]);
 
-  const selectedInference = selectedUser ? inferenceByUserId.get(selectedUser.id) : undefined;
+  const selectedInference = selectedUser ? dataset.inferenceByUserId.get(selectedUser.id) : undefined;
 
   const selectedComparisonCohort = useMemo(() => {
     if (comparisonCohortId !== 'auto') {
@@ -246,9 +258,9 @@ export default function App() {
 
   const inferenceTypes = useMemo(() => {
     return new Map(
-      dataset.users.map((user) => [user.id, inferenceByUserId.get(user.id)?.diagnosis.type ?? 'AMBIGUOUS'])
+      dataset.users.map((user) => [user.id, dataset.inferenceByUserId.get(user.id)?.diagnosis.type ?? 'AMBIGUOUS'])
     );
-  }, [dataset.users, inferenceByUserId]);
+  }, [dataset.inferenceByUserId, dataset.users]);
 
   const populationSummary = useMemo(
     () =>
@@ -256,12 +268,13 @@ export default function App() {
         dataset.users.length,
         dataset.users.length,
         inferenceTypes,
-        pseudoCohortAnalysis.allReports.length
+        dataset.pseudoCohortAnalysis.allReports.length
       ),
-    [dataset.users.length, inferenceTypes, pseudoCohortAnalysis.allReports.length]
+    [dataset.users.length, inferenceTypes, dataset.pseudoCohortAnalysis.allReports.length]
   );
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
+  const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1] ?? null;
   const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
   const selectedUserTopCohorts = selectedInference
     ? [
@@ -311,8 +324,8 @@ export default function App() {
 
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
-      const inference = inferenceByUserId.get(user.id);
-      const tags = user.declaredTags.slice(0, 3).join(' · ');
+      const inference = dataset.inferenceByUserId.get(user.id);
+      const tags = user.declaredTags.slice(0, 3).join(' Â· ');
 
       return {
         id: user.id,
@@ -321,7 +334,7 @@ export default function App() {
         badge: inference?.diagnosis.type ?? 'unknown'
       };
     });
-  }, [dataset.users, inferenceByUserId]);
+  }, [dataset.inferenceByUserId, dataset.users]);
 
   const selectedIslandOptions = useMemo<SelectionOption[]>(() => {
     return dataset.islands.map((island) => {
@@ -339,25 +352,25 @@ export default function App() {
       {
         id: 'auto',
         label: 'Behavior top (auto)',
-        description: 'Use the current user’s strongest behavioral match.'
+        description: 'Use the current userâ€™s strongest behavioral match.'
       },
       ...dataset.cohorts.map((cohort) => ({
         id: cohort.id,
         label: cohort.label,
-        description: cohort.tags.join(' · '),
+        description: cohort.tags.join(' Â· '),
         badge: cohort.source
       }))
     ];
   }, [dataset.cohorts]);
 
   const pseudoReportOptions = useMemo<SelectionOption[]>(() => {
-    return pseudoCohortAnalysis.allReports.map((report) => ({
+    return dataset.pseudoCohortAnalysis.allReports.map((report) => ({
       id: report.key,
       label: report.tags.join(' | '),
-      description: `${report.userCount} users · ${report.reportType}`,
+      description: `${report.userCount} users Â· ${report.reportType}`,
       badge: report.analystPriority
     }));
-  }, [pseudoCohortAnalysis.allReports]);
+  }, [dataset.pseudoCohortAnalysis.allReports]);
 
   const reportColumns: ReportTableColumn<PseudoCohortReport>[] = [
     {
@@ -425,19 +438,19 @@ export default function App() {
         <MetricCard
           label="Identity/Behavior Fit"
           value={selectedInference.signalFit.toFixed(3)}
-          helper="Do this player’s declared tags and observed ratings point toward the same cohort pattern?"
+          helper="Do this playerâ€™s declared tags and observed ratings point toward the same cohort pattern?"
           tone="accent"
         />
         <MetricCard
           label="Rating Evidence"
-          value={selectedInference.signalEvidence.toFixed(3)}
-          helper="How much rating data supports this judgment?"
+          value={selectedInference.ratingEvidence.toFixed(3)}
+          helper="How much sparse rating data supports this judgment?"
           tone="neutral"
         />
         <MetricCard
           label="Usable Signal"
           value={selectedInference.effectiveSignal.toFixed(3)}
-          helper="How much weight the system should currently give this player’s ratings."
+          helper="How much weight the system should currently give this playerâ€™s ratings."
           tone="success"
         />
       </div>
@@ -494,7 +507,7 @@ export default function App() {
       </div>
 
       <div className="metric-grid metric-grid--compact">
-        <MetricCard label="User rating" value={selectedComparisonUserRating ?? '—'} helper="Visible rating from the selected user." />
+        <MetricCard label="User rating" value={selectedComparisonUserRating ?? 'â€”'} helper="Visible rating from the selected user." />
         <MetricCard
           label="Comparison cohort"
           value={selectedComparisonLabel}
@@ -502,15 +515,15 @@ export default function App() {
         />
         <MetricCard
           label="Cohort rating"
-          value={selectedComparisonCohortRating ?? '—'}
-          helper="The selected cohort’s rating on this island."
+          value={selectedComparisonCohortRating ?? 'â€”'}
+          helper="The selected cohortâ€™s rating on this island."
         />
         <MetricCard
           label="Exact match rate"
           value={
             exactMatchRate
               ? `${exactMatchRate.matches}/${exactMatchRate.rated} (${formatPercent(exactMatchRate.rate)})`
-              : '—'
+              : 'â€”'
           }
           helper="Matches across islands both the user and comparison cohort rated."
         />
@@ -543,7 +556,7 @@ export default function App() {
       <section className="detail-block">
         <h4>Diagnosis</h4>
         <p>{selectedInference.diagnosis.message}</p>
-        <p className="muted">{selectedInference.diagnosis.reasons.join(' · ')}</p>
+        <p className="muted">{selectedInference.diagnosis.reasons.join(' Â· ')}</p>
       </section>
       <section className="detail-block">
         <h4>Debug</h4>
@@ -563,8 +576,8 @@ export default function App() {
       </section>
       <section className="detail-block">
         <h4>Visible ratings</h4>
-        <p>User: {selectedComparisonUserRating ?? '—'}</p>
-        <p>Cohort: {selectedComparisonCohortRating ?? '—'}</p>
+        <p>User: {selectedComparisonUserRating ?? 'â€”'}</p>
+        <p>Cohort: {selectedComparisonCohortRating ?? 'â€”'}</p>
       </section>
       <section className="detail-block">
         <h4>Seeded cohort ratings</h4>
@@ -573,7 +586,7 @@ export default function App() {
             <div key={cohort.id} className="detail-mini-table__row">
               <span>{cohort.label}</span>
               <Badge tone={rating === 1 ? 'success' : rating === -1 ? 'danger' : 'warning'}>
-                {rating ?? '—'}
+                {rating ?? 'â€”'}
               </Badge>
             </div>
           ))}
@@ -583,7 +596,7 @@ export default function App() {
   ) : null;
 
   const selectedPseudoDetail = drawerState?.type === 'pseudo'
-    ? pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key) ?? null
+    ? dataset.pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key) ?? null
     : null;
 
   const pseudoDrawerContent = selectedPseudoDetail ? (
@@ -703,8 +716,12 @@ export default function App() {
         const userRating = selectedUser.ratings[island.id] ?? null;
         const cohortRating = selectedComparisonCohort.ratings[island.id] ?? null;
         const match =
-          userRating === null || cohortRating === null
-            ? 'No overlap'
+          userRating === null && cohortRating === null
+            ? 'Both unrated'
+            : userRating === null
+              ? 'User unrated'
+              : cohortRating === null
+                ? 'Cohort unrated'
             : userRating === cohortRating
               ? 'Match'
               : 'Mismatch';
@@ -728,8 +745,8 @@ export default function App() {
   const pseudoConsistentColumns = reportColumns;
   const pseudoInconsistentColumns = reportColumns;
 
-  const pseudoConsistentRows = pseudoCohortAnalysis.topConsistentPseudoCohorts;
-  const pseudoInconsistentRows = pseudoCohortAnalysis.topInconsistentPseudoCohorts;
+  const pseudoConsistentRows = dataset.pseudoCohortAnalysis.topConsistentPseudoCohorts;
+  const pseudoInconsistentRows = dataset.pseudoCohortAnalysis.topInconsistentPseudoCohorts;
 
   const openSelectionButton = (kind: Exclude<SelectionModalKind, null>, label: string) => (
     <button type="button" className="button" onClick={() => setModalKind(kind)}>
@@ -782,11 +799,95 @@ export default function App() {
             step={1}
           />
         </label>
+        <label className="control">
+          <span>Initial ratings</span>
+          <input
+            type="number"
+            value={initialRatingsPerUser}
+            onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
+            min={1}
+            max={12}
+            step={1}
+          />
+        </label>
+        <label className="control">
+          <span>Active users / turn</span>
+          <input
+            type="number"
+            value={activeUsersPerTurn}
+            onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
+            min={1}
+            max={96}
+            step={1}
+          />
+        </label>
+        <label className="control">
+          <span>Ratings / user</span>
+          <input
+            type="number"
+            value={maxRatingsPerActiveUser}
+            onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
+            min={1}
+            max={8}
+            step={1}
+          />
+        </label>
+        <label className="control">
+          <span>Turn batch</span>
+          <input
+            type="number"
+            value={turnBatchCount}
+            onChange={(event) => setTurnBatchCount(Number(event.target.value))}
+            min={1}
+            max={20}
+            step={1}
+          />
+        </label>
         <button type="button" className="button" onClick={randomizeSeed}>
           Regenerate dataset
         </button>
+        <button
+          type="button"
+          className="button"
+          onClick={() =>
+            setSimulationState((state) =>
+              advancePassiveTurn(state, {
+                activeUsersPerTurn,
+                maxRatingsPerActiveUser
+              })
+            )
+          }
+        >
+          Take 1 Turn
+        </button>
+        <button
+          type="button"
+          className="button"
+          onClick={() =>
+            setSimulationState((state) => {
+              let next = state;
+
+              for (let index = 0; index < turnBatchCount; index += 1) {
+                next = advancePassiveTurn(next, {
+                  activeUsersPerTurn,
+                  maxRatingsPerActiveUser
+                });
+              }
+
+              return next;
+            })
+          }
+        >
+          Take X Turns
+        </button>
+        <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
+          Reset Simulation
+        </button>
         <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
           {showDebug ? 'Hide debug' : 'Show debug'}
+        </button>
+        <button type="button" className="button button--ghost" onClick={() => setShowAbout((value) => !value)}>
+          {showAbout ? 'Hide about' : 'About / Prior Art'}
         </button>
         {openSelectionButton('user', 'Select user')}
         {openSelectionButton('island', 'Select island')}
@@ -794,12 +895,32 @@ export default function App() {
       </section>
 
       <section className="summary-grid">
+        <Panel title="Turn Summary" className="panel--full">
+          <div className="metric-grid metric-grid--compact">
+            <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
+            <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
+            <MetricCard label="Ratings this turn" value={currentTurnSummary?.ratingsCreated ?? 0} />
+            <MetricCard label="Active users this turn" value={currentTurnSummary?.activeUserIds.length ?? 0} />
+            <MetricCard label="New islands rated" value={currentTurnSummary?.newlyRatedIslandIds.length ?? 0} />
+          </div>
+          <div className="summary-inline">
+            {(dataset.turnHistory.slice(-3) ?? []).map((turn) => (
+              <Badge key={turn.turn} tone="neutral">
+                Turn {turn.turn}: {turn.ratingsCreated} ratings
+              </Badge>
+            ))}
+          </div>
+        </Panel>
+
         <Panel title="Population Summary" className="panel--full">
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
             <MetricCard label="Seeded anchors" value={dataset.cohorts.length} />
             <MetricCard label="Generated users" value={populationSummary.generatedUsers} />
+            <MetricCard label="Visible users" value={dataset.users.length} />
             <MetricCard label="Islands" value={dataset.islands.length} />
+            <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
+            <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
             <MetricCard label="High signal users" value={populationSummary.highSignal} tone="success" />
             <MetricCard label="Retag candidates" value={populationSummary.retagCandidates} tone="warning" />
             <MetricCard label="Inverse profiles" value={populationSummary.inverseProfiles} tone="danger" />
@@ -904,6 +1025,31 @@ export default function App() {
             )}
           </Panel>
         ) : null}
+
+        {showAbout ? (
+          <Panel title="About / Prior Art" className="panel--wide">
+            <div className="stack">
+              <p>
+                Wayfarer is an amateur proof-of-concept, not a production recommender system and not a
+                formal academic claim.
+              </p>
+              <p>
+                It explores cohort-local trust propagation for sparse UGC discovery: trusted seed
+                reviewers define initial cohort anchors, and players who behave like those anchors
+                on known content earn cohort-local predictive signal for under-reviewed islands.
+              </p>
+              <p>
+                That makes it adjacent to trust-aware collaborative filtering and TrustSVD, both of
+                which suggest that trust-weighted rating evidence can help when data is sparse.
+                Wayfarerâ€™s product-shaped twist is narrower: the propagated unit is not global
+                reputation or explicit social trust, but cohort-local predictive signal.
+              </p>
+              <p>
+                This is worth prototyping, not proven.
+              </p>
+            </div>
+          </Panel>
+        ) : null}
       </section>
 
       <SelectionModal
@@ -984,3 +1130,4 @@ export default function App() {
     </main>
   );
 }
+

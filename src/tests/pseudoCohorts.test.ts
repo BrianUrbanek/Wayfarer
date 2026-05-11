@@ -50,6 +50,7 @@ function buildInferenceResult(
     behaviorSpecificity: Math.max(0, behaviorScore - inverseScore),
     signalFit: effectiveSignal,
     signalEvidence: 1,
+    ratingEvidence: 1,
     effectiveSignal
   };
 }

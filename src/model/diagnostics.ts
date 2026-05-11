@@ -30,7 +30,7 @@ export interface DiagnoseInput {
   behaviorMatchStrength: number;
   behaviorSpecificity: number;
   effectiveSignal: number;
-  cohorts?: CohortAnchor[];
+  cohorts?: readonly CohortAnchor[];
 }
 
 function priorityForType(type: DiagnosisType): Diagnosis['analystPriority'] {
@@ -54,7 +54,10 @@ function priorityForType(type: DiagnosisType): Diagnosis['analystPriority'] {
   }
 }
 
-function suggestTagsFromCohorts(cohorts: CohortAnchor[] | undefined, cohortId: CohortId | null): TagId[] | undefined {
+function suggestTagsFromCohorts(
+  cohorts: readonly CohortAnchor[] | undefined,
+  cohortId: CohortId | null
+): TagId[] | undefined {
   if (!cohorts || cohortId === null) {
     return undefined;
   }

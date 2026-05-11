@@ -13,5 +13,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Island Comparison');
     expect(html).toContain('Pseudo-Cohort Reports');
     expect(html).toContain('Debug Data');
+    expect(html).toContain('Turn Summary');
+    expect(html).toContain('About / Prior Art');
+    expect(html).toContain('Take 1 Turn');
   });
 });

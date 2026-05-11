@@ -20,6 +20,7 @@ export interface CohortSimilarity {
 export interface SignalSummary {
   signalFit: number;
   signalEvidence: number;
+  ratingEvidence: number;
   effectiveSignal: number;
 }
 
@@ -37,7 +38,11 @@ export interface InferenceResult extends SignalSummary {
   inverseTop: CohortMatch;
 }
 
-function scoreDeclaredSimilarity(user: User, cohort: CohortAnchor, allTags: TagId[]): SimilarityResult {
+function scoreDeclaredSimilarity(
+  user: User,
+  cohort: CohortAnchor,
+  allTags: readonly TagId[]
+): SimilarityResult {
   const userVector = tagsToVector(user.declaredTags, allTags);
   const cohortVector = tagsToVector(cohort.tags, allTags);
   const value = cosineSimilarity(userVector, cohortVector);
@@ -52,7 +57,7 @@ function scoreDeclaredSimilarity(user: User, cohort: CohortAnchor, allTags: TagI
 function scoreBehaviorSimilarity(
   user: User,
   cohort: CohortAnchor,
-  allIslands: Island[]
+  allIslands: readonly Island[]
 ): SimilarityResult {
   const userVector = ratingsToVector(user.ratings, allIslands);
   const cohortVector = ratingsToVector(cohort.ratings, allIslands);
@@ -81,8 +86,8 @@ export function inverseBehaviorScore(similarity: SimilarityResult): number {
 
 export function computeDeclaredSimilarities(
   user: User,
-  cohorts: CohortAnchor[],
-  allTags: TagId[]
+  cohorts: readonly CohortAnchor[],
+  allTags: readonly TagId[]
 ): CohortSimilarity[] {
   return cohorts.map((cohort) => {
     const similarity = scoreDeclaredSimilarity(user, cohort, allTags);
@@ -96,8 +101,8 @@ export function computeDeclaredSimilarities(
 
 export function computeBehavioralSimilarities(
   user: User,
-  cohorts: CohortAnchor[],
-  allIslands: Island[]
+  cohorts: readonly CohortAnchor[],
+  allIslands: readonly Island[]
 ): CohortSimilarity[] {
   return cohorts.map((cohort) => {
     const similarity = scoreBehaviorSimilarity(user, cohort, allIslands);
@@ -177,20 +182,22 @@ export function computeEffectiveSignal(
   const behaviorScores = behaviorDistribution.map((entry) => entry.score);
   const signalFit = cosineSimilarity(declaredScores, behaviorScores);
   const signalEvidence = Math.max(options.declaredEvidence, options.behavioralEvidence);
+  const ratingEvidence = options.behavioralEvidence;
   const effectiveSignal = signalFit * signalEvidence;
 
   return {
     signalFit,
     signalEvidence,
+    ratingEvidence,
     effectiveSignal
   };
 }
 
 export function computeInference(
   user: User,
-  cohorts: CohortAnchor[],
-  allTags: TagId[],
-  allIslands: Island[],
+  cohorts: readonly CohortAnchor[],
+  allTags: readonly TagId[],
+  allIslands: readonly Island[],
   thresholds: DiagnosisThresholds = DEFAULT_THRESHOLDS
 ): InferenceResult & { diagnosis: ReturnType<typeof diagnoseInference> } {
   const declaredSimilarities = computeDeclaredSimilarities(user, cohorts, allTags);
