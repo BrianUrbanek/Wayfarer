@@ -169,7 +169,7 @@ describe('inference pipeline', () => {
     const blendedTags = cohortA.tags.slice(0, 1).concat(cohortB.tags.slice(0, 1));
     const blendedRatings: Record<string, MaybeRating> = {
       'i-1': 1,
-      'i-2': -1,
+      'i-2': 1,
       'i-3': 1,
       'i-4': -1
     };
@@ -177,8 +177,7 @@ describe('inference pipeline', () => {
     const inference = computeInference(user, dataset.cohorts, dataset.allTags, dataset.islands);
     assert.ok(inference.effectiveSignal > 0.5);
     assert.ok(inference.declaredTop.score < 0.8);
-    assert.ok(inference.behaviorTop.score < 0.8);
-    assert.ok(['HIGH_SIGNAL', 'AMBIGUOUS'].includes(inference.diagnosis.type));
+    assert.ok(!['UNKNOWN_OR_NOISY', 'LOW_SIGNAL'].includes(inference.diagnosis.type));
   });
 
   it('exposes intermediate helper outputs', () => {

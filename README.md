@@ -18,6 +18,7 @@ The current implementation target is a browser-based TypeScript app, likely Vite
 
 - [Cohort-Aware Discovery Toy Spec](docs/cohort-aware-discovery-toy-spec.md)
 - [Algorithm Implementation Spec](docs/algorithm-implementation-spec.md)
+- [Wayfarer Next-Generation Model Spec](docs/wayfarer-next-generation-model-spec.md)
 
 ## Live demo
 

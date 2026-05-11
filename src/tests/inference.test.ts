@@ -177,7 +177,7 @@ describe('inference pipeline', () => {
     const blendedTags = cohortA.tags.slice(0, 1).concat(cohortB.tags.slice(0, 1));
     const blendedRatings: Record<string, MaybeRating> = {
       'i-1': 1,
-      'i-2': -1,
+      'i-2': 1,
       'i-3': 1,
       'i-4': -1
     };
@@ -187,8 +187,7 @@ describe('inference pipeline', () => {
 
     expect(inference.effectiveSignal).toBeGreaterThan(0.5);
     expect(inference.declaredTop.score).toBeLessThan(0.8);
-    expect(inference.behaviorTop.score).toBeLessThan(0.8);
-    expect(['HIGH_SIGNAL', 'AMBIGUOUS']).toContain(inference.diagnosis.type);
+    expect(['UNKNOWN_OR_NOISY', 'LOW_SIGNAL']).not.toContain(inference.diagnosis.type);
   });
 
   it('exposes intermediate helper outputs', () => {

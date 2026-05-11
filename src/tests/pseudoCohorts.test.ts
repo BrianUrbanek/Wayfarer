@@ -46,6 +46,8 @@ function buildInferenceResult(
     declaredTop,
     behaviorTop,
     inverseTop,
+    behaviorMatchStrength: behaviorScore,
+    behaviorSpecificity: Math.max(0, behaviorScore - inverseScore),
     signalFit: effectiveSignal,
     signalEvidence: 1,
     effectiveSignal

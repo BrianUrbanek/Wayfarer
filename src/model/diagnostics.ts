@@ -6,6 +6,8 @@ export interface DiagnosisThresholds {
   strongCohortMatch: number;
   mediumCohortMatch: number;
   strongInverse: number;
+  strongBehaviorMatch: number;
+  strongBehaviorSpecificity: number;
 }
 
 export const DEFAULT_THRESHOLDS: DiagnosisThresholds = {
@@ -13,7 +15,9 @@ export const DEFAULT_THRESHOLDS: DiagnosisThresholds = {
   lowSignal: 0.35,
   strongCohortMatch: 0.6,
   mediumCohortMatch: 0.4,
-  strongInverse: 0.6
+  strongInverse: 0.6,
+  strongBehaviorMatch: 0.35,
+  strongBehaviorSpecificity: 0.06
 };
 
 export interface DiagnoseInput {
@@ -23,6 +27,8 @@ export interface DiagnoseInput {
   declaredTop: CohortMatch;
   behaviorTop: CohortMatch;
   inverseTop: CohortMatch;
+  behaviorMatchStrength: number;
+  behaviorSpecificity: number;
   effectiveSignal: number;
   cohorts?: CohortAnchor[];
 }
@@ -67,7 +73,11 @@ export function diagnoseInference(
   // Precedence matters:
   // 1) strong agreement, 2) structured inverse profile, 3) explicit retag mismatch,
   // 4) unstructured/noisy behavior, 5) lower-confidence signal mismatch, 6) fallback ambiguity.
-  if (input.effectiveSignal >= thresholds.highSignal) {
+  if (
+    input.effectiveSignal >= thresholds.highSignal &&
+    input.behaviorMatchStrength >= thresholds.strongBehaviorMatch &&
+    input.behaviorSpecificity >= thresholds.strongBehaviorSpecificity
+  ) {
     type = 'HIGH_SIGNAL';
   } else if (
     input.inverseTop.score >= thresholds.strongInverse &&
@@ -102,7 +112,9 @@ export function diagnoseInference(
     `effectiveSignal=${input.effectiveSignal.toFixed(3)}`,
     `declaredTop=${input.declaredTop.cohortId ?? 'none'}:${input.declaredTop.score.toFixed(3)}`,
     `behaviorTop=${input.behaviorTop.cohortId ?? 'none'}:${input.behaviorTop.score.toFixed(3)}`,
-    `inverseTop=${input.inverseTop.cohortId ?? 'none'}:${input.inverseTop.score.toFixed(3)}`
+    `inverseTop=${input.inverseTop.cohortId ?? 'none'}:${input.inverseTop.score.toFixed(3)}`,
+    `behaviorMatchStrength=${input.behaviorMatchStrength.toFixed(3)}`,
+    `behaviorSpecificity=${input.behaviorSpecificity.toFixed(3)}`
   ];
 
   const diagnosis: Diagnosis = {

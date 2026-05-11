@@ -10,6 +10,8 @@ function inferenceFixture(overrides: Partial<{
   declaredTop: CohortMatch;
   behaviorTop: CohortMatch;
   inverseTop: CohortMatch;
+  behaviorMatchStrength: number;
+  behaviorSpecificity: number;
   effectiveSignal: number;
 }> = {}) {
   return {
@@ -19,6 +21,8 @@ function inferenceFixture(overrides: Partial<{
     declaredTop: overrides.declaredTop ?? match('cohort-a', 0.9),
     behaviorTop: overrides.behaviorTop ?? match('cohort-a', 0.9),
     inverseTop: overrides.inverseTop ?? match('cohort-a', 0.1),
+    behaviorMatchStrength: overrides.behaviorMatchStrength ?? 0.9,
+    behaviorSpecificity: overrides.behaviorSpecificity ?? 0.1,
     effectiveSignal: overrides.effectiveSignal ?? 0.9
   };
 }
@@ -29,6 +33,20 @@ describe('diagnosis rules', () => {
 
     expect(diagnosis.type).toBe('HIGH_SIGNAL');
     expect(diagnosis.analystPriority).toBe('none');
+  });
+
+  it('treats flat behavior fallback as non-informative', () => {
+    const diagnosis = diagnoseInference(
+      inferenceFixture({
+        effectiveSignal: 0.92,
+        behaviorTop: match('cohort-a', 0.2),
+        inverseTop: match('cohort-b', 0.2),
+        behaviorMatchStrength: 0,
+        behaviorSpecificity: 0
+      })
+    );
+
+    expect(['UNKNOWN_OR_NOISY', 'AMBIGUOUS']).toContain(diagnosis.type);
   });
 
   it('returns MISMATCH_RETAG when declared and behavioral top cohorts differ', () => {

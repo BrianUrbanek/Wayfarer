@@ -101,6 +101,31 @@ function countNonNullRatings(user: User): number {
   return Object.values(user.ratings).filter((value) => value !== null).length;
 }
 
+function computeExactMatchRate(user: User, cohort: CohortAnchor, islandIds: string[]) {
+  let matches = 0;
+  let rated = 0;
+
+  for (const islandId of islandIds) {
+    const userRating = user.ratings[islandId] ?? null;
+    const cohortRating = cohort.ratings[islandId] ?? null;
+
+    if (userRating === null || cohortRating === null) {
+      continue;
+    }
+
+    rated += 1;
+    if (userRating === cohortRating) {
+      matches += 1;
+    }
+  }
+
+  return {
+    matches,
+    rated,
+    rate: rated > 0 ? matches / rated : 0
+  };
+}
+
 function buildPopulationSummary(datasetUserCount: number, totalUsers: number, inferenceTypes: Map<string, string>, pseudoReports: number) {
   let highSignal = 0;
   let retagCandidates = 0;
@@ -270,6 +295,20 @@ export default function App() {
     ? selectedComparisonCohort.ratings[selectedIsland.id] ?? null
     : null;
 
+  const exactMatchRate =
+    selectedUser && selectedComparisonCohort
+      ? computeExactMatchRate(
+          selectedUser,
+          selectedComparisonCohort,
+          dataset.islands.map((island) => island.id)
+        )
+      : null;
+
+  const behaviorIsNonInformative =
+    selectedInference !== undefined &&
+    selectedInference.behaviorMatchStrength < 0.35 &&
+    selectedInference.behaviorSpecificity < 0.06;
+
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
       const inference = inferenceByUserId.get(user.id);
@@ -403,6 +442,19 @@ export default function App() {
         />
       </div>
 
+      <div className="metric-grid metric-grid--compact">
+        <MetricCard
+          label="Behavior match strength"
+          value={selectedInference.behaviorMatchStrength.toFixed(3)}
+          helper="Strongest raw positive cohort fit before the distribution is normalized."
+        />
+        <MetricCard
+          label="Behavior specificity"
+          value={selectedInference.behaviorSpecificity.toFixed(3)}
+          helper="How much the behavior distribution prefers one cohort over the runner-up."
+        />
+      </div>
+
       <div className="summary-top-cohorts">
         {selectedUserTopCohorts.map(({ label, match }) => (
           <MetricCard
@@ -452,6 +504,15 @@ export default function App() {
           label="Cohort rating"
           value={selectedComparisonCohortRating ?? '—'}
           helper="The selected cohort’s rating on this island."
+        />
+        <MetricCard
+          label="Exact match rate"
+          value={
+            exactMatchRate
+              ? `${exactMatchRate.matches}/${exactMatchRate.rated} (${formatPercent(exactMatchRate.rate)})`
+              : '—'
+          }
+          helper="Matches across islands both the user and comparison cohort rated."
         />
       </div>
 
@@ -537,7 +598,7 @@ export default function App() {
         <p>Internal consistency: {selectedPseudoDetail.internalConsistency.toFixed(3)}</p>
         <p>Consistency evidence: {selectedPseudoDetail.consistencyEvidence.toFixed(3)}</p>
         <p>Known fit: {selectedPseudoDetail.averageKnownCohortFit.toFixed(3)}</p>
-        <p>Effective signal: {selectedPseudoDetail.averageEffectiveSignal.toFixed(3)}</p>
+        <p>Usable Signal: {selectedPseudoDetail.averageEffectiveSignal.toFixed(3)}</p>
         <p>Priority: {selectedPseudoDetail.analystPriority}</p>
       </section>
       <section className="detail-block">
@@ -567,6 +628,16 @@ export default function App() {
         entries={selectedInference.behaviorDistribution}
         labelForCohort={labelForCohort}
       />
+
+      {behaviorIsNonInformative ? (
+        <div className="notice notice--warning">
+          <strong>Behavior distribution is non-informative.</strong>
+          <p>
+            The normalized cohort bars are falling back to a spread shape, so read this as a
+            placeholder until raw behavior strength and specificity rise.
+          </p>
+        </div>
+      ) : null}
 
       <DistributionList
         title="Inverse behavior distribution"

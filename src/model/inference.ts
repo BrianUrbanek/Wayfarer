@@ -24,6 +24,8 @@ export interface SignalSummary {
 }
 
 export interface InferenceResult extends SignalSummary {
+  behaviorMatchStrength: number;
+  behaviorSpecificity: number;
   declaredSimilarities: CohortSimilarity[];
   behavioralSimilarities: CohortSimilarity[];
   inverseBehavioralSimilarities: CohortSimilarity[];
@@ -55,6 +57,18 @@ function scoreBehaviorSimilarity(
   const userVector = ratingsToVector(user.ratings, allIslands);
   const cohortVector = ratingsToVector(cohort.ratings, allIslands);
   return pearsonCorrelation(userVector, cohortVector);
+}
+
+function behaviorSpecificityFromDistribution(distribution: CohortMatch[]): number {
+  if (distribution.length < 2) {
+    return distribution[0]?.score ?? 0;
+  }
+
+  const sortedScores = distribution
+    .map((entry) => entry.score)
+    .sort((left, right) => right - left);
+
+  return Math.max(0, sortedScores[0] - sortedScores[1]);
 }
 
 export function positiveBehaviorScore(similarity: SimilarityResult): number {
@@ -192,6 +206,11 @@ export function computeInference(
   const declaredTop = topCohortMatch(declaredDistribution);
   const behaviorTop = topCohortMatch(behaviorDistribution);
   const inverseTop = topCohortMatch(inverseBehaviorDistribution);
+  const behaviorMatchStrength = behavioralSimilarities.reduce(
+    (best, entry) => Math.max(best, Math.max(0, entry.similarity.value)),
+    0
+  );
+  const behaviorSpecificity = behaviorSpecificityFromDistribution(behaviorDistribution);
 
   const declaredEvidence = user.declaredTags.length > 0 ? 1 : 0;
   const behavioralEvidence = behavioralSimilarities.length
@@ -213,6 +232,8 @@ export function computeInference(
     declaredTop,
     behaviorTop,
     inverseTop,
+    behaviorMatchStrength,
+    behaviorSpecificity,
     ...signal
   };
 
@@ -224,6 +245,8 @@ export function computeInference(
       declaredTop,
       behaviorTop,
       inverseTop,
+      behaviorMatchStrength,
+      behaviorSpecificity,
       effectiveSignal: signal.effectiveSignal,
       cohorts
     },

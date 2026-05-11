@@ -486,6 +486,30 @@ select {
   line-height: 1.55;
 }
 
+.notice {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(141, 164, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.notice--warning {
+  border-color: rgba(255, 211, 111, 0.24);
+  background: rgba(255, 211, 111, 0.08);
+}
+
+.notice strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.notice p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .debug-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

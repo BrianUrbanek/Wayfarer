@@ -11,6 +11,8 @@ function fixture(overrides: Partial<{
   declaredTop: CohortMatch;
   behaviorTop: CohortMatch;
   inverseTop: CohortMatch;
+  behaviorMatchStrength: number;
+  behaviorSpecificity: number;
   effectiveSignal: number;
 }> = {}) {
   return {
@@ -20,6 +22,8 @@ function fixture(overrides: Partial<{
     declaredTop: overrides.declaredTop ?? match('cohort-a', 0.9),
     behaviorTop: overrides.behaviorTop ?? match('cohort-a', 0.9),
     inverseTop: overrides.inverseTop ?? match('cohort-a', 0.1),
+    behaviorMatchStrength: overrides.behaviorMatchStrength ?? 0.9,
+    behaviorSpecificity: overrides.behaviorSpecificity ?? 0.1,
     effectiveSignal: overrides.effectiveSignal ?? 0.9
   };
 }
@@ -29,6 +33,20 @@ describe('diagnosis precedence', () => {
     const diagnosis = diagnoseInference(fixture());
     assert.equal(diagnosis.type, 'HIGH_SIGNAL');
     assert.match(diagnosis.message, /signal/i);
+  });
+
+  it('treats flat behavior fallback as non-informative', () => {
+    const diagnosis = diagnoseInference(
+      fixture({
+        effectiveSignal: 0.92,
+        behaviorTop: match('cohort-a', 0.2),
+        inverseTop: match('cohort-b', 0.2),
+        behaviorMatchStrength: 0,
+        behaviorSpecificity: 0
+      })
+    );
+
+    assert.ok(['UNKNOWN_OR_NOISY', 'AMBIGUOUS'].includes(diagnosis.type));
   });
 
   it('returns INVERSE_PROFILE before retag mismatch when inverse is strong', () => {
