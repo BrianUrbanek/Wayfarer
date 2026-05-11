@@ -7,9 +7,14 @@ import type {
   User
 } from '../model/types.js';
 import { generateIslands } from './islandGeneration.js';
-import { generateAlignedRatings, materializeCohortRatings } from './ratingGeneration.js';
+import { materializeCohortRatings } from './ratingGeneration.js';
 import { createSeededRandom } from './seededRandom.js';
-import { generateSeedLikeUserTags } from './tagGeneration.js';
+import {
+  buildReviewerArchetypeProfile,
+  REVIEWER_ARCHETYPES,
+  generateReviewerDeclaredTags,
+  generateReviewerRatings
+} from './reviewerArchetypeGeneration.js';
 
 export type AlignmentDistribution =
   | number
@@ -93,20 +98,25 @@ function buildUser(
   ratingAlignmentDistribution: AlignmentDistribution
 ): User {
   const hiddenSeedCohort = chooseSeedCohort(cohorts, index);
-  const hiddenTagAlignment = sampleAlignment(rng, tagAlignmentDistribution);
-  const hiddenRatingAlignment = sampleAlignment(rng, ratingAlignmentDistribution);
+  const hiddenReviewerArchetype = REVIEWER_ARCHETYPES[index % REVIEWER_ARCHETYPES.length];
+  const profile = buildReviewerArchetypeProfile(cohorts, index, hiddenReviewerArchetype);
+  const hiddenTagAlignment = clampAlignment(sampleAlignment(rng, tagAlignmentDistribution));
+  const hiddenRatingAlignment = clampAlignment(sampleAlignment(rng, ratingAlignmentDistribution));
+  const declaredAlignment = Math.min(profile.tagAlignment, hiddenTagAlignment);
+  const ratingAlignment = Math.min(profile.ratingAlignment, hiddenRatingAlignment);
 
-  const declaredTags = generateSeedLikeUserTags(
+  const declaredTags = generateReviewerDeclaredTags(
     rng,
     allTags,
-    hiddenSeedCohort,
-    hiddenTagAlignment
+    cohorts.find((cohort) => cohort.id === profile.declaredCohortId) ?? hiddenSeedCohort,
+    declaredAlignment
   );
-  const ratings = generateAlignedRatings(
+  const ratings = generateReviewerRatings(
     rng,
     islands,
-    hiddenSeedCohort.ratings,
-    hiddenRatingAlignment
+    cohorts.find((cohort) => cohort.id === profile.behaviorCohortId)?.ratings ?? hiddenSeedCohort.ratings,
+    hiddenReviewerArchetype,
+    ratingAlignment
   );
 
   return {
@@ -115,8 +125,12 @@ function buildUser(
     declaredTags,
     ratings,
     hiddenSeedCohortId: hiddenSeedCohort.id as CohortId,
+    hiddenDeclaredCohortId: profile.declaredCohortId,
+    hiddenBehaviorCohortId: profile.behaviorCohortId,
     hiddenTagAlignment,
-    hiddenRatingAlignment
+    hiddenRatingAlignment,
+    hiddenReviewerArchetype,
+    hiddenReviewerChecksum: profile.checksum
   };
 }
 

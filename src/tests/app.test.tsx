@@ -15,10 +15,12 @@ describe('App analyst console', () => {
     expect(html).toContain('Model Explanation');
     expect(html).toContain('Island Comparison');
     expect(html).toContain('Pseudo-Cohort Reports');
+    expect(html).toContain('Reviewer Archetype Recovery');
     expect(html).toContain('Debug Data');
     expect(html).toContain('Turn Summary');
     expect(html).toContain('Turn mode');
     expect(html).toContain('About');
+    expect(html).toContain('Hidden generator archetype');
     expect(html).toContain('Take 1 Turn');
   });
 });

@@ -7,3 +7,4 @@ import './affinity.node.test.js';
 import './recommendations.node.test.js';
 import './pseudoCohorts.node.test.js';
 import './simulation.node.test.js';
+import './reviewerArchetypes.node.test.js';

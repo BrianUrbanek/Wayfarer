@@ -14,6 +14,7 @@ import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
 import type { CohortAffinityEstimate } from './model/affinity';
 import type { PseudoCohortReport } from './model/pseudoCohorts';
+import { archetypeLabel, type ReviewerArchetypeReport } from './model/reviewerArchetypes';
 import { recommendIslandsForUser, type IslandRecommendation } from './model/recommendations';
 import {
   advanceActiveTurn,
@@ -35,6 +36,7 @@ type DrawerState =
   | { type: 'user'; id: string }
   | { type: 'island'; id: string }
   | { type: 'pseudo'; key: string }
+  | { type: 'reviewer'; userId: string }
   | { type: 'recommendation'; userId: string; islandId: string }
   | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
@@ -190,6 +192,21 @@ function pseudoPriorityTone(priority: PseudoCohortReport['analystPriority']) {
   }
 }
 
+function reviewerRecoveryTone(status: string) {
+  switch (status) {
+    case 'MATCH':
+      return 'success';
+    case 'PARTIAL':
+      return 'accent';
+    case 'MISS':
+      return 'danger';
+    case 'UNCERTAIN':
+      return 'warning';
+    default:
+      return 'neutral';
+  }
+}
+
 export default function App() {
   const [seed, setSeed] = useState(INITIAL_CONFIG.seed);
   const [numUsers, setNumUsers] = useState(INITIAL_CONFIG.numUsers);
@@ -338,6 +355,7 @@ export default function App() {
       : null;
 
   const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1] ?? null;
+  const reviewerArchetypeAnalysis = dataset.reviewerArchetypeAnalysis;
   const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
   const selectedUserTopCohorts = selectedInference
     ? [
@@ -474,6 +492,17 @@ export default function App() {
     }));
   }, [dataset.pseudoCohortAnalysis.allReports]);
 
+  const reviewerReportRows = reviewerArchetypeAnalysis.allReports;
+  const reviewerCohortRows = useMemo(
+    () =>
+      reviewerArchetypeAnalysis.highSignalByCohort.map((entry) => ({
+        cohort: dataset.cohorts.find((cohort) => cohort.id === entry.cohortId) ?? null,
+        users: entry.users,
+        topUser: entry.users[0] ?? null
+      })),
+    [dataset.cohorts, reviewerArchetypeAnalysis.highSignalByCohort]
+  );
+
   const reportColumns: ReportTableColumn<PseudoCohortReport>[] = [
     {
       key: 'tags',
@@ -595,6 +624,103 @@ export default function App() {
     }
   ];
 
+  const reviewerReportColumns: ReportTableColumn<ReviewerArchetypeReport>[] = [
+    {
+      key: 'user',
+      label: 'User',
+      render: (row) => (
+        <div className="table-cell-stack">
+          <strong>{row.label}</strong>
+          <span className="muted">{row.userId}</span>
+        </div>
+      )
+    },
+    {
+      key: 'hidden',
+      label: 'Hidden archetype',
+      render: (row) => (
+        <div className="table-cell-stack">
+          <Badge tone="neutral">{archetypeLabel(row.hiddenReviewerArchetype)}</Badge>
+          <span className="muted">Debug checksum: {row.hiddenReviewerChecksum}</span>
+        </div>
+      )
+    },
+    {
+      key: 'diagnosis',
+      label: 'Inferred behavior',
+      render: (row) => (
+        <div className="table-cell-stack">
+          <Badge tone={diagnosisTone(row.inferredDiagnosisType)}>{row.inferredDiagnosisType}</Badge>
+          <span className="muted">{row.inferredCohortId ? labelForCohort(row.inferredCohortId) : 'none'}</span>
+        </div>
+      )
+    },
+    {
+      key: 'recovery',
+      label: 'Recovery',
+      render: (row) => <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>,
+      align: 'center'
+    },
+    {
+      key: 'knownFit',
+      label: 'Known fit',
+      render: (row) => formatPercent(row.knownCohortFit),
+      align: 'right'
+    },
+    {
+      key: 'signalEvidence',
+      label: 'Evidence',
+      render: (row) => formatPercent(row.signalEvidence),
+      align: 'right'
+    },
+    {
+      key: 'effectiveSignal',
+      label: 'Usable signal',
+      render: (row) => formatDecimal(row.effectiveSignal),
+      align: 'right'
+    },
+    {
+      key: 'flags',
+      label: 'Flags',
+      render: (row) => row.analystFlags.slice(0, 3).join(' · ')
+    }
+  ];
+
+  const reviewerCohortColumns: ReportTableColumn<{
+    cohort: CohortAnchor | null;
+    users: ReviewerArchetypeReport[];
+    topUser: ReviewerArchetypeReport | null;
+  }>[] = [
+    {
+      key: 'cohort',
+      label: 'Cohort',
+      render: (row) => row.cohort?.label ?? 'none'
+    },
+    {
+      key: 'topUser',
+      label: 'Top user',
+      render: (row) => row.topUser?.label ?? 'none'
+    },
+    {
+      key: 'count',
+      label: 'Users',
+      render: (row) => row.users.length,
+      align: 'right'
+    },
+    {
+      key: 'signal',
+      label: 'Top signal',
+      render: (row) => formatDecimal(row.topUser?.effectiveSignal ?? 0),
+      align: 'right'
+    },
+    {
+      key: 'status',
+      label: 'Recovery',
+      render: (row) => <Badge tone={reviewerRecoveryTone(row.topUser?.recoveryStatus ?? 'UNCERTAIN')}>{row.topUser?.recoveryStatus ?? 'UNCERTAIN'}</Badge>,
+      align: 'center'
+    }
+  ];
+
   const recommendationColumns: ReportTableColumn<IslandRecommendation>[] = [
     {
       key: 'island',
@@ -636,6 +762,152 @@ export default function App() {
       align: 'right'
     }
   ];
+
+  const selectedReviewerReport = drawerState?.type === 'reviewer'
+    ? reviewerReportRows.find((report) => report.userId === drawerState.userId) ?? null
+    : null;
+
+  const selectedUserReviewerReport = selectedUser
+    ? reviewerReportRows.find((report) => report.userId === selectedUser.id) ?? null
+    : null;
+
+  const reviewerArchetypeSummary = (
+    <div className="stack">
+      <div className="summary-header">
+        <div>
+          <p className="eyebrow">Reviewer archetype recovery</p>
+          <h3>Hidden generator checksums vs inferred behavior</h3>
+        </div>
+        <p className="muted">
+          Debug-only labels are used to evaluate whether the visible model recovers the intended synthetic pattern
+          when the evidence is there, and stays unsure when it is not.
+        </p>
+      </div>
+
+      <div className="metric-grid metric-grid--compact">
+        <MetricCard label="Generated archetypes" value={reviewerArchetypeAnalysis.recoverySummary.totalUsers} tone="accent" />
+        <MetricCard label="Matches" value={reviewerArchetypeAnalysis.recoverySummary.matchCount} tone="success" />
+        <MetricCard label="Partial" value={reviewerArchetypeAnalysis.recoverySummary.partialCount} tone="accent" />
+        <MetricCard label="Misses" value={reviewerArchetypeAnalysis.recoverySummary.missCount} tone="danger" />
+        <MetricCard label="Uncertain" value={reviewerArchetypeAnalysis.recoverySummary.uncertainCount} tone="warning" />
+        <MetricCard label="Candidate review" value={reviewerArchetypeAnalysis.recoverySummary.candidateSeedCount} tone="accent" />
+        <MetricCard label="False positives" value={reviewerArchetypeAnalysis.recoverySummary.falsePositiveCount} tone="danger" />
+        <MetricCard label="False negatives" value={reviewerArchetypeAnalysis.recoverySummary.falseNegativeCount} tone="warning" />
+      </div>
+
+      <div className="report-section">
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>High Signal by Cohort</h3>
+            <p>Top signal users grouped by their strongest cohort fit.</p>
+          </div>
+          <ReportTable
+            columns={reviewerCohortColumns}
+            rows={reviewerCohortRows.filter((row): row is { cohort: CohortAnchor; users: ReviewerArchetypeReport[]; topUser: ReviewerArchetypeReport } => row.cohort !== null && row.topUser !== null)}
+            getRowKey={(row) => row.cohort.id}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.topUser.userId })}
+            emptyTitle="No high-signal users"
+            emptyDescription="Take more turns so the visible model can accumulate cohort-local signal."
+          />
+        </div>
+
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>Candidate New Seed / Tina-like</h3>
+            <p>High-value reviewers that do not fit known cohorts cleanly.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.candidateSeedUsers}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No analyst candidates"
+            emptyDescription="This panel fills when the system finds strong signal but weak known-cohort fit."
+          />
+
+          <div className="section-heading">
+            <h3>High Signal, Weak Known Fit</h3>
+            <p>Users the model trusts, but only loosely explains with current cohort labels.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.weakFitHighSignalUsers}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No weak-fit high-signal users"
+            emptyDescription="This list fills when a user has strong signal but poor known-cohort fit."
+          />
+        </div>
+      </div>
+
+      <div className="report-section">
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>Early Scouts</h3>
+            <p>Users whose active routing bias lands early in the turn history.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.earlyScouts}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No early scouts"
+            emptyDescription="Active turn timing has not yet produced any early-scout patterns."
+          />
+        </div>
+
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>Popularity Chasers and Noise</h3>
+            <p>Broad-hit followers, noisy users, and low-evidence mismatches.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={[
+              ...reviewerArchetypeAnalysis.popularityChasers,
+              ...reviewerArchetypeAnalysis.noisyUsers
+            ]}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No popularity chasers or noisy users"
+            emptyDescription="The current sample has not produced any obvious broad-hit followers or random noise."
+          />
+        </div>
+      </div>
+
+      <div className="report-section">
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>False Positives</h3>
+            <p>Hidden noise or detached predictors that the model may be reading as meaningful signal.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.falsePositives}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No false positives"
+            emptyDescription="The visible model has not over-classified any noisy or detached users yet."
+          />
+        </div>
+
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>False Negatives</h3>
+            <p>Hidden clean matches, mislabeled users, or inverse raters the model failed to recover.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.falseNegatives}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No false negatives"
+            emptyDescription="The current synthetic sample has not produced any misses worth flagging."
+          />
+        </div>
+      </div>
+    </div>
+  );
 
   const selectedUserSummary = selectedInference ? (
     <div className="stack">
@@ -943,6 +1215,27 @@ export default function App() {
         <p className="muted">{selectedInference.diagnosis.reasons.join(' | ')}</p>
       </section>
       <section className="detail-block">
+        <h4>Reviewer checksum</h4>
+        <p>
+          Hidden generator archetype:{' '}
+          {selectedUser.hiddenReviewerArchetype ? archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
+        </p>
+        <p>
+          Recovery status:{' '}
+          {selectedUserReviewerReport ? (
+            <Badge tone={reviewerRecoveryTone(selectedUserReviewerReport.recoveryStatus)}>
+              {selectedUserReviewerReport.recoveryStatus}
+            </Badge>
+          ) : (
+            'n/a'
+          )}
+        </p>
+        <p className="muted">
+          Analyst flags: {selectedUserReviewerReport?.analystFlags.join(' · ') ?? 'n/a'}
+        </p>
+        <p className="muted">Hidden labels are debug checksums only. They do not feed the model.</p>
+      </section>
+      <section className="detail-block">
         <h4>Debug</h4>
         <p>Hidden seed: {selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}</p>
         <p>Tag alignment: {selectedUser.hiddenTagAlignment ?? 'n/a'}</p>
@@ -1101,6 +1394,50 @@ export default function App() {
             <p className="muted">No weighted contributions yet.</p>
           )}
         </div>
+      </section>
+    </div>
+  ) : null;
+
+  const reviewerDrawerContent = selectedReviewerReport ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>{selectedReviewerReport.label}</h4>
+        <p className="muted">{selectedReviewerReport.userId}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Hidden generator checksum</h4>
+        <p>Hidden archetype: {archetypeLabel(selectedReviewerReport.hiddenReviewerArchetype)}</p>
+        <p>Checksum: {selectedReviewerReport.hiddenReviewerChecksum}</p>
+        <p className="muted">Debug checksum only. Not a model input.</p>
+      </section>
+      <section className="detail-block">
+        <h4>Inferred behavior</h4>
+        <p>Diagnosis: <Badge tone={diagnosisTone(selectedReviewerReport.inferredDiagnosisType)}>{selectedReviewerReport.inferredDiagnosisType}</Badge></p>
+        <p>Inferred cohort: {selectedReviewerReport.inferredCohortId ? labelForCohort(selectedReviewerReport.inferredCohortId) : 'none'}</p>
+        <p>Recovery status: <Badge tone={reviewerRecoveryTone(selectedReviewerReport.recoveryStatus)}>{selectedReviewerReport.recoveryStatus}</Badge></p>
+      </section>
+      <section className="detail-block">
+        <h4>Evidence</h4>
+        <p>Declared fit: {formatPercent(selectedReviewerReport.declaredFit)}</p>
+        <p>Behavior fit: {formatPercent(selectedReviewerReport.behaviorFit)}</p>
+        <p>Known fit: {formatPercent(selectedReviewerReport.knownCohortFit)}</p>
+        <p>Signal evidence: {formatPercent(selectedReviewerReport.signalEvidence)}</p>
+        <p>Usable signal: {formatDecimal(selectedReviewerReport.effectiveSignal)}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Analyst flags</h4>
+        <div className="badge-row">
+          {selectedReviewerReport.analystFlags.length > 0 ? (
+            selectedReviewerReport.analystFlags.map((flag) => (
+              <Badge key={flag} tone="neutral">
+                {flag}
+              </Badge>
+            ))
+          ) : (
+            <span className="muted">No flags yet.</span>
+          )}
+        </div>
+        <p className="muted">Review candidate: {selectedReviewerReport.reviewCandidate ? 'yes' : 'no'}</p>
       </section>
     </div>
   ) : null;
@@ -1482,6 +1819,10 @@ export default function App() {
           </div>
         </Panel>
 
+        <Panel title="Reviewer Archetype Recovery" className="panel--wide">
+          {reviewerArchetypeSummary}
+        </Panel>
+
         <Panel title="Selected User Summary">
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>
@@ -1551,6 +1892,11 @@ export default function App() {
                   helper="Debug and validation only."
                 />
                 <MetricCard
+                  label="Hidden generator archetype"
+                  value={selectedUser.hiddenReviewerArchetype ? archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
+                  helper="Debug and validation only."
+                />
+                <MetricCard
                   label="Hidden tag alignment"
                   value={selectedUser.hiddenTagAlignment ?? 'n/a'}
                   helper="Debug and validation only."
@@ -1568,6 +1914,11 @@ export default function App() {
                       : 'Different visible fit'
                   }
                   helper="Hidden data is not a model input."
+                />
+                <MetricCard
+                  label="Recovery status"
+                  value={selectedUserReviewerReport?.recoveryStatus ?? 'n/a'}
+                  helper="Debug checksum status for the selected user."
                 />
               </div>
             ) : (
@@ -1713,6 +2064,14 @@ export default function App() {
         onClose={() => setDrawerState(null)}
       >
         {affinityDrawerContent}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'reviewer'}
+        title={drawerState?.type === 'reviewer' ? `Reviewer checksum: ${selectedReviewerReport?.label ?? drawerState.userId}` : 'Reviewer checksum'}
+        onClose={() => setDrawerState(null)}
+      >
+        {reviewerDrawerContent}
       </Drawer>
     </main>
   );

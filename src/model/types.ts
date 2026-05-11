@@ -3,6 +3,17 @@ export type UserId = string;
 export type IslandId = string;
 export type CohortId = string;
 
+export type ReviewerArchetype =
+  | 'CLEAN_COHORT_MATCH'
+  | 'MISLABELED_USER'
+  | 'INVERSE_RATER'
+  | 'RANDOM_NOISY_USER'
+  | 'TINA_LIKE_DETACHED_PREDICTOR'
+  | 'EARLY_SCOUT'
+  | 'LATE_CONSENSUS_FOLLOWER'
+  | 'POPULARITY_CHASER'
+  | 'NICHE_SPECIALIST';
+
 export type Rating = -1 | 0 | 1;
 export type MaybeRating = Rating | null;
 
@@ -34,8 +45,12 @@ export interface User {
   declaredTags: TagId[];
   ratings: Record<IslandId, MaybeRating>;
   hiddenSeedCohortId?: CohortId;
+  hiddenDeclaredCohortId?: CohortId;
+  hiddenBehaviorCohortId?: CohortId;
   hiddenTagAlignment?: number;
   hiddenRatingAlignment?: number;
+  hiddenReviewerArchetype?: ReviewerArchetype;
+  hiddenReviewerChecksum?: string;
 }
 
 export interface SimilarityResult {

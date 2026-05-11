@@ -1,4 +1,5 @@
 import { analyzePseudoCohorts, type PseudoCohortAnalysis } from './pseudoCohorts.js';
+import { analyzeReviewerArchetypes, type ReviewerArchetypeAnalysis } from './reviewerArchetypes.js';
 import { computeInference } from './inference.js';
 import { buildIslandAffinityReports, type IslandAffinityReport } from './affinity.js';
 import { buildRaterSignalProfiles, type RaterSignalProfile } from './raterSignal.js';
@@ -55,6 +56,7 @@ export interface SimulationState {
   raterSignalProfiles: ReadonlyMap<UserId, RaterSignalProfile>;
   islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>;
   pseudoCohortAnalysis: PseudoCohortAnalysis;
+  reviewerArchetypeAnalysis: ReviewerArchetypeAnalysis;
   turnHistory: SimulationTurnSummary[];
 }
 
@@ -263,6 +265,14 @@ function recomputeState(
     islands
   );
   const pseudoCohortAnalysis = analyzePseudoCohorts(users, inferenceByUserId);
+  const reviewerArchetypeAnalysis = analyzeReviewerArchetypes(
+    users,
+    inferenceByUserId,
+    raterSignalAnalysis.byUserId,
+    cohorts,
+    islands,
+    ratingEvents
+  );
 
   return {
     seed,
@@ -288,6 +298,7 @@ function recomputeState(
     raterSignalProfiles: raterSignalAnalysis.byUserId,
     islandAffinityReports: islandAffinityAnalysis.byIslandId,
     pseudoCohortAnalysis,
+    reviewerArchetypeAnalysis,
     turnHistory: turnHistory.map((summary) => ({
       ...summary,
       activeUserIds: summary.activeUserIds.slice(),

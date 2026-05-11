@@ -38,6 +38,10 @@ export interface InferenceResult extends SignalSummary {
   inverseTop: CohortMatch;
 }
 
+export type InferenceAnalysis = InferenceResult & {
+  diagnosis: ReturnType<typeof diagnoseInference>;
+};
+
 function scoreDeclaredSimilarity(
   user: User,
   cohort: CohortAnchor,
@@ -199,7 +203,7 @@ export function computeInference(
   allTags: readonly TagId[],
   allIslands: readonly Island[],
   thresholds: DiagnosisThresholds = DEFAULT_THRESHOLDS
-): InferenceResult & { diagnosis: ReturnType<typeof diagnoseInference> } {
+): InferenceAnalysis {
   const declaredSimilarities = computeDeclaredSimilarities(user, cohorts, allTags);
   const behavioralSimilarities = computeBehavioralSimilarities(user, cohorts, allIslands);
   const inverseBehavioralSimilarities = computeInverseBehavioralSimilarities(behavioralSimilarities);
