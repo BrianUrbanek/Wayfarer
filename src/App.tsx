@@ -1,22 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Badge } from './ui/components/Badge';
+import { Drawer } from './ui/components/Drawer';
+import { EmptyState } from './ui/components/EmptyState';
+import { MetricCard } from './ui/components/MetricCard';
 import { Panel } from './ui/components/Panel';
-import { UserListPanel } from './ui/components/UserListPanel';
-import { IslandRatingsPanel } from './ui/components/IslandRatingsPanel';
-import { ModelOutputPanel } from './ui/components/ModelOutputPanel';
-import { DebugPanel } from './ui/components/DebugPanel';
-import { PseudoCohortPanel } from './ui/components/PseudoCohortPanel';
+import { ProgressBar } from './ui/components/ProgressBar';
+import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
+import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
+import { DistributionList } from './ui/components/DistributionList';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
 import { computeInference } from './model/inference';
-import { analyzePseudoCohorts } from './model/pseudoCohorts';
-import type { CohortAnchor } from './model/types';
+import {
+  analyzePseudoCohorts,
+  type PseudoCohortReport
+} from './model/pseudoCohorts';
+import type { CohortAnchor, Island, User } from './model/types';
 
 const INITIAL_CONFIG = {
   seed: 48291,
-  numUsers: 12,
+  numUsers: 48,
   numIslands: 18
 };
+
+type SelectionModalKind = 'user' | 'island' | 'cohort' | 'pseudo' | null;
+
+type DrawerState =
+  | { type: 'user'; id: string }
+  | { type: 'island'; id: string }
+  | { type: 'pseudo'; key: string }
+  | null;
 
 function buildDataset(seed: number, numUsers: number, numIslands: number) {
   return generateColumbusDataset({
@@ -42,15 +56,107 @@ function labelForCohortFactory(cohorts: CohortAnchor[]) {
   };
 }
 
+function formatPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatRating(value: string | number | null): string {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+
+  return String(value);
+}
+
+function diagnosisTone(type: string): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' {
+  switch (type) {
+    case 'HIGH_SIGNAL':
+      return 'success';
+    case 'MISMATCH_RETAG':
+      return 'warning';
+    case 'INVERSE_PROFILE':
+      return 'danger';
+    case 'UNKNOWN_OR_NOISY':
+      return 'neutral';
+    case 'LOW_SIGNAL':
+      return 'warning';
+    default:
+      return 'neutral';
+  }
+}
+
+function comparisonLabel(user: User | null, selectedCohort: CohortAnchor | null, cohortLabel: (id: string | null) => string) {
+  if (selectedCohort) {
+    return selectedCohort.label;
+  }
+
+  if (user) {
+    return cohortLabel(user.hiddenSeedCohortId ?? null);
+  }
+
+  return 'none';
+}
+
+function countNonNullRatings(user: User): number {
+  return Object.values(user.ratings).filter((value) => value !== null).length;
+}
+
+function buildPopulationSummary(datasetUserCount: number, totalUsers: number, inferenceTypes: Map<string, string>, pseudoReports: number) {
+  let highSignal = 0;
+  let retagCandidates = 0;
+  let inverseProfiles = 0;
+  let noisyUsers = 0;
+
+  inferenceTypes.forEach((type) => {
+    if (type === 'HIGH_SIGNAL') {
+      highSignal += 1;
+    } else if (type === 'MISMATCH_RETAG') {
+      retagCandidates += 1;
+    } else if (type === 'INVERSE_PROFILE') {
+      inverseProfiles += 1;
+    } else if (type === 'UNKNOWN_OR_NOISY' || type === 'AMBIGUOUS' || type === 'LOW_SIGNAL') {
+      noisyUsers += 1;
+    }
+  });
+
+  return {
+    totalUsers,
+    generatedUsers: datasetUserCount,
+    highSignal,
+    retagCandidates,
+    inverseProfiles,
+    noisyUsers,
+    pseudoReports
+  };
+}
+
+function pseudoPriorityTone(priority: PseudoCohortReport['analystPriority']) {
+  switch (priority) {
+    case 'critical':
+      return 'danger';
+    case 'high':
+      return 'warning';
+    case 'medium':
+      return 'accent';
+    default:
+      return 'neutral';
+  }
+}
+
 export default function App() {
   const [seed, setSeed] = useState(INITIAL_CONFIG.seed);
   const [numUsers, setNumUsers] = useState(INITIAL_CONFIG.numUsers);
   const [numIslands, setNumIslands] = useState(INITIAL_CONFIG.numIslands);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedIslandId, setSelectedIslandId] = useState<string>('');
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
   const [showDebug, setShowDebug] = useState(true);
+  const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
+  const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
   const dataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
+
+  const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
 
   const inferenceByUserId = useMemo(() => {
     return new Map(
@@ -61,16 +167,10 @@ export default function App() {
     );
   }, [dataset]);
 
-  const pseudoCohorts = useMemo(
+  const pseudoCohortAnalysis = useMemo(
     () => analyzePseudoCohorts(dataset.users, inferenceByUserId),
     [dataset.users, inferenceByUserId]
   );
-
-  const selectedUser = useMemo(() => {
-    return dataset.users.find((user) => user.id === selectedUserId) ?? dataset.users[0] ?? null;
-  }, [dataset.users, selectedUserId]);
-
-  const selectedInference = selectedUser ? inferenceByUserId.get(selectedUser.id) : undefined;
 
   useEffect(() => {
     if (!dataset.users.length) {
@@ -78,99 +178,517 @@ export default function App() {
       return;
     }
 
-    if (!selectedUser || selectedUser.id !== selectedUserId) {
+    if (!dataset.users.some((user) => user.id === selectedUserId)) {
       setSelectedUserId(dataset.users[0].id);
     }
-  }, [dataset.users, selectedUser, selectedUserId]);
+  }, [dataset.users, selectedUserId]);
 
-  const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
+  useEffect(() => {
+    if (!dataset.islands.length) {
+      setSelectedIslandId('');
+      return;
+    }
 
-  const comparisonCohortIdResolved = useMemo(() => {
+    if (!dataset.islands.some((island) => island.id === selectedIslandId)) {
+      setSelectedIslandId(dataset.islands[0].id);
+    }
+  }, [dataset.islands, selectedIslandId]);
+
+  const selectedUser = useMemo(() => {
+    return dataset.users.find((user) => user.id === selectedUserId) ?? dataset.users[0] ?? null;
+  }, [dataset.users, selectedUserId]);
+
+  const selectedIsland = useMemo(() => {
+    return dataset.islands.find((island) => island.id === selectedIslandId) ?? dataset.islands[0] ?? null;
+  }, [dataset.islands, selectedIslandId]);
+
+  const selectedInference = selectedUser ? inferenceByUserId.get(selectedUser.id) : undefined;
+
+  const selectedComparisonCohort = useMemo(() => {
     if (comparisonCohortId !== 'auto') {
-      return comparisonCohortId;
+      return dataset.cohorts.find((cohort) => cohort.id === comparisonCohortId) ?? null;
     }
 
     return (
-      selectedInference?.behaviorTop.cohortId ??
-      selectedInference?.declaredTop.cohortId ??
-      dataset.cohorts[0]?.id ??
+      dataset.cohorts.find((cohort) => cohort.id === selectedInference?.behaviorTop.cohortId) ??
+      dataset.cohorts.find((cohort) => cohort.id === selectedInference?.declaredTop.cohortId) ??
+      dataset.cohorts[0] ??
       null
     );
   }, [comparisonCohortId, dataset.cohorts, selectedInference]);
 
-  const comparisonCohort = useMemo(() => {
-    if (comparisonCohortIdResolved === null) {
-      return null;
-    }
+  const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, labelForCohort);
 
-    return dataset.cohorts.find((cohort) => cohort.id === comparisonCohortIdResolved) ?? null;
-  }, [comparisonCohortIdResolved, dataset.cohorts]);
+  const inferenceTypes = useMemo(() => {
+    return new Map(
+      dataset.users.map((user) => [user.id, inferenceByUserId.get(user.id)?.diagnosis.type ?? 'AMBIGUOUS'])
+    );
+  }, [dataset.users, inferenceByUserId]);
 
-  const hiddenClassificationLabel = useMemo(() => {
-    if (!selectedUser || !selectedInference) {
-      return 'No user selected';
-    }
+  const populationSummary = useMemo(
+    () =>
+      buildPopulationSummary(
+        dataset.users.length,
+        dataset.users.length,
+        inferenceTypes,
+        pseudoCohortAnalysis.allReports.length
+      ),
+    [dataset.users.length, inferenceTypes, pseudoCohortAnalysis.allReports.length]
+  );
 
-    const targetCohort = selectedInference.behaviorTop.cohortId
-      ? labelForCohort(selectedInference.behaviorTop.cohortId)
-      : 'none';
+  const selectedInferenceDiagnostics = selectedInference?.diagnosis;
+  const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
+  const selectedUserTopCohorts = selectedInference
+    ? [
+        {
+          label: 'Declared',
+          match: selectedInference.declaredTop
+        },
+        {
+          label: 'Behavior',
+          match: selectedInference.behaviorTop
+        },
+        {
+          label: 'Inverse',
+          match: selectedInference.inverseTop
+        }
+      ]
+    : [];
 
-    if (!selectedUser.hiddenSeedCohortId) {
-      return 'No hidden seed assigned';
-    }
+  const selectedIslandRows = useMemo(() => {
+    return dataset.cohorts.map((cohort) => ({
+      cohort,
+      rating: selectedIsland ? cohort.ratings[selectedIsland.id] ?? null : null
+    }));
+  }, [dataset.cohorts, selectedIsland]);
 
-    if (selectedUser.hiddenSeedCohortId === selectedInference.behaviorTop.cohortId) {
-      return 'Recovered hidden seed';
-    }
-
-    if (
-      selectedInference.diagnosis.type === 'MISMATCH_RETAG' ||
-      selectedInference.diagnosis.type === 'HIGH_SIGNAL'
-    ) {
-      return `Visible behavior maps to ${targetCohort} instead of the hidden seed`;
-    }
-
-    if (selectedInference.diagnosis.type === 'INVERSE_PROFILE') {
-      return `Strong inverse pattern relative to ${labelForCohort(selectedInference.inverseTop.cohortId)}`;
-    }
-
-    return `Debug-only relation to ${labelForCohort(selectedUser.hiddenSeedCohortId)}`;
-  }, [labelForCohort, selectedInference, selectedUser]);
-
-  const hiddenSeedLabel = selectedUser?.hiddenSeedCohortId
-    ? labelForCohort(selectedUser.hiddenSeedCohortId)
+  const selectedComparisonUserRating = selectedUser && selectedIsland
+    ? selectedUser.ratings[selectedIsland.id] ?? null
     : null;
+
+  const selectedComparisonCohortRating = selectedComparisonCohort && selectedIsland
+    ? selectedComparisonCohort.ratings[selectedIsland.id] ?? null
+    : null;
+
+  const selectedUserOptions = useMemo<SelectionOption[]>(() => {
+    return dataset.users.map((user) => {
+      const inference = inferenceByUserId.get(user.id);
+      const tags = user.declaredTags.slice(0, 3).join(' · ');
+
+      return {
+        id: user.id,
+        label: user.label,
+        description: tags,
+        badge: inference?.diagnosis.type ?? 'unknown'
+      };
+    });
+  }, [dataset.users, inferenceByUserId]);
+
+  const selectedIslandOptions = useMemo<SelectionOption[]>(() => {
+    return dataset.islands.map((island) => {
+      return {
+        id: island.id,
+        label: island.label,
+        description: `Rated by ${dataset.cohorts.length} seeded anchors`,
+        badge: island.hiddenClass ?? 'island'
+      };
+    });
+  }, [dataset.cohorts.length, dataset.islands]);
+
+  const comparisonCohortOptions = useMemo<SelectionOption[]>(() => {
+    return [
+      {
+        id: 'auto',
+        label: 'Behavior top (auto)',
+        description: 'Use the current user’s strongest behavioral match.'
+      },
+      ...dataset.cohorts.map((cohort) => ({
+        id: cohort.id,
+        label: cohort.label,
+        description: cohort.tags.join(' · '),
+        badge: cohort.source
+      }))
+    ];
+  }, [dataset.cohorts]);
+
+  const pseudoReportOptions = useMemo<SelectionOption[]>(() => {
+    return pseudoCohortAnalysis.allReports.map((report) => ({
+      id: report.key,
+      label: report.tags.join(' | '),
+      description: `${report.userCount} users · ${report.reportType}`,
+      badge: report.analystPriority
+    }));
+  }, [pseudoCohortAnalysis.allReports]);
+
+  const reportColumns: ReportTableColumn<PseudoCohortReport>[] = [
+    {
+      key: 'tags',
+      label: 'Tag combo',
+      render: (report) => report.tags.join(' | ')
+    },
+    {
+      key: 'users',
+      label: 'Users',
+      render: (report) => report.userCount,
+      align: 'right'
+    },
+    {
+      key: 'consistency',
+      label: 'Consistency',
+      render: (report) => <ProgressBar value={Math.max(0, report.internalConsistency)} />
+    },
+    {
+      key: 'fit',
+      label: 'Known fit',
+      render: (report) => formatPercent(report.averageKnownCohortFit),
+      align: 'right'
+    },
+    {
+      key: 'signal',
+      label: 'Effective signal',
+      render: (report) => formatPercent(report.averageEffectiveSignal),
+      align: 'right'
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      render: (report) => <Badge tone={pseudoPriorityTone(report.analystPriority)}>{report.analystPriority}</Badge>,
+      align: 'center'
+    }
+  ];
+
+  const selectedUserSummary = selectedInference ? (
+    <div className="stack">
+      <div className="summary-header">
+        <div>
+          <p className="eyebrow">Selected user</p>
+          <h3>{selectedUser?.label ?? 'None'}</h3>
+        </div>
+        <div className="summary-header__actions">
+          <button type="button" className="button button--ghost" onClick={() => setDrawerState(selectedUser ? { type: 'user', id: selectedUser.id } : null)}>
+            Open detail
+          </button>
+          <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
+            Select user
+          </button>
+        </div>
+      </div>
+
+      <div className="badge-row">
+        {(selectedUser?.declaredTags ?? []).map((tag) => (
+          <Badge key={tag} tone="accent">
+            {tag}
+          </Badge>
+        ))}
+      </div>
+
+      <div className="metric-grid">
+        <MetricCard
+          label="Identity/Behavior Fit"
+          value={selectedInference.signalFit.toFixed(3)}
+          helper="Do this player’s declared tags and observed ratings point toward the same cohort pattern?"
+          tone="accent"
+        />
+        <MetricCard
+          label="Rating Evidence"
+          value={selectedInference.signalEvidence.toFixed(3)}
+          helper="How much rating data supports this judgment?"
+          tone="neutral"
+        />
+        <MetricCard
+          label="Usable Signal"
+          value={selectedInference.effectiveSignal.toFixed(3)}
+          helper="How much weight the system should currently give this player’s ratings."
+          tone="success"
+        />
+      </div>
+
+      <div className="summary-top-cohorts">
+        {selectedUserTopCohorts.map(({ label, match }) => (
+          <MetricCard
+            key={label}
+            label={`${label} top cohort`}
+            value={labelForCohort(match.cohortId)}
+            helper={`${formatPercent(match.score)} match`}
+            tone="neutral"
+          />
+        ))}
+      </div>
+
+      <div className="summary-inline">
+        <Badge tone={diagnosisTone(selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS')}>
+          {selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
+        </Badge>
+        <span className="muted">{selectedInferenceDiagnostics?.message}</span>
+      </div>
+    </div>
+  ) : null;
+
+  const selectedIslandSummary = selectedIsland ? (
+    <div className="stack">
+      <div className="summary-header">
+        <div>
+          <p className="eyebrow">Selected island</p>
+          <h3>{selectedIsland.label}</h3>
+        </div>
+        <div className="summary-header__actions">
+          <button type="button" className="button button--ghost" onClick={() => setDrawerState({ type: 'island', id: selectedIsland.id })}>
+            Open detail
+          </button>
+          <button type="button" className="button button--ghost" onClick={() => setModalKind('island')}>
+            Select island
+          </button>
+        </div>
+      </div>
+
+      <div className="metric-grid metric-grid--compact">
+        <MetricCard label="User rating" value={selectedComparisonUserRating ?? '—'} helper="Visible rating from the selected user." />
+        <MetricCard
+          label="Comparison cohort"
+          value={selectedComparisonLabel}
+          helper="The cohort used for island comparison."
+        />
+        <MetricCard
+          label="Cohort rating"
+          value={selectedComparisonCohortRating ?? '—'}
+          helper="The selected cohort’s rating on this island."
+        />
+      </div>
+
+      <div className="summary-inline">
+        <Badge tone="neutral">User rated: {selectedUserRatings}</Badge>
+        <Badge tone="accent">Island comparison updates with selection</Badge>
+      </div>
+    </div>
+  ) : null;
+
+  const selectedUserDetail = selectedUser && selectedInference ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>Identity</h4>
+        <p>{selectedUser.label}</p>
+        <div className="badge-row">
+          {selectedUser.declaredTags.map((tag) => (
+            <Badge key={tag} tone="accent">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </section>
+      <section className="detail-block">
+        <h4>Ratings</h4>
+        <p>{selectedUserRatings} islands rated</p>
+      </section>
+      <section className="detail-block">
+        <h4>Diagnosis</h4>
+        <p>{selectedInference.diagnosis.message}</p>
+        <p className="muted">{selectedInference.diagnosis.reasons.join(' · ')}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Debug</h4>
+        <p>Hidden seed: {selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}</p>
+        <p>Tag alignment: {selectedUser.hiddenTagAlignment ?? 'n/a'}</p>
+        <p>Rating alignment: {selectedUser.hiddenRatingAlignment ?? 'n/a'}</p>
+      </section>
+    </div>
+  ) : null;
+
+  const selectedIslandDetail = selectedIsland ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>Island</h4>
+        <p>{selectedIsland.label}</p>
+        <p className="muted">Comparison cohort: {selectedComparisonLabel}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Visible ratings</h4>
+        <p>User: {selectedComparisonUserRating ?? '—'}</p>
+        <p>Cohort: {selectedComparisonCohortRating ?? '—'}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Seeded cohort ratings</h4>
+        <div className="detail-mini-table">
+          {selectedIslandRows.map(({ cohort, rating }) => (
+            <div key={cohort.id} className="detail-mini-table__row">
+              <span>{cohort.label}</span>
+              <Badge tone={rating === 1 ? 'success' : rating === -1 ? 'danger' : 'warning'}>
+                {rating ?? '—'}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  ) : null;
+
+  const selectedPseudoDetail = drawerState?.type === 'pseudo'
+    ? pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key) ?? null
+    : null;
+
+  const pseudoDrawerContent = selectedPseudoDetail ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>{selectedPseudoDetail.tags.join(' | ')}</h4>
+        <p className="muted">{selectedPseudoDetail.reportType}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Metrics</h4>
+        <p>Users: {selectedPseudoDetail.userCount}</p>
+        <p>Internal consistency: {selectedPseudoDetail.internalConsistency.toFixed(3)}</p>
+        <p>Consistency evidence: {selectedPseudoDetail.consistencyEvidence.toFixed(3)}</p>
+        <p>Known fit: {selectedPseudoDetail.averageKnownCohortFit.toFixed(3)}</p>
+        <p>Effective signal: {selectedPseudoDetail.averageEffectiveSignal.toFixed(3)}</p>
+        <p>Priority: {selectedPseudoDetail.analystPriority}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Users</h4>
+        <p className="muted">{selectedPseudoDetail.users.join(', ')}</p>
+      </section>
+    </div>
+  ) : null;
+
+  const modelExplanation = selectedInference ? (
+    <div className="stack">
+      <div className="summary-header">
+        <div>
+          <p className="eyebrow">Model explanation</p>
+          <h3>Why the model scored this user the way it did</h3>
+        </div>
+      </div>
+
+      <DistributionList
+        title="Declared distribution"
+        entries={selectedInference.declaredDistribution}
+        labelForCohort={labelForCohort}
+      />
+
+      <DistributionList
+        title="Behavior distribution"
+        entries={selectedInference.behaviorDistribution}
+        labelForCohort={labelForCohort}
+      />
+
+      <DistributionList
+        title="Inverse behavior distribution"
+        entries={selectedInference.inverseBehaviorDistribution}
+        labelForCohort={labelForCohort}
+      />
+
+      <section className="diagnosis-card">
+        <h4>Diagnosis reasons</h4>
+        <ul className="diagnosis-list">
+          {selectedInference.diagnosis.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+        <div className="summary-inline">
+          <span className="muted">
+            Suggested cohort:{' '}
+            {selectedInference.diagnosis.suggestedCohortId
+              ? labelForCohort(selectedInference.diagnosis.suggestedCohortId)
+              : 'none'}
+          </span>
+          <span className="muted">
+            Suggested tags:{' '}
+            {selectedInference.diagnosis.suggestedTags?.length
+              ? selectedInference.diagnosis.suggestedTags.join(', ')
+              : 'none'}
+          </span>
+        </div>
+      </section>
+    </div>
+  ) : (
+    <EmptyState title="No user selected" description="Choose a user to inspect declared and behavioral fit." />
+  );
+
+  const islandComparison = selectedUser && selectedComparisonCohort ? (
+    <ReportTable
+      columns={[
+        {
+          key: 'island',
+          label: 'Island',
+          render: (row: { island: Island; userRating: string; cohortRating: string; match: string }) => row.island.label
+        },
+        {
+          key: 'user',
+          label: 'User',
+          render: (row) => row.userRating,
+          align: 'center'
+        },
+        {
+          key: 'cohort',
+          label: 'Cohort',
+          render: (row) => row.cohortRating,
+          align: 'center'
+        },
+        {
+          key: 'match',
+          label: 'Match',
+          render: (row) => row.match,
+          align: 'center'
+        }
+      ]}
+      rows={dataset.islands.map((island) => {
+        const userRating = selectedUser.ratings[island.id] ?? null;
+        const cohortRating = selectedComparisonCohort.ratings[island.id] ?? null;
+        const match =
+          userRating === null || cohortRating === null
+            ? 'No overlap'
+            : userRating === cohortRating
+              ? 'Match'
+              : 'Mismatch';
+
+        return {
+          island,
+          userRating: formatRating(userRating),
+          cohortRating: formatRating(cohortRating),
+          match
+        };
+      })}
+      getRowKey={(row) => row.island.id}
+      onRowClick={(row) => setDrawerState({ type: 'island', id: row.island.id })}
+      emptyTitle="No islands"
+      emptyDescription="Increase the island count to compare ratings."
+    />
+  ) : (
+    <EmptyState title="Select a user" description="Island comparison appears once a user is selected." />
+  );
+
+  const pseudoConsistentColumns = reportColumns;
+  const pseudoInconsistentColumns = reportColumns;
+
+  const pseudoConsistentRows = pseudoCohortAnalysis.topConsistentPseudoCohorts;
+  const pseudoInconsistentRows = pseudoCohortAnalysis.topInconsistentPseudoCohorts;
+
+  const openSelectionButton = (kind: Exclude<SelectionModalKind, null>, label: string) => (
+    <button type="button" className="button" onClick={() => setModalKind(kind)}>
+      {label}
+    </button>
+  );
 
   const randomizeSeed = () => {
     setSeed(Math.floor(Math.random() * 1_000_000_000));
   };
 
   return (
-    <main className="app-shell">
+    <main className="app-shell analyst-console">
       <header className="hero">
         <div className="hero__eyebrow-row">
-          <p className="eyebrow">Wayfarer explainability dashboard</p>
+          <p className="eyebrow">Wayfarer analyst console</p>
           <span className="hero__pill">Columbus debug engine</span>
         </div>
         <h1>Wayfarer</h1>
         <p className="subtitle">
-          A cohort-aware discovery console that surfaces visible tags, observed ratings, diagnosis, and
-          analyst-facing pseudo-cohort reports without exposing hidden synthetic metadata to the model.
+          Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and
+          pseudo-cohort reports at scale.
         </p>
       </header>
 
-      <section className="control-bar" aria-label="Dataset controls">
+      <section className="control-strip" aria-label="Dashboard controls">
         <label className="control">
           <span>Seed</span>
-          <input
-            type="number"
-            value={seed}
-            onChange={(event) => setSeed(Number(event.target.value))}
-            min={0}
-            step={1}
-          />
+          <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
         </label>
-
         <label className="control">
           <span>Users</span>
           <input
@@ -178,11 +696,10 @@ export default function App() {
             value={numUsers}
             onChange={(event) => setNumUsers(Number(event.target.value))}
             min={1}
-            max={64}
+            max={400}
             step={1}
           />
         </label>
-
         <label className="control">
           <span>Islands</span>
           <input
@@ -190,99 +707,209 @@ export default function App() {
             value={numIslands}
             onChange={(event) => setNumIslands(Number(event.target.value))}
             min={4}
-            max={48}
+            max={96}
             step={1}
           />
         </label>
-
-        <label className="control control--wide">
-          <span>Comparison cohort</span>
-          <select
-            value={comparisonCohortId}
-            onChange={(event) => setComparisonCohortId(event.target.value)}
-          >
-            <option value="auto">Behavior top</option>
-            {dataset.cohorts.map((cohort) => (
-              <option key={cohort.id} value={cohort.id}>
-                {cohort.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <button type="button" className="button" onClick={randomizeSeed}>
           Regenerate dataset
         </button>
-
         <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
-          {showDebug ? 'Hide debug panel' : 'Show debug panel'}
+          {showDebug ? 'Hide debug' : 'Show debug'}
         </button>
-
-        <div className="control-bar__meta">
-          <span>{dataset.cohorts.length} seeded anchors</span>
-          <span>{dataset.users.length} generated users</span>
-          <span>{dataset.islands.length} islands</span>
-        </div>
+        {openSelectionButton('user', 'Select user')}
+        {openSelectionButton('island', 'Select island')}
+        {openSelectionButton('cohort', 'Select cohort')}
       </section>
 
-      <section className="dashboard-grid" aria-label="Wayfarer dashboard">
-        <Panel title="Users" className="panel--users">
-          {selectedUser ? (
-            <UserListPanel
-              cohorts={dataset.cohorts}
-              users={dataset.users}
-              selectedUserId={selectedUser.id}
-              onSelectUser={setSelectedUserId}
+      <section className="summary-grid">
+        <Panel title="Population Summary" className="panel--full">
+          <div className="metric-grid">
+            <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
+            <MetricCard label="Seeded anchors" value={dataset.cohorts.length} />
+            <MetricCard label="Generated users" value={populationSummary.generatedUsers} />
+            <MetricCard label="Islands" value={dataset.islands.length} />
+            <MetricCard label="High signal users" value={populationSummary.highSignal} tone="success" />
+            <MetricCard label="Retag candidates" value={populationSummary.retagCandidates} tone="warning" />
+            <MetricCard label="Inverse profiles" value={populationSummary.inverseProfiles} tone="danger" />
+            <MetricCard label="Unknown / noisy" value={populationSummary.noisyUsers} />
+            <MetricCard label="Pseudo-cohort reports" value={populationSummary.pseudoReports} />
+          </div>
+          <div className="summary-inline">
+            <ProgressBar
+              value={populationSummary.totalUsers ? populationSummary.highSignal / populationSummary.totalUsers : 0}
+              label="High-signal share"
+              tone="success"
             />
-          ) : (
-            <p className="muted">No users available.</p>
-          )}
+          </div>
         </Panel>
 
-        <Panel title="Island Ratings" className="panel--ratings">
-          {selectedUser && comparisonCohort ? (
-            <IslandRatingsPanel
-              user={selectedUser}
-              comparisonCohort={comparisonCohort}
-              islands={dataset.islands}
-            />
-          ) : (
-            <p className="muted">Select a user to see island-by-island rating comparisons.</p>
-          )}
+        <Panel title="Selected User Summary">
+          {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>
 
-        <Panel title="Model Output" className="panel--model">
-          {selectedUser && selectedInference ? (
-            <ModelOutputPanel
-              inference={selectedInference}
-              cohorts={dataset.cohorts}
-              labelForCohort={labelForCohort}
-            />
-          ) : (
-            <p className="muted">Select a user to inspect declared, behavioral, and inverse signal.</p>
-          )}
+        <Panel title="Selected Island Summary">
+          {selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />}
+        </Panel>
+
+        <Panel title="Model Explanation" className="panel--wide">
+          {modelExplanation}
+        </Panel>
+
+        <Panel title="Island Comparison" className="panel--wide">
+          {islandComparison}
+        </Panel>
+
+        <Panel title="Pseudo-Cohort Reports" className="panel--wide">
+          <div className="section-toolbar">
+            <button type="button" className="button button--ghost" onClick={() => setModalKind('pseudo')}>
+              Select report row
+            </button>
+          </div>
+          <div className="report-section">
+            <div className="report-section__column">
+              <div className="section-heading">
+                <h3>Top Consistent Pseudo-Cohorts</h3>
+                <p>High agreement, meaningful evidence, and low known-cohort fit.</p>
+              </div>
+              <ReportTable
+                columns={pseudoConsistentColumns}
+                rows={pseudoConsistentRows}
+                getRowKey={(row) => row.key}
+                onRowClick={(row) => setDrawerState({ type: 'pseudo', key: row.key })}
+                emptyTitle="No consistent pseudo-cohorts"
+                emptyDescription="Increase user count or vary the generator seed."
+              />
+            </div>
+
+            <div className="report-section__column">
+              <div className="section-heading">
+                <h3>Top Inconsistent Pseudo-Cohorts</h3>
+                <p>Tag combinations whose members do not rate coherently.</p>
+              </div>
+              <ReportTable
+                columns={pseudoInconsistentColumns}
+                rows={pseudoInconsistentRows}
+                getRowKey={(row) => row.key}
+                onRowClick={(row) => setDrawerState({ type: 'pseudo', key: row.key })}
+                emptyTitle="No inconsistent pseudo-cohorts"
+                emptyDescription="Increase user count or vary the generator seed."
+              />
+            </div>
+          </div>
         </Panel>
 
         {showDebug ? (
-          <Panel title="Debug" className="panel--debug">
+          <Panel title="Debug Data" className="panel--wide">
             {selectedUser && selectedInference ? (
-              <DebugPanel
-                user={selectedUser}
-                inference={selectedInference}
-                hiddenSeedLabel={hiddenSeedLabel}
-                hiddenClassification={hiddenClassificationLabel}
-                showHidden={showDebug}
-              />
+              <div className="debug-grid">
+                <MetricCard
+                  label="Hidden seed"
+                  value={selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}
+                  helper="Debug and validation only."
+                />
+                <MetricCard
+                  label="Hidden tag alignment"
+                  value={selectedUser.hiddenTagAlignment ?? 'n/a'}
+                  helper="Debug and validation only."
+                />
+                <MetricCard
+                  label="Hidden rating alignment"
+                  value={selectedUser.hiddenRatingAlignment ?? 'n/a'}
+                  helper="Debug and validation only."
+                />
+                <MetricCard
+                  label="Hidden vs inferred"
+                  value={
+                    selectedUser.hiddenSeedCohortId === selectedInference.behaviorTop.cohortId
+                      ? 'Recovered hidden seed'
+                      : 'Different visible fit'
+                  }
+                  helper="Hidden data is not a model input."
+                />
+              </div>
             ) : (
-              <p className="muted">No user selected.</p>
+              <EmptyState title="No debug data" description="Select a user to inspect hidden generation fields." />
             )}
           </Panel>
         ) : null}
-
-        <Panel title="Pseudo-Cohorts" className="panel--pseudo panel--full">
-          <PseudoCohortPanel analysis={pseudoCohorts} />
-        </Panel>
       </section>
+
+      <SelectionModal
+        open={modalKind === 'user'}
+        title="Select User"
+        searchPlaceholder="Search users"
+        options={selectedUserOptions}
+        selectedId={selectedUserId}
+        onSelect={(id) => {
+          setSelectedUserId(id);
+          setModalKind(null);
+        }}
+        onClose={() => setModalKind(null)}
+      />
+
+      <SelectionModal
+        open={modalKind === 'island'}
+        title="Select Island"
+        searchPlaceholder="Search islands"
+        options={selectedIslandOptions}
+        selectedId={selectedIslandId}
+        onSelect={(id) => {
+          setSelectedIslandId(id);
+          setModalKind(null);
+        }}
+        onClose={() => setModalKind(null)}
+      />
+
+      <SelectionModal
+        open={modalKind === 'cohort'}
+        title="Select Comparison Cohort"
+        searchPlaceholder="Search cohorts"
+        options={comparisonCohortOptions}
+        selectedId={comparisonCohortId}
+        onSelect={(id) => {
+          setComparisonCohortId(id);
+          setModalKind(null);
+        }}
+        onClose={() => setModalKind(null)}
+      />
+
+      <SelectionModal
+        open={modalKind === 'pseudo'}
+        title="Select Pseudo-Cohort Report"
+        searchPlaceholder="Search report rows"
+        options={pseudoReportOptions}
+        selectedId={drawerState?.type === 'pseudo' ? drawerState.key : null}
+        onSelect={(id) => {
+          setDrawerState({ type: 'pseudo', key: id });
+          setModalKind(null);
+        }}
+        onClose={() => setModalKind(null)}
+      />
+
+      <Drawer
+        open={drawerState?.type === 'user'}
+        title={drawerState?.type === 'user' ? `User detail: ${selectedUser?.label ?? drawerState.id}` : 'User detail'}
+        onClose={() => setDrawerState(null)}
+      >
+        {selectedUserDetail}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'island'}
+        title={drawerState?.type === 'island' ? `Island detail: ${selectedIsland?.label ?? drawerState.id}` : 'Island detail'}
+        onClose={() => setDrawerState(null)}
+      >
+        {selectedIslandDetail}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'pseudo'}
+        title={drawerState?.type === 'pseudo' ? 'Pseudo-cohort detail' : 'Pseudo-cohort detail'}
+        onClose={() => setDrawerState(null)}
+      >
+        {pseudoDrawerContent}
+      </Drawer>
     </main>
   );
 }
