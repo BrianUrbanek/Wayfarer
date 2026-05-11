@@ -182,7 +182,7 @@ export default function App() {
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
   const [showDebug, setShowDebug] = useState(true);
-  const [showAbout, setShowAbout] = useState(true);
+  const [showAbout, setShowAbout] = useState(false);
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
@@ -766,7 +766,12 @@ export default function App() {
           <p className="eyebrow">Wayfarer analyst console</p>
           <span className="hero__pill">Columbus debug engine</span>
         </div>
-        <h1>Wayfarer</h1>
+        <div className="hero__title-row">
+          <h1>Wayfarer</h1>
+          <button type="button" className="button button--ghost hero__about-button" onClick={() => setShowAbout(true)}>
+            About
+          </button>
+        </div>
         <p className="subtitle">
           Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and
           pseudo-cohort reports at scale.
@@ -889,9 +894,6 @@ export default function App() {
           </button>
           <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
             {showDebug ? 'Hide debug' : 'Show debug'}
-          </button>
-          <button type="button" className="button button--ghost" onClick={() => setShowAbout((value) => !value)}>
-            {showAbout ? 'Hide about' : 'About / Prior Art'}
           </button>
           {openSelectionButton('user', 'Select user')}
           {openSelectionButton('island', 'Select island')}

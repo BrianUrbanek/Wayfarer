@@ -86,6 +86,17 @@ select {
   letter-spacing: -0.05em;
 }
 
+.hero__title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.hero__title-row .hero__about-button {
+  margin-top: 10px;
+}
+
 .subtitle {
   max-width: 74ch;
   margin: 14px 0 0;
