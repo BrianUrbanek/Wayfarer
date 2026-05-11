@@ -5,6 +5,13 @@ export default defineConfig({
     preserveSymlinks: true
   },
   test: {
-    environment: 'node'
+    environment: 'node',
+    include: ['src/tests/**/*.{test,spec}.{ts,tsx,js,jsx}'],
+    exclude: [
+      'src/tests/node/**',
+      'dist-node-tests/**',
+      '**/*.node.test.ts',
+      '**/*.node.test.js'
+    ]
   }
 });
