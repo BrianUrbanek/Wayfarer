@@ -112,10 +112,11 @@ describe('inference pipeline', () => {
   });
 
   it('treats random visible ratings as unknown or ambiguous', () => {
-    const randomRatings = Object.fromEntries(
+    const randomRatings: Record<string, MaybeRating> = Object.fromEntries(
       dataset.islands.map((island, index) => {
-        const pattern: MaybeRating[] = [null, null, 1, null, -1, null];
-        return [island.id, pattern[index % pattern.length]];
+        if (index === 0) return [island.id, 1 as MaybeRating];
+        if (index === 1) return [island.id, -1 as MaybeRating];
+        return [island.id, null as MaybeRating];
       })
     );
     const user = buildVisibleUser('Random user', cohortC.tags, randomRatings);
