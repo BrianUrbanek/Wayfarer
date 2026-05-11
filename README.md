@@ -19,6 +19,10 @@ The current implementation target is a browser-based TypeScript app, likely Vite
 - [Cohort-Aware Discovery Toy Spec](docs/cohort-aware-discovery-toy-spec.md)
 - [Algorithm Implementation Spec](docs/algorithm-implementation-spec.md)
 
+## Live demo
+
+- [Wayfarer on GitHub Pages](https://brianurbanek.github.io/Wayfarer/)
+
 ## Working names
 
 - **Wayfarer**: repository/project name.
