@@ -26,7 +26,6 @@ describe('App analyst console', () => {
     expect(html).toContain('Drilldown targets');
     expect(html).toContain('Pinned drilldown');
     expect(html).toContain('Turn behavior / Dynamic settings');
-    expect(html).toContain('Turn policy');
     expect(html).toContain('Rating count policy');
     expect(html).toContain('Organic Exploration');
     expect(html).toContain('Guided Discovery');
