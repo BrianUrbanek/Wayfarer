@@ -35,6 +35,8 @@ And then:
 
 Tag-level island descriptions may still be useful, but they should be treated as derived explanatory summaries, not the foundation of rater trust.
 
+The trust layer remains cohort-local, not tag-local. Tags are routing hints and explanatory vocabulary; they are not the primary trust surface.
+
 This turns Wayfarer from a static similarity demonstration into a discovery loop.
 
 ## Key Concepts
@@ -60,7 +62,7 @@ A rating event records:
 - user,
 - island,
 - expressed rating,
-- time/day,
+- turn,
 - island age at time of rating,
 - island exposure/rating count at time of rating,
 - and eventually the rater signal snapshot used at that time.
@@ -87,7 +89,7 @@ It means:
 
 A user may be high-signal for one cohort and low-signal for another.
 
-This is specifically **cohort-level signal**, not tag-level signal.
+This is specifically **cohort-local signal**, not tag-local signal.
 
 The system should not treat individual tags as independent trust dimensions. Tags are descriptors, routing hints, and candidate vocabulary. Cohorts are meaningful combinations of tags that have demonstrated coherent rating behavior.
 
@@ -354,18 +356,18 @@ This implies:
 Example:
 
 ```text
-Day 1:
+Turn 1:
 User X rates Island Foo +1.
 User X has low/unknown signal.
 
-Day 5:
+Turn 5:
 System discovers User X consistently matches Competitive / Skill Expression.
 
 Reanalysis:
 User X’s historical +1 on Island Foo now contributes more evidence toward Competitive / Skill Expression affinity.
 ```
 
-This is the implied trust layer.
+This is the implied cohort-local trust layer.
 
 ## Avoiding Feedback Loops
 
@@ -417,7 +419,7 @@ A simple turn:
 ```text
 1. Start from the current simulation state.
 2. Select which users act this turn.
-3. Each active user rates between X and Y islands.
+3. Each participating user rates between X and Y islands.
 4. Ratings become immutable RatingEvents.
 5. Run an analysis pass.
 6. Update rater signal profiles.
@@ -437,18 +439,18 @@ Reset Simulation
 
 The important affordance is `Take 1 Turn`, because it makes the causal chain inspectable.
 
-### Passive vs Active Discovery Turns
+### Organic / Guided / Mixed Turn Modes
 
 The simulation can support different turn modes.
 
-Passive observation mode:
+Organic Exploration:
 
 ```text
 Users rate random sparse subsets of islands.
 The system observes and learns.
 ```
 
-Active discovery mode:
+Guided Discovery:
 
 ```text
 The system recommends or routes unrated islands to users.
@@ -456,7 +458,18 @@ Users rate those routed islands.
 The system learns whether its routing improved fit, confidence, or discovery value.
 ```
 
-This distinction is important. Passive turns test whether the model can infer structure from sparse observations. Active turns test whether the model can improve discovery by choosing useful routing probes.
+Mixed Turn Mode:
+
+```text
+The turn policy selects one shared set of participating users.
+Each selected user is then evaluated for organic and guided eligibility.
+A selected user may produce organic events, guided events, both, or neither.
+The participating user count remains an honest cap on distinct users involved in the turn.
+```
+
+This distinction is important. Organic turns test whether the model can infer structure from sparse observations. Guided turns test whether the model can improve discovery by choosing useful routing probes. Mixed turns test both at once while keeping the participant set shared and turn-scoped.
+
+Current turn policy controls how many users participate in a turn. A future model may move participation tendencies onto generated users with separate organic/guided activity profiles, but that is intentionally out of scope here.
 
 ### Feedback-Safe Turn Rules
 
@@ -561,7 +574,7 @@ Examples:
 - Mislabeled User
 - Inverse Rater
 - Random / Noisy User
-- Tina-like Detached Predictor
+- Unexplained High-Signal User / Candidate New Seed User
 - Early Scout
 - Late Consensus Follower
 - Popularity Chaser
@@ -800,9 +813,9 @@ This is deferred for the proof of concept, but it should remain visible as a lat
 - How do we avoid feedback loops in the toy model while still showing retroactive reweighting?
 - What thresholds define “enough evidence” for discovery expansion?
 - How should recommendation balance safe fit against discovery value?
-- How many users should act per turn?
-- How many islands should each active user rate per turn?
-- What mix of passive random ratings vs active routed recommendations best demonstrates the discovery loop?
+- How many users should participate per turn?
+- How many islands should each participating user rate per turn?
+- What mix of Organic Exploration vs Guided Discovery in Mixed Turn Mode best demonstrates the discovery loop?
 - How should the dashboard explain the difference between safe recommendation and discovery probe?
 
 ## Design Checksum
@@ -812,12 +825,13 @@ The next-generation model should preserve these principles:
 - Ratings are events, not just aggregate values.
 - Expressed rating and evidentiary weight are separate.
 - User signal is local to cohort/taste space, not moral trust.
-- User signal is cohort-based, not tag-based.
-- Tags are starting vocabulary and routing hints; a stronger tag taxonomy is a long-term output of analysis.
+- User signal is cohort-local, not tag-local.
+- Tags are starting vocabulary and routing hints; tag-level summaries are derived/explanatory, not the primary trust layer.
 - Island quality is local to cohorts, not global truth.
 - Confidence is about qualified evidence sufficiency, not total-population percentage.
 - Sparse ratings are necessary for discovery.
 - The simulation should advance in discrete turns with inspectable state changes.
+- Turn policy controls how many users participate; per-user organic/guided activity profiles are future work.
 - Turn boundaries preserve causality and reduce feedback-loop risk.
 - Early coherent signal should trigger cautious expansion.
 - High-signal raters should increase confidence faster than unknown raters.

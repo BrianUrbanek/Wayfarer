@@ -608,7 +608,7 @@ Meaning:
 
 > This tag combination does not produce coherent ratings. It may contain vague, overloaded, or poorly chosen tags.
 
-## Predictive Power / Tina Detection
+## Predictive Power / Unexplained High-Signal User Detection
 
 This is a later stage because it requires time-separated data.
 
@@ -617,9 +617,9 @@ The static synthetic dataset can fake this with two phases:
 1. Early ratings
 2. Later traction / later ratings from a stable pool
 
-### Tina Condition
+### Unexplained High-Signal Condition
 
-A Tina-like user has:
+A candidate new seed user has:
 
 ```text
 low known-cohort fit
@@ -645,14 +645,14 @@ analystPriority = critical
 
 ### Stable Audience Pool
 
-A stable pool can be approximated by users whose later ratings correlate with Tina’s ratings or whose island engagement moves in accordance with Tina’s ratings.
+A stable pool can be approximated by users whose later ratings correlate with that candidate seed user’s ratings or whose island engagement moves in accordance with that user’s ratings.
 
 Do not create a new cohort automatically.
 
 Only surface:
 
 ```text
-Tina appears predictive for this recurring audience pool.
+An unexplained high-signal user appears predictive for this recurring audience pool.
 ```
 
 ## Columbus Synthetic Generator
@@ -944,7 +944,7 @@ Acceptance:
 - How should blended cohort assignments be explained to users/analysts?
 - What minimum population size should pseudo-cohorts require?
 - What evidence threshold makes a pseudo-cohort analyst-worthy?
-- How should time-separated predictive power be simulated for Tina detection?
+- How should time-separated predictive power be simulated for unexplained high-signal user detection?
 
 ## Design Checksum
 

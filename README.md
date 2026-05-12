@@ -1,8 +1,8 @@
 # Wayfarer
 
-Wayfarer is a toy/prototype implementation of a cohort-aware discovery system for user-generated content.
+Wayfarer is a browser-based TypeScript / React / Vitest analyst console for a cohort-aware discovery system for user-generated content.
 
-The system is designed to test a constrained, analyst-governed recommendation model:
+The current app is a working prototype, not just a scaffold. It is designed to test a constrained, analyst-governed recommendation model:
 
 - players declare preference tags;
 - seeded internal meta-moderators define initial cohort anchors;
@@ -10,9 +10,10 @@ The system is designed to test a constrained, analyst-governed recommendation mo
 - the model compares declared tag fit against observed rating behavior;
 - signal means model fit, not moral credibility or access authority;
 - the system can suggest existing cohort retags and flag unexplained predictive behavior for analyst review;
-- it does **not** automatically invent production cohorts.
+- it does **not** automatically invent production cohorts;
+- rating signal is cohort-local, while tag-level summaries are derived and explanatory.
 
-The current implementation target is a browser-based TypeScript app, likely Vite + React + Vitest, so Codex can run tests and iterate on the algorithm safely.
+The current UI is a browser analyst console for inspecting sparse ratings, cohort-local signal, island affinity, and routing behavior.
 
 ## Core docs
 
@@ -29,6 +30,13 @@ The current implementation target is a browser-based TypeScript app, likely Vite
 - **Wayfarer**: repository/project name.
 - **Wayfinder**: possible external/system/app name.
 - **Columbus**: internal synthetic dataset generator / debug engine codename.
+
+## Project Hygiene
+
+- Keep changes narrow and issue-bounded unless the task explicitly asks for broader cleanup.
+- For docs work and Node-safe model checks, run `npm run test:node` and `.\node_modules\.bin\tsc.cmd -b`.
+- For wider behavior changes, also run the broader local checks you actually touched, such as `npm run test`, `npm run build`, or `npm run dev`.
+- Do not report a command as passing unless you actually ran it in this workspace.
 
 ## First milestone
 
