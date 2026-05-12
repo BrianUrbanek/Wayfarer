@@ -734,6 +734,14 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .intro-column--reference {
+    order: -1;
+  }
+
+  .intro-column--controls {
+    order: 0;
+  }
+
   .panel--users,
   .panel--model,
   .panel--pseudo {
