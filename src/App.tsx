@@ -911,7 +911,7 @@ export default function App() {
         <div className="report-section__column">
           <div className="section-heading">
             <h3>Early Scouts</h3>
-            <p>Users whose active routing bias lands early in the turn history.</p>
+            <p>Users whose guided routing bias lands early in the turn history.</p>
           </div>
           <ReportTable
             columns={reviewerReportColumns}
@@ -919,7 +919,7 @@ export default function App() {
             getRowKey={(row) => row.userId}
             onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
             emptyTitle="No early scouts"
-            emptyDescription="Active turn timing has not yet produced any early-scout patterns."
+            emptyDescription="Guided turn timing has not yet produced any early-scout patterns."
           />
         </div>
 
@@ -1145,7 +1145,7 @@ export default function App() {
         <MetricCard
           label="Guided recommendations / user"
           value={guidedRecommendationsPerUser}
-          helper="How many unrated islands each active user can receive per guided turn."
+          helper="How many unrated islands each participating user can receive per guided turn."
         />
       </div>
 
@@ -1999,6 +1999,10 @@ export default function App() {
           <Badge tone="accent">Story: {selectedStory.title}</Badge>
           <Badge tone="neutral">Mode: {guidanceMode}</Badge>
           <Badge tone="neutral">Ordering: {DASHBOARD_ORDERING_LABELS[dashboardOrdering]}</Badge>
+          <Badge tone="neutral">Turn mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+          <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+          <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+          <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
         </div>
       </section>
 
@@ -2071,39 +2075,6 @@ export default function App() {
               </select>
             </label>
             <label className="control">
-              {labeledControl(
-                'Rating Count Model',
-                'Choose whether participating users create a fixed count of ratings or a dice-based count.'
-              )}
-              <select
-                value={organicRatingCountModel}
-                onChange={(event) => {
-                  const nextValue = event.target.value as RatingCountModel;
-                  setOrganicRatingCountModel(nextValue);
-                  setGuidedRatingCountModel(nextValue);
-                }}
-              >
-                {Object.entries(RATING_COUNT_MODEL_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="control">
-              {labeledControl(
-                'Routing Risk Profile',
-                'Preset bundle for exploration weight and minimum predicted fit. Select Custom to edit both values.'
-              )}
-              <select value={routingRiskProfile} onChange={(event) => setRoutingRiskProfile(event.target.value as RoutingRiskProfile)}>
-                {Object.entries(ROUTING_RISK_PROFILE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="control">
               {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
               <input
                 type="number"
@@ -2114,12 +2085,6 @@ export default function App() {
                 step={1}
               />
             </label>
-          </div>
-          <div className="summary-inline">
-            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-            <Badge tone="neutral">{describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}</Badge>
           </div>
           <div className="control-strip__actions">
             <button type="button" className="button" onClick={randomizeSeed}>
@@ -2180,8 +2145,32 @@ export default function App() {
           <div className="policy-stack">
             <section className="policy-subgroup">
               <div className="section-heading">
-                <h3>Shared participation settings</h3>
-                <p className="muted">These controls apply to the current turn mode whenever users are selected to act.</p>
+                <h3>Rating count policy</h3>
+              </div>
+              <div className="control-strip__fields control-strip__fields--dynamic">
+                <label className="control">
+                  <select
+                    aria-label="Rating count model"
+                    value={organicRatingCountModel}
+                    onChange={(event) => {
+                      const nextValue = event.target.value as RatingCountModel;
+                      setOrganicRatingCountModel(nextValue);
+                      setGuidedRatingCountModel(nextValue);
+                    }}
+                  >
+                    {Object.entries(RATING_COUNT_MODEL_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="policy-subgroup">
+              <div className="section-heading">
+                <h3>Participation settings</h3>
               </div>
               <div className="control-strip__fields control-strip__fields--dynamic">
                 {participationModel === 'fixed-count' ? (
@@ -2216,7 +2205,6 @@ export default function App() {
               <section className="policy-subgroup">
                 <div className="section-heading">
                   <h3>Organic Exploration</h3>
-                  <p className="muted">Users sample unrated islands on their own.</p>
                 </div>
                 <div className="control-strip__fields control-strip__fields--dynamic">
                   {organicRatingCountModel === 'fixed-count' ? (
@@ -2251,7 +2239,6 @@ export default function App() {
               <section className="policy-subgroup">
                 <div className="section-heading">
                   <h3>Guided Discovery</h3>
-                  <p className="muted">The router selects unrated islands before the user sees them.</p>
                 </div>
                 <div className="control-strip__fields control-strip__fields--dynamic">
                   {guidedRatingCountModel === 'fixed-count' ? (
@@ -2283,6 +2270,24 @@ export default function App() {
                   )}
                 </div>
                 <div className="control-strip__fields control-strip__fields--dynamic">
+                  <section className="policy-subgroup policy-subgroup--compact">
+                    <div className="section-heading">
+                      <h3>Routing risk profile</h3>
+                    </div>
+                    <label className="control">
+                      <select
+                        aria-label="Routing risk profile"
+                        value={routingRiskProfile}
+                        onChange={(event) => setRoutingRiskProfile(event.target.value as RoutingRiskProfile)}
+                      >
+                        {Object.entries(ROUTING_RISK_PROFILE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </section>
                   {routingRiskProfile === 'custom' ? (
                     <>
                       <label className="control">
@@ -2314,12 +2319,7 @@ export default function App() {
                         />
                       </label>
                     </>
-                  ) : (
-                    <div className="notice notice--subtle">
-                      <strong>{ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</strong>
-                      <p>{describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}</p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </section>
             ) : null}

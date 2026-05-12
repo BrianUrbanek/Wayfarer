@@ -129,7 +129,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
       'Open Drilldown targets and pin a high-signal user.',
       'Select a high-signal user.',
       'Open Discovery Routing and the selected island summary.',
-      'Take an active turn and watch routed islands create new sparse evidence.'
+      'Take a guided turn and watch routed islands create new sparse evidence.'
     ],
     expectedResult:
       'High-signal users should produce stronger routing candidates and the island affinity panels should show evidence moving in the expected direction.',
@@ -214,7 +214,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
       'Guided discovery should produce routed recommendations and more legible evidence growth than organic exploration.',
     failureSigns: [
       'The turn summary does not make the mode difference obvious.',
-      'Active and passive turns look identical.',
+      'Organic and guided turns look identical.',
       'No change is visible in the routing or affinity panels.'
     ],
     recommendedOrdering: 'routing-first'

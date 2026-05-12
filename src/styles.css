@@ -194,6 +194,9 @@ select {
   border-radius: 22px;
   background: rgba(9, 14, 25, 0.72);
   backdrop-filter: blur(18px);
+  position: sticky;
+  top: 12px;
+  z-index: 30;
 }
 
 .topbar__left,
