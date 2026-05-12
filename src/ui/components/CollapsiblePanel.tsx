@@ -14,20 +14,20 @@ export function CollapsiblePanel({ title, collapsed, onToggle, className, descri
       <header className="collapsible-panel__header">
         <div>
           <h2>{title}</h2>
-          {description ? <p className="muted">{description}</p> : null}
+          {!collapsed && description ? <p className="muted">{description}</p> : null}
         </div>
-        <button type="button" className="button button--ghost collapsible-panel__toggle" onClick={onToggle}>
-          {collapsed ? 'Expand' : 'Collapse'}
+        <button
+          type="button"
+          className="icon-button collapsible-panel__toggle"
+          onClick={onToggle}
+          aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+        >
+          <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+            {collapsed ? '▾' : '▴'}
+          </span>
         </button>
       </header>
-      {collapsed ? (
-        <div className="notice notice--subtle">
-          <strong>{title} collapsed.</strong>
-          <p>Expand this panel when you need it.</p>
-        </div>
-      ) : (
-        children
-      )}
+      {collapsed ? null : children}
     </section>
   );
 }
