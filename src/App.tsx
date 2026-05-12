@@ -42,6 +42,8 @@ const INITIAL_CONFIG = {
 
 type SelectionModalKind = 'user' | 'island' | 'cohort' | 'pseudo' | null;
 
+type PinnedDrilldownKind = 'user' | 'island' | 'cohort' | null;
+
 type DrawerState =
   | { type: 'user'; id: string }
   | { type: 'island'; id: string }
@@ -239,6 +241,7 @@ export default function App() {
   const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
+  const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
   const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
@@ -1306,6 +1309,30 @@ export default function App() {
     </div>
   ) : null;
 
+  const selectedCohortDetail = selectedComparisonCohort ? (
+    <div className="detail-stack">
+      <section className="detail-block">
+        <h4>Cohort</h4>
+        <p>{selectedComparisonCohort.label}</p>
+        <p className="muted">Comparison label: {selectedComparisonLabel}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Visible tags</h4>
+        <div className="badge-row">
+          {selectedComparisonCohort.tags.map((tag) => (
+            <Badge key={tag} tone="accent">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </section>
+      <section className="detail-block">
+        <h4>Source</h4>
+        <p>{selectedComparisonCohort.source === 'meta_moderator' ? 'Trusted seed cohort anchor' : 'Analyst-defined cohort'}</p>
+      </section>
+    </div>
+  ) : null;
+
   const selectedPseudoDetail = drawerState?.type === 'pseudo'
     ? dataset.pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key) ?? null
     : null;
@@ -1790,6 +1817,27 @@ export default function App() {
     }
   };
 
+  const showInstructionPanel = guidanceMode === 'novice' && guidanceOpen;
+  const showCollapsedInstruction = guidanceMode === 'novice' && !guidanceOpen;
+
+  const pinnedDrilldownContent =
+    pinnedDrilldownKind === 'user'
+      ? selectedUserDetail
+      : pinnedDrilldownKind === 'island'
+        ? selectedIslandDetail
+        : pinnedDrilldownKind === 'cohort'
+          ? selectedCohortDetail
+          : null;
+
+  const pinnedDrilldownTitle =
+    pinnedDrilldownKind === 'user'
+      ? `Pinned user: ${selectedUser?.label ?? 'none'}`
+      : pinnedDrilldownKind === 'island'
+        ? `Pinned island: ${selectedIsland?.label ?? 'none'}`
+        : pinnedDrilldownKind === 'cohort'
+          ? `Pinned cohort: ${selectedComparisonLabel}`
+          : 'Pinned drilldown';
+
   return (
     <main className="app-shell analyst-console">
       <header className="hero">
@@ -1858,205 +1906,245 @@ export default function App() {
         </div>
       </section>
 
-      <section className="intro-grid" aria-label="Controls and instructions">
-        <Panel title="Control panel">
-          <div className="control-strip__fields">
-            <label className="control">
-              <span>Seed</span>
-              <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-            </label>
-            <label className="control">
-              <span>Users</span>
-              <input
-                type="number"
-                value={numUsers}
-                onChange={(event) => setNumUsers(Number(event.target.value))}
-                min={1}
-                max={400}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Islands</span>
-              <input
-                type="number"
-                value={numIslands}
-                onChange={(event) => setNumIslands(Number(event.target.value))}
-                min={4}
-                max={96}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Initial ratings</span>
-              <input
-                type="number"
-                value={initialRatingsPerUser}
-                onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
-                min={1}
-                max={12}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Turn mode</span>
-              <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                <option value="passive">Passive / random</option>
-                <option value="active">Active discovery</option>
-              </select>
-            </label>
-            <label className="control">
-              <span>Exploration weight</span>
-              <input
-                type="number"
-                value={explorationWeight}
-                onChange={(event) => setExplorationWeight(Number(event.target.value))}
-                min={0}
-                max={2}
-                step={0.05}
-              />
-            </label>
-            <label className="control">
-              <span>Fit floor</span>
-              <input
-                type="number"
-                value={minPredictedFitFloor}
-                onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
-                min={-1}
-                max={1}
-                step={0.05}
-              />
-            </label>
-            <label className="control">
-              <span>Routed / active user</span>
-              <input
-                type="number"
-                value={routedIslandsPerActiveUser}
-                onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
-                min={1}
-                max={8}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Active users / turn</span>
-              <input
-                type="number"
-                value={activeUsersPerTurn}
-                onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
-                min={1}
-                max={96}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Passive ratings / user</span>
-              <input
-                type="number"
-                value={maxRatingsPerActiveUser}
-                onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
-                min={1}
-                max={8}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Turn batch</span>
-              <input
-                type="number"
-                value={turnBatchCount}
-                onChange={(event) => setTurnBatchCount(Number(event.target.value))}
-                min={1}
-                max={20}
-                step={1}
-              />
-            </label>
-          </div>
-          <div className="control-strip__actions">
-            <button type="button" className="button" onClick={randomizeSeed}>
-              Regenerate dataset
-            </button>
-            <button type="button" className="button" onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}>
-              Take 1 Turn
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() =>
-                setSimulationState((state) => {
-                  let next = state;
-
-                  for (let index = 0; index < turnBatchCount; index += 1) {
-                    next = advanceCurrentTurn(next);
-                  }
-
-                  return next;
-                })
-              }
-            >
-              Take X Turns
-            </button>
-            <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
-              Reset Simulation
-            </button>
-            <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
-              {showDebug ? 'Hide debug' : 'Show debug'}
-            </button>
-            {openSelectionButton('user', 'Select user')}
-            {openSelectionButton('island', 'Select island')}
-            {openSelectionButton('cohort', 'Select cohort')}
-          </div>
-        </Panel>
-
-        <Panel title="Instruction panel">
-          <div className="summary-header">
-            <div>
-              <p className="eyebrow">Use case</p>
-              <h3>{selectedStory.title}</h3>
+      <section className={`intro-grid${showInstructionPanel ? '' : ' intro-grid--expert'}`} aria-label="Controls and instructions">
+        <div className="intro-column intro-column--controls">
+          <Panel title="Control panel">
+            <div className="control-strip__fields">
+              <label className="control">
+                <span>Seed</span>
+                <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+              </label>
+              <label className="control">
+                <span>Users</span>
+                <input
+                  type="number"
+                  value={numUsers}
+                  onChange={(event) => setNumUsers(Number(event.target.value))}
+                  min={1}
+                  max={400}
+                  step={1}
+                />
+              </label>
+              <label className="control">
+                <span>Islands</span>
+                <input
+                  type="number"
+                  value={numIslands}
+                  onChange={(event) => setNumIslands(Number(event.target.value))}
+                  min={4}
+                  max={96}
+                  step={1}
+                />
+              </label>
+              <label className="control">
+                <span>Initial ratings</span>
+                <input
+                  type="number"
+                  value={initialRatingsPerUser}
+                  onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
+                  min={1}
+                  max={12}
+                  step={1}
+                />
+              </label>
+              <label className="control">
+                <span>Turn mode</span>
+                <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                  <option value="passive">Passive / random</option>
+                  <option value="active">Active discovery</option>
+                </select>
+              </label>
+              <label className="control">
+                <span>Exploration weight</span>
+                <input
+                  type="number"
+                  value={explorationWeight}
+                  onChange={(event) => setExplorationWeight(Number(event.target.value))}
+                  min={0}
+                  max={2}
+                  step={0.05}
+                />
+              </label>
+              <label className="control">
+                <span>Fit floor</span>
+                <input
+                  type="number"
+                  value={minPredictedFitFloor}
+                  onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
+                  min={-1}
+                  max={1}
+                  step={0.05}
+                />
+              </label>
+              <label className="control">
+                <span>Routed / active user</span>
+                <input
+                  type="number"
+                  value={routedIslandsPerActiveUser}
+                  onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
+                  min={1}
+                  max={8}
+                  step={1}
+                />
+              </label>
+              <label className="control">
+                <span>Active users / turn</span>
+                <input
+                  type="number"
+                  value={activeUsersPerTurn}
+                  onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
+                  min={1}
+                  max={96}
+                  step={1}
+                />
+              </label>
+              <label className="control">
+                <span>Passive ratings / user</span>
+                <input
+                  type="number"
+                  value={maxRatingsPerActiveUser}
+                  onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
+                  min={1}
+                  max={8}
+                  step={1}
+                />
+              </label>
+              <label className="control">
+                <span>Turn batch</span>
+                <input
+                  type="number"
+                  value={turnBatchCount}
+                  onChange={(event) => setTurnBatchCount(Number(event.target.value))}
+                  min={1}
+                  max={20}
+                  step={1}
+                />
+              </label>
             </div>
-            <div className="summary-header__actions">
-              <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
-              <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen((value) => !value)}>
-                {guidanceOpen ? 'Collapse guidance' : 'Expand guidance'}
+            <div className="control-strip__actions">
+              <button type="button" className="button" onClick={randomizeSeed}>
+                Regenerate dataset
+              </button>
+              <button type="button" className="button" onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}>
+                Take 1 Turn
+              </button>
+              <button
+                type="button"
+                className="button"
+                onClick={() =>
+                  setSimulationState((state) => {
+                    let next = state;
+
+                    for (let index = 0; index < turnBatchCount; index += 1) {
+                      next = advanceCurrentTurn(next);
+                    }
+
+                    return next;
+                  })
+                }
+              >
+                Take X Turns
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
+                Reset Simulation
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
+                {showDebug ? 'Hide debug' : 'Show debug'}
               </button>
             </div>
-          </div>
-          {guidanceOpen ? (
-            <div className="instruction-grid">
-              <section className="detail-block">
-                <h4>Goal</h4>
-                <p>{selectedStory.goal}</p>
-              </section>
-              <section className="detail-block">
-                <h4>Steps</h4>
-                <ol className="instruction-list">
-                  {selectedStory.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-              </section>
-              <section className="detail-block">
-                <h4>Expected result</h4>
-                <p>{selectedStory.expectedResult}</p>
-              </section>
-              <section className="detail-block">
-                <h4>Failure signs</h4>
-                <ul className="diagnosis-list">
-                  {selectedStory.failureSigns.map((failureSign) => (
-                    <li key={failureSign}>{failureSign}</li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-          ) : (
-            <div className="notice">
-              <strong>Guidance collapsed.</strong>
-              <p>
-                This panel is here to tell a new reader what to prove next. Expand it if the current story is unclear.
+          </Panel>
+
+          <Panel title="Drilldown targets">
+            <div className="section-toolbar section-toolbar--stacked">
+              <p className="muted">
+                Pin a user, island, or cohort here for quick reference while you inspect the reports below.
               </p>
+              <div className="section-toolbar__buttons">
+                {openSelectionButton('user', 'Select user')}
+                {openSelectionButton('island', 'Select island')}
+                {openSelectionButton('cohort', 'Select cohort')}
+              </div>
             </div>
-          )}
-        </Panel>
+          </Panel>
+        </div>
+
+        <div className="intro-column intro-column--reference">
+          {showInstructionPanel ? (
+            <Panel title="Instruction panel">
+              <div className="summary-header">
+                <div>
+                  <p className="eyebrow">Use case</p>
+                  <h3>{selectedStory.title}</h3>
+                </div>
+                <div className="summary-header__actions">
+                  <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
+                  <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen((value) => !value)}>
+                    {guidanceOpen ? 'Collapse guidance' : 'Expand guidance'}
+                  </button>
+                </div>
+              </div>
+              <div className="instruction-grid">
+                <section className="detail-block">
+                  <h4>Goal</h4>
+                  <p>{selectedStory.goal}</p>
+                </section>
+                <section className="detail-block">
+                  <h4>Steps</h4>
+                  <ol className="instruction-list">
+                    {selectedStory.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                </section>
+                <section className="detail-block">
+                  <h4>Expected result</h4>
+                  <p>{selectedStory.expectedResult}</p>
+                </section>
+                <section className="detail-block">
+                  <h4>Failure signs</h4>
+                  <ul className="diagnosis-list">
+                    {selectedStory.failureSigns.map((failureSign) => (
+                      <li key={failureSign}>{failureSign}</li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            </Panel>
+          ) : showCollapsedInstruction ? (
+            <Panel title="Instruction panel">
+              <div className="notice">
+                <strong>Guidance collapsed.</strong>
+                <p>This panel is here to tell a new reader what to prove next. Expand it if the current story is unclear.</p>
+                <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen(true)}>
+                  Expand guidance
+                </button>
+              </div>
+            </Panel>
+          ) : null}
+
+          <Panel title="Pinned drilldown" className="panel--sticky">
+            <div className="summary-header">
+              <div>
+                <p className="eyebrow">Pinned drilldown</p>
+                <h3>{pinnedDrilldownTitle}</h3>
+              </div>
+              <div className="summary-header__actions">
+                <Badge tone="neutral">Quick reference</Badge>
+                <button type="button" className="button button--ghost" onClick={() => setPinnedDrilldownKind(null)}>
+                  Clear pin
+                </button>
+              </div>
+            </div>
+            {pinnedDrilldownContent ? (
+              pinnedDrilldownContent
+            ) : (
+              <EmptyState
+                title="Nothing pinned yet"
+                description="Use Drilldown targets to pin a user, island, or cohort here for quick reference."
+              />
+            )}
+          </Panel>
+        </div>
       </section>
 
       <section className="dashboard-shell" aria-label="Analyst dashboard">
@@ -2128,6 +2216,7 @@ export default function App() {
         selectedId={selectedUserId}
         onSelect={(id) => {
           setSelectedUserId(id);
+          setPinnedDrilldownKind('user');
           setModalKind(null);
         }}
         onClose={() => setModalKind(null)}
@@ -2141,6 +2230,7 @@ export default function App() {
         selectedId={selectedIslandId}
         onSelect={(id) => {
           setSelectedIslandId(id);
+          setPinnedDrilldownKind('island');
           setModalKind(null);
         }}
         onClose={() => setModalKind(null)}
@@ -2154,6 +2244,7 @@ export default function App() {
         selectedId={comparisonCohortId}
         onSelect={(id) => {
           setComparisonCohortId(id);
+          setPinnedDrilldownKind('cohort');
           setModalKind(null);
         }}
         onClose={() => setModalKind(null)}

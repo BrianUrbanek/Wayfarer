@@ -251,6 +251,31 @@ select {
   align-items: start;
 }
 
+.intro-column {
+  display: grid;
+  gap: 18px;
+}
+
+.intro-column--reference {
+  position: relative;
+}
+
+.panel--sticky {
+  position: sticky;
+  top: 18px;
+}
+
+.section-toolbar--stacked {
+  display: grid;
+  gap: 12px;
+}
+
+.section-toolbar__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .instruction-grid {
   display: grid;
   gap: 12px;

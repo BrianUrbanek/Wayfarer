@@ -23,6 +23,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Dashboard ordering');
     expect(html).toContain('Use Case / Story');
     expect(html).toContain('Instruction panel');
+    expect(html).toContain('Drilldown targets');
+    expect(html).toContain('Pinned drilldown');
     expect(html).toContain('Goal');
     expect(html).toContain('About');
     expect(html).toContain('Hidden generator archetype');

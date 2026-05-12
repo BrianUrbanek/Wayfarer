@@ -46,7 +46,8 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'Learn the full loop from seed setup to inspection.',
     steps: [
       'Set Dashboard ordering to Overview first.',
-      'Pick a user and inspect the selected user summary.',
+      'Open Drilldown targets and pin a user, island, or cohort.',
+      'Inspect the pinned drilldown tray and the selected user summary.',
       'Take one turn and watch the turn summary change.',
       'Open the reviewer recovery and discovery routing panels.',
       'Open About if you want the prior-art framing.'
@@ -66,9 +67,9 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'See whether a user behaves like a trusted cohort anchor.',
     steps: [
       'Use Overview first ordering.',
+      'Open Drilldown targets and pin the user you want to inspect.',
       'Select a user that the reviewer recovery panel marks as a clean or partial match.',
-      'Open the selected user drawer.',
-      'Compare declared fit, behavior fit, and hidden debug checksum fields.'
+      'Compare declared fit, behavior fit, and hidden debug checksum fields in the pinned tray.'
     ],
     expectedResult:
       'The user should show a clear declared-vs-behavior story, and a good match should look high-signal rather than random.',
@@ -86,6 +87,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     steps: [
       'Use Recovery first ordering.',
       'Open Reviewer Archetype Recovery.',
+      'Open Drilldown targets and pin one of the uncertain users.',
       'Look for random, noisy, or uncertain checksum statuses.',
       'Select one of those users and inspect the diagnosis reasons.'
     ],
@@ -104,6 +106,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'See when declared tags point one way but ratings point another.',
     steps: [
       'Use Recovery first ordering.',
+      'Open Drilldown targets and pin a user.',
       'Open the candidate seed / unexplained high-signal report.',
       'Look for users marked as mismatches or retag candidates.',
       'Compare the declared top cohort to the behavior top cohort.'
@@ -123,6 +126,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'See whether high-signal users extend seed reach into under-reviewed islands.',
     steps: [
       'Use Routing first ordering.',
+      'Open Drilldown targets and pin a high-signal user.',
       'Select a high-signal user.',
       'Open Discovery Routing and the selected island summary.',
       'Take an active turn and watch routed islands create new sparse evidence.'
@@ -142,6 +146,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'Check that the router distinguishes known-good recommendations from useful probes.',
     steps: [
       'Use Routing first ordering.',
+      'Open Drilldown targets and pin a user.',
       'Compare the top recommendation rows in Discovery Routing.',
       'Open both a safe fit and a discovery probe.',
       'Read the recommendation metrics and explanation text.'
@@ -161,6 +166,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'Surface users whose behavior is predictive but not well explained by current cohorts.',
     steps: [
       'Use Recovery first ordering.',
+      'Open Drilldown targets and pin a candidate user.',
       'Open the candidate new seed / unexplained high-signal section.',
       'Look for users with high usable signal and weak known fit.',
       'Open a reviewer detail drawer for a candidate.'
@@ -200,6 +206,7 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     steps: [
       'Use Routing first ordering.',
       'Switch Turn mode between passive random and active discovery.',
+      'Open Drilldown targets and pin a user before comparing the modes.',
       'Take one turn in each mode.',
       'Compare the turn summary, routing panel, and island affinity changes.'
     ],
