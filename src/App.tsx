@@ -8,6 +8,7 @@ import { Panel } from './ui/components/Panel';
 import { ProgressBar } from './ui/components/ProgressBar';
 import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
+import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
 import {
   DASHBOARD_ORDERINGS,
@@ -242,6 +243,7 @@ export default function App() {
   const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
+  const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(true);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
   const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
@@ -268,6 +270,12 @@ export default function App() {
   useEffect(() => {
     setGuidanceOpen(guidanceMode === 'novice');
   }, [guidanceMode]);
+
+  useEffect(() => {
+    if (pinnedDrilldownKind !== null) {
+      setPinnedTrayCollapsed(false);
+    }
+  }, [pinnedDrilldownKind]);
 
   const dataset = simulationState;
   const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
@@ -1838,8 +1846,13 @@ export default function App() {
           ? `Pinned cohort: ${selectedComparisonLabel}`
           : 'Pinned drilldown';
 
+  const pinnedTraySpace = pinnedTrayCollapsed ? 92 : 456;
+
   return (
-    <main className="app-shell analyst-console">
+    <main
+      className="app-shell analyst-console"
+      style={{ ['--tray-space' as string]: `${pinnedTraySpace}px` }}
+    >
       <header className="hero">
         <div className="hero__eyebrow-row">
           <p className="eyebrow">Wayfarer analyst console</p>
@@ -2068,84 +2081,60 @@ export default function App() {
           </Panel>
         </div>
 
-        <div className="intro-column intro-column--reference">
-          {showInstructionPanel ? (
-            <Panel title="Instruction panel">
-              <div className="summary-header">
-                <div>
-                  <p className="eyebrow">Use case</p>
-                  <h3>{selectedStory.title}</h3>
-                </div>
-                <div className="summary-header__actions">
-                  <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
-                  <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen((value) => !value)}>
-                    {guidanceOpen ? 'Collapse guidance' : 'Expand guidance'}
-                  </button>
-                </div>
-              </div>
-              <div className="instruction-grid">
-                <section className="detail-block">
-                  <h4>Goal</h4>
-                  <p>{selectedStory.goal}</p>
-                </section>
-                <section className="detail-block">
-                  <h4>Steps</h4>
-                  <ol className="instruction-list">
-                    {selectedStory.steps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
-                </section>
-                <section className="detail-block">
-                  <h4>Expected result</h4>
-                  <p>{selectedStory.expectedResult}</p>
-                </section>
-                <section className="detail-block">
-                  <h4>Failure signs</h4>
-                  <ul className="diagnosis-list">
-                    {selectedStory.failureSigns.map((failureSign) => (
-                      <li key={failureSign}>{failureSign}</li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-            </Panel>
-          ) : showCollapsedInstruction ? (
-            <Panel title="Instruction panel">
-              <div className="notice">
-                <strong>Guidance collapsed.</strong>
-                <p>This panel is here to tell a new reader what to prove next. Expand it if the current story is unclear.</p>
-                <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen(true)}>
-                  Expand guidance
-                </button>
-              </div>
-            </Panel>
-          ) : null}
-
-          <Panel title="Pinned drilldown" className="panel--sticky">
-            <div className="summary-header">
-              <div>
-                <p className="eyebrow">Pinned drilldown</p>
-                <h3>{pinnedDrilldownTitle}</h3>
-              </div>
-              <div className="summary-header__actions">
-                <Badge tone="neutral">Quick reference</Badge>
-                <button type="button" className="button button--ghost" onClick={() => setPinnedDrilldownKind(null)}>
-                  Clear pin
-                </button>
-              </div>
-            </div>
-            {pinnedDrilldownContent ? (
-              pinnedDrilldownContent
-            ) : (
-              <EmptyState
-                title="Nothing pinned yet"
-                description="Use Drilldown targets to pin a user, island, or cohort here for quick reference."
-              />
-            )}
-          </Panel>
-        </div>
       </section>
+
+      {showInstructionPanel ? (
+        <Panel title="Instruction panel">
+          <div className="summary-header">
+            <div>
+              <p className="eyebrow">Use case</p>
+              <h3>{selectedStory.title}</h3>
+            </div>
+            <div className="summary-header__actions">
+              <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
+              <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen((value) => !value)}>
+                {guidanceOpen ? 'Collapse guidance' : 'Expand guidance'}
+              </button>
+            </div>
+          </div>
+          <div className="instruction-grid">
+            <section className="detail-block">
+              <h4>Goal</h4>
+              <p>{selectedStory.goal}</p>
+            </section>
+            <section className="detail-block">
+              <h4>Steps</h4>
+              <ol className="instruction-list">
+                {selectedStory.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+            <section className="detail-block">
+              <h4>Expected result</h4>
+              <p>{selectedStory.expectedResult}</p>
+            </section>
+            <section className="detail-block">
+              <h4>Failure signs</h4>
+              <ul className="diagnosis-list">
+                {selectedStory.failureSigns.map((failureSign) => (
+                  <li key={failureSign}>{failureSign}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </Panel>
+      ) : showCollapsedInstruction ? (
+        <Panel title="Instruction panel">
+          <div className="notice">
+            <strong>Guidance collapsed.</strong>
+            <p>This panel is here to tell a new reader what to prove next. Expand it if the current story is unclear.</p>
+            <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen(true)}>
+              Expand guidance
+            </button>
+          </div>
+        </Panel>
+      ) : null}
 
       <section className="dashboard-shell" aria-label="Analyst dashboard">
         {visibleDashboardSections.map((sectionKey) => {
@@ -2174,6 +2163,25 @@ export default function App() {
           );
         })}
       </section>
+
+      <Tray
+        collapsed={pinnedTrayCollapsed}
+        title={pinnedDrilldownTitle}
+        onToggle={() => setPinnedTrayCollapsed((value) => !value)}
+        onClear={() => {
+          setPinnedDrilldownKind(null);
+          setPinnedTrayCollapsed(true);
+        }}
+      >
+        {pinnedDrilldownContent ? (
+          pinnedDrilldownContent
+        ) : (
+          <EmptyState
+            title="Nothing pinned yet"
+            description="Use Drilldown targets to pin a user, island, or cohort here for quick reference."
+          />
+        )}
+      </Tray>
 
       <Modal open={showAbout} title="About / Prior Art" placement="top" onClose={() => setShowAbout(false)}>
         <div className="stack about-copy">

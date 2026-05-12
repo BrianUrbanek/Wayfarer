@@ -47,6 +47,7 @@ select {
 .app-shell {
   min-height: 100vh;
   padding: 32px;
+  padding-right: calc(32px + var(--tray-space, 0px));
 }
 
 .hero {
@@ -251,6 +252,10 @@ select {
   align-items: start;
 }
 
+.intro-grid--expert {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .intro-column {
   display: grid;
   gap: 18px;
@@ -274,6 +279,83 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.tray {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: min(430px, calc(100vw - 36px));
+  height: calc(100vh - 36px);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  background: rgba(11, 18, 33, 0.96);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+  z-index: 25;
+  overflow: hidden;
+  transition:
+    width 180ms ease,
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+
+.tray--collapsed {
+  width: 76px;
+}
+
+.tray__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tray--collapsed .tray__rail {
+  padding: 14px 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.tray__rail-title h2 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+}
+
+.tray--collapsed .tray__rail-title h2 {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+  font-size: 0.82rem;
+}
+
+.tray__rail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tray--collapsed .tray__rail-actions {
+  flex-direction: column;
+}
+
+.tray__toggle,
+.tray__clear {
+  min-width: 0;
+}
+
+.tray__body {
+  overflow: auto;
+  padding: 18px;
+}
+
+.tray--collapsed .tray__body {
+  display: none;
 }
 
 .instruction-grid {
@@ -708,6 +790,10 @@ select {
 }
 
 @media (max-width: 1180px) {
+  .app-shell {
+    padding-right: 32px;
+  }
+
   .control-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -747,6 +833,13 @@ select {
   .panel--pseudo {
     grid-row: auto;
     grid-column: auto;
+  }
+
+  .tray {
+    top: 12px;
+    right: 12px;
+    width: min(360px, calc(100vw - 24px));
+    height: calc(100vh - 24px);
   }
 
   .stack--two-up {
