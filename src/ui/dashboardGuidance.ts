@@ -205,13 +205,13 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     goal: 'See whether routed turns produce more useful evidence than random exposure.',
     steps: [
       'Use Routing first ordering.',
-      'Switch Turn mode between passive random and active discovery.',
+      'Switch Turn mode between Organic Exploration, Guided Discovery, and Mixed.',
       'Open Drilldown targets and pin a user before comparing the modes.',
       'Take one turn in each mode.',
       'Compare the turn summary, routing panel, and island affinity changes.'
     ],
     expectedResult:
-      'Active discovery should produce routed recommendations and more legible evidence growth than passive random exposure.',
+      'Guided discovery should produce routed recommendations and more legible evidence growth than organic exploration.',
     failureSigns: [
       'The turn summary does not make the mode difference obvious.',
       'Active and passive turns look identical.',

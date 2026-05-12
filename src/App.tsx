@@ -7,6 +7,7 @@ import { Modal } from './ui/components/Modal';
 import { Panel } from './ui/components/Panel';
 import { ProgressBar } from './ui/components/ProgressBar';
 import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
+import { InfoTip } from './ui/components/InfoTip';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { Tray } from './ui/components/Tray';
@@ -21,6 +22,20 @@ import {
   type GuidanceMode,
   type UseCaseStoryId
 } from './ui/dashboardGuidance';
+import {
+  DEFAULT_TURN_POLICY,
+  describeRoutingRiskProfile,
+  getTurnModeVisibility,
+  PARTICIPATION_MODEL_LABELS,
+  RATING_COUNT_MODEL_LABELS,
+  ROUTING_RISK_PROFILE_LABELS,
+  resolveRoutingRiskProfileValues,
+  TURN_MODE_LABELS,
+  type ParticipationModel,
+  type RatingCountModel,
+  type RoutingRiskProfile,
+  type TurnMode
+} from './model/turnPolicy';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
@@ -29,8 +44,7 @@ import type { PseudoCohortReport } from './model/pseudoCohorts';
 import { archetypeLabel, type ReviewerArchetypeReport } from './model/reviewerArchetypes';
 import { recommendIslandsForUser, type IslandRecommendation } from './model/recommendations';
 import {
-  advanceActiveTurn,
-  advancePassiveTurn,
+  advancePolicyTurn,
   createInitialSimulationState,
   type SimulationState
 } from './model/simulation';
@@ -54,8 +68,6 @@ type DrawerState =
   | { type: 'recommendation'; userId: string; islandId: string }
   | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
-
-type TurnMode = 'passive' | 'active';
 
 function buildDataset(seed: number, numUsers: number, numIslands: number) {
   return generateColumbusDataset({
@@ -226,12 +238,19 @@ export default function App() {
   const [numUsers, setNumUsers] = useState(INITIAL_CONFIG.numUsers);
   const [numIslands, setNumIslands] = useState(INITIAL_CONFIG.numIslands);
   const [initialRatingsPerUser, setInitialRatingsPerUser] = useState(4);
-  const [activeUsersPerTurn, setActiveUsersPerTurn] = useState(6);
-  const [maxRatingsPerActiveUser, setMaxRatingsPerActiveUser] = useState(3);
-  const [turnMode, setTurnMode] = useState<TurnMode>('passive');
-  const [explorationWeight, setExplorationWeight] = useState(0.55);
-  const [minPredictedFitFloor, setMinPredictedFitFloor] = useState(0.2);
-  const [routedIslandsPerActiveUser, setRoutedIslandsPerActiveUser] = useState(2);
+  const [turnMode, setTurnMode] = useState<TurnMode>(DEFAULT_TURN_POLICY.turnMode);
+  const [participationModel, setParticipationModel] = useState<ParticipationModel>(DEFAULT_TURN_POLICY.participationModel);
+  const [participatingUsersPerTurn, setParticipatingUsersPerTurn] = useState(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
+  const [participationChance, setParticipationChance] = useState(DEFAULT_TURN_POLICY.participationChance);
+  const [organicRatingCountModel, setOrganicRatingCountModel] = useState<RatingCountModel>(DEFAULT_TURN_POLICY.organicRatingCountModel);
+  const [organicRatingsPerUser, setOrganicRatingsPerUser] = useState(DEFAULT_TURN_POLICY.organicRatingsPerUser);
+  const [organicRatingDice, setOrganicRatingDice] = useState(DEFAULT_TURN_POLICY.organicRatingDice);
+  const [guidedRatingCountModel, setGuidedRatingCountModel] = useState<RatingCountModel>(DEFAULT_TURN_POLICY.guidedRatingCountModel);
+  const [guidedRecommendationsPerUser, setGuidedRecommendationsPerUser] = useState(DEFAULT_TURN_POLICY.guidedRecommendationsPerUser);
+  const [guidedRecommendationDice, setGuidedRecommendationDice] = useState(DEFAULT_TURN_POLICY.guidedRecommendationDice);
+  const [routingRiskProfile, setRoutingRiskProfile] = useState<RoutingRiskProfile>(DEFAULT_TURN_POLICY.routingRiskProfile);
+  const [customExplorationWeight, setCustomExplorationWeight] = useState(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
+  const [customMinimumPredictedFit, setCustomMinimumPredictedFit] = useState(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
   const [turnBatchCount, setTurnBatchCount] = useState(5);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
@@ -246,6 +265,7 @@ export default function App() {
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(true);
   const [controlsCollapsed, setControlsCollapsed] = useState(false);
+  const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(false);
   const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(false);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
@@ -358,13 +378,22 @@ export default function App() {
   );
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
+  const effectiveRoutingValues = useMemo(
+    () =>
+      resolveRoutingRiskProfileValues(routingRiskProfile, {
+        explorationWeight: customExplorationWeight,
+        minimumPredictedFit: customMinimumPredictedFit
+      }),
+    [customExplorationWeight, customMinimumPredictedFit, routingRiskProfile]
+  );
+  const turnModeVisibility = useMemo(() => getTurnModeVisibility(turnMode), [turnMode]);
   const routingOptions = useMemo(
     () => ({
-      explorationWeight,
-      minPredictedFitFloor,
-      topLimit: Math.max(8, routedIslandsPerActiveUser * 2)
+      explorationWeight: effectiveRoutingValues.explorationWeight,
+      minPredictedFitFloor: effectiveRoutingValues.minimumPredictedFit,
+      topLimit: Math.max(8, guidedRecommendationsPerUser * 2)
     }),
-    [explorationWeight, minPredictedFitFloor, routedIslandsPerActiveUser]
+    [effectiveRoutingValues.explorationWeight, effectiveRoutingValues.minimumPredictedFit, guidedRecommendationsPerUser]
   );
 
   const selectedUserRecommendations = useMemo(() => {
@@ -389,6 +418,7 @@ export default function App() {
   const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1] ?? null;
   const reviewerArchetypeAnalysis = dataset.reviewerArchetypeAnalysis;
   const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
+  const visibleTurnModeLabel = TURN_MODE_LABELS[turnMode];
   const selectedUserTopCohorts = selectedInference
     ? [
         {
@@ -477,7 +507,7 @@ export default function App() {
   const selectedStory = useMemo(() => getUseCaseStory(useCaseId), [useCaseId]);
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
-  const appStatus = `Turn ${dataset.currentTurn} · ${turnMode === 'active' ? 'Active discovery' : 'Passive random'} · ${dataset.users.length} users · ${dataset.islands.length} islands`;
+  const appStatus = `Turn ${dataset.currentTurn} · ${visibleTurnModeLabel} · ${dataset.users.length} users · ${dataset.islands.length} islands`;
 
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
@@ -1092,25 +1122,30 @@ export default function App() {
 
       <div className="metric-grid metric-grid--compact">
         <MetricCard
-          label="Turn mode"
-          value={turnMode === 'active' ? 'Active discovery' : 'Passive random'}
+          label="Routing mode"
+          value={visibleTurnModeLabel}
           helper="Recommendations only route unrated islands, then the next turn updates the event log."
-          tone={turnMode === 'active' ? 'accent' : 'neutral'}
+          tone={turnMode === 'guided' ? 'accent' : 'neutral'}
+        />
+        <MetricCard
+          label="Routing profile"
+          value={ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}
+          helper={describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}
         />
         <MetricCard
           label="Exploration weight"
-          value={formatDecimal(explorationWeight, 2)}
+          value={formatDecimal(effectiveRoutingValues.explorationWeight, 2)}
           helper="How much discovery value can influence the final route score."
         />
         <MetricCard
-          label="Fit floor"
-          value={formatDecimal(minPredictedFitFloor, 2)}
-          helper="Minimum predicted fit required before an island can be routed."
+          label="Minimum predicted fit"
+          value={formatDecimal(effectiveRoutingValues.minimumPredictedFit, 2)}
+          helper="Safety gate for guided routing."
         />
         <MetricCard
-          label="Route count"
-          value={routedIslandsPerActiveUser}
-          helper="How many unrated islands each active user can receive per active turn."
+          label="Guided recommendations / user"
+          value={guidedRecommendationsPerUser}
+          helper="How many unrated islands each active user can receive per guided turn."
         />
       </div>
 
@@ -1120,7 +1155,7 @@ export default function App() {
         getRowKey={(row) => row.islandId}
         onRowClick={(row) => setDrawerState({ type: 'recommendation', userId: selectedUser.id, islandId: row.islandId })}
         emptyTitle="No unrated recommendations"
-        emptyDescription="The current user has no unrated islands that clear the predicted-fit floor."
+        emptyDescription="The current user has no unrated islands that clear the minimum predicted fit."
       />
     </div>
   ) : (
@@ -1380,7 +1415,7 @@ export default function App() {
         <h4>Routing note</h4>
         <p>
           This recommendation is based on the user&apos;s current sparse ratings and the island&apos;s cohort-local affinity
-          report before the next turn. The same routing path can feed either passive or active discovery turns.
+          report before the next turn. The same routing path can feed either organic exploration or guided discovery turns.
         </p>
       </section>
     </div>
@@ -1636,24 +1671,56 @@ export default function App() {
     </button>
   );
 
+  const labeledControl = (label: string, help: string) => (
+    <span className="control__label-row">
+      <span>{label}</span>
+      <InfoTip label={`${label} help`} text={help} />
+    </span>
+  );
+
   const randomizeSeed = () => {
     setSeed(Math.floor(Math.random() * 1_000_000_000));
   };
 
-  const advanceCurrentTurn = (state: SimulationState) => {
-    if (turnMode === 'active') {
-      return advanceActiveTurn(state, {
-        activeUsersPerTurn,
-        routedIslandsPerActiveUser,
-        explorationWeight,
-        minPredictedFitFloor
-      });
-    }
+  const resetControlPolicy = () => {
+    setSeed(INITIAL_CONFIG.seed);
+    setNumUsers(INITIAL_CONFIG.numUsers);
+    setNumIslands(INITIAL_CONFIG.numIslands);
+    setInitialRatingsPerUser(4);
+    setTurnMode(DEFAULT_TURN_POLICY.turnMode);
+    setParticipationModel(DEFAULT_TURN_POLICY.participationModel);
+    setParticipatingUsersPerTurn(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
+    setParticipationChance(DEFAULT_TURN_POLICY.participationChance);
+    setOrganicRatingCountModel(DEFAULT_TURN_POLICY.organicRatingCountModel);
+    setOrganicRatingsPerUser(DEFAULT_TURN_POLICY.organicRatingsPerUser);
+    setOrganicRatingDice(DEFAULT_TURN_POLICY.organicRatingDice);
+    setGuidedRatingCountModel(DEFAULT_TURN_POLICY.guidedRatingCountModel);
+    setGuidedRecommendationsPerUser(DEFAULT_TURN_POLICY.guidedRecommendationsPerUser);
+    setGuidedRecommendationDice(DEFAULT_TURN_POLICY.guidedRecommendationDice);
+    setRoutingRiskProfile(DEFAULT_TURN_POLICY.routingRiskProfile);
+    setCustomExplorationWeight(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
+    setCustomMinimumPredictedFit(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
+    setTurnBatchCount(DEFAULT_TURN_POLICY.turnBatchCount);
+  };
 
-    return advancePassiveTurn(state, {
-      activeUsersPerTurn,
-      maxRatingsPerActiveUser
-    });
+  const currentTurnPolicy = {
+    turnMode,
+    participationModel,
+    participatingUsersPerTurn,
+    participationChance,
+    organicRatingCountModel,
+    organicRatingsPerUser,
+    organicRatingDice,
+    guidedRatingCountModel,
+    guidedRecommendationsPerUser,
+    guidedRecommendationDice,
+    routingRiskProfile,
+    customExplorationWeight,
+    customMinimumPredictedFit
+  };
+
+  const advanceCurrentTurn = (state: SimulationState) => {
+    return advancePolicyTurn(state, currentTurnPolicy);
   };
 
   const dashboardSections: Record<DashboardPanelGroupKey, { title: string; panels: JSX.Element[] }> = {
@@ -1665,12 +1732,20 @@ export default function App() {
             <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
             <MetricCard
               label="Mode"
-              value={currentTurnSummary?.mode === 'active' ? 'Active discovery' : 'Passive random'}
+              value={
+                currentTurnSummary?.mode === 'active'
+                  ? TURN_MODE_LABELS.guided
+                  : currentTurnSummary?.mode === 'mixed'
+                    ? TURN_MODE_LABELS.mixed
+                    : TURN_MODE_LABELS.organic
+              }
               helper="How the most recent turn created rating events."
             />
             <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
             <MetricCard label="Ratings this turn" value={currentTurnSummary?.ratingsCreated ?? 0} />
-            <MetricCard label="Active users this turn" value={currentTurnSummary?.activeUserIds.length ?? 0} />
+            <MetricCard label="Organic events this turn" value={currentTurnSummary?.organicRatingsCreated ?? 0} />
+            <MetricCard label="Guided events this turn" value={currentTurnSummary?.guidedRatingsCreated ?? 0} />
+            <MetricCard label="Participating users this turn" value={currentTurnSummary?.activeUserIds.length ?? 0} />
             <MetricCard label="New islands rated" value={currentTurnSummary?.newlyRatedIslandIds.length ?? 0} />
             <MetricCard label="Safe fits routed" value={currentTurnSummary?.recommendationKinds.SAFE_FIT ?? 0} />
             <MetricCard
@@ -1681,7 +1756,9 @@ export default function App() {
           <div className="summary-inline">
             {(dataset.turnHistory.slice(-3) ?? []).map((turn) => (
               <Badge key={turn.turn} tone="neutral">
-                Turn {turn.turn}: {turn.mode === 'active' ? 'active' : 'passive'} · {turn.ratingsCreated} ratings
+                Turn {turn.turn}:{' '}
+                {turn.mode === 'active' ? TURN_MODE_LABELS.guided : turn.mode === 'mixed' ? TURN_MODE_LABELS.mixed : TURN_MODE_LABELS.organic} ·{' '}
+                {turn.ratingsCreated} ratings
               </Badge>
             ))}
           </div>
@@ -1927,18 +2004,18 @@ export default function App() {
 
       <section className="top-stack" aria-label="Controls and drilldown">
         <CollapsiblePanel
-          title="Control panel"
+          title="Simulation setup"
           collapsed={controlsCollapsed}
           onToggle={() => setControlsCollapsed((value) => !value)}
-          description="Simulation and generation settings."
+          description="Stable settings for the simulation world."
         >
           <div className="control-strip__fields">
             <label className="control">
-              <span>Seed</span>
+              {labeledControl('Seed', 'Controls the reproducible random number stream for the generated world and turns.')}
               <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
             </label>
             <label className="control">
-              <span>Users</span>
+              {labeledControl('Users', 'How many synthetic users the generator creates.')}
               <input
                 type="number"
                 value={numUsers}
@@ -1949,7 +2026,7 @@ export default function App() {
               />
             </label>
             <label className="control">
-              <span>Islands</span>
+              {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
               <input
                 type="number"
                 value={numIslands}
@@ -1960,7 +2037,7 @@ export default function App() {
               />
             </label>
             <label className="control">
-              <span>Initial ratings</span>
+              {labeledControl('Bootstrap Ratings / User', 'Initial sparse rating events created at Turn 0. These are evidence, not signal.')}
               <input
                 type="number"
                 value={initialRatingsPerUser}
@@ -1971,69 +2048,7 @@ export default function App() {
               />
             </label>
             <label className="control">
-              <span>Turn mode</span>
-              <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                <option value="passive">Passive / random</option>
-                <option value="active">Active discovery</option>
-              </select>
-            </label>
-            <label className="control">
-              <span>Exploration weight</span>
-              <input
-                type="number"
-                value={explorationWeight}
-                onChange={(event) => setExplorationWeight(Number(event.target.value))}
-                min={0}
-                max={2}
-                step={0.05}
-              />
-            </label>
-            <label className="control">
-              <span>Fit floor</span>
-              <input
-                type="number"
-                value={minPredictedFitFloor}
-                onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
-                min={-1}
-                max={1}
-                step={0.05}
-              />
-            </label>
-            <label className="control">
-              <span>Routed / active user</span>
-              <input
-                type="number"
-                value={routedIslandsPerActiveUser}
-                onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
-                min={1}
-                max={8}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Active users / turn</span>
-              <input
-                type="number"
-                value={activeUsersPerTurn}
-                onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
-                min={1}
-                max={96}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Passive ratings / user</span>
-              <input
-                type="number"
-                value={maxRatingsPerActiveUser}
-                onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
-                min={1}
-                max={8}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              <span>Turn batch</span>
+              {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
               <input
                 type="number"
                 value={turnBatchCount}
@@ -2043,6 +2058,12 @@ export default function App() {
                 step={1}
               />
             </label>
+          </div>
+          <div className="summary-inline">
+            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+            <Badge tone="neutral">{describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}</Badge>
           </div>
           <div className="control-strip__actions">
             <button type="button" className="button" onClick={randomizeSeed}>
@@ -2068,12 +2089,253 @@ export default function App() {
             >
               Take X Turns
             </button>
-            <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
+            <button
+              type="button"
+              className="button button--ghost"
+              onClick={() => {
+                resetControlPolicy();
+                const defaultBootstrap = buildDataset(INITIAL_CONFIG.seed, INITIAL_CONFIG.numUsers, INITIAL_CONFIG.numIslands);
+                setSimulationState(
+                  createInitialSimulationState({
+                    seed: INITIAL_CONFIG.seed,
+                    allTags: defaultBootstrap.allTags,
+                    latentUsers: defaultBootstrap.users,
+                    cohorts: defaultBootstrap.cohorts,
+                    islands: defaultBootstrap.islands,
+                    initialRatingsPerUser: 4
+                  })
+                );
+              }}
+            >
               Reset Simulation
             </button>
             <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
               {showDebug ? 'Hide debug' : 'Show debug'}
             </button>
+          </div>
+        </CollapsiblePanel>
+
+        <CollapsiblePanel
+          title="Turn behavior / Dynamic settings"
+          collapsed={dynamicSettingsCollapsed}
+          onToggle={() => setDynamicSettingsCollapsed((value) => !value)}
+          description="Only the controls that matter for the selected turn policy are shown here."
+        >
+          <div className="policy-stack">
+            <section className="policy-subgroup">
+              <div className="section-heading">
+                <h3>Turn policy</h3>
+                <p className="muted">Choose how the simulation advances on the next turn.</p>
+              </div>
+              <div className="control-strip__fields control-strip__fields--dynamic">
+                <label className="control">
+                  {labeledControl('Turn Mode', 'How users participate this turn: Organic Exploration, Guided Discovery, or both.')}
+                  <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                    {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="control">
+                  {labeledControl(
+                    'Participation Model',
+                    'How participating users are chosen: a fixed count or independent chance per user.'
+                  )}
+                  <select
+                    value={participationModel}
+                    onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}
+                  >
+                    {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="policy-subgroup">
+              <div className="section-heading">
+                <h3>Rating count policy</h3>
+                <p className="muted">Use one shared count policy for both organic and guided turns.</p>
+              </div>
+              <div className="control-strip__fields control-strip__fields--dynamic">
+                <label className="control">
+                  {labeledControl('Rating Count Model', 'How many ratings each participating user creates: fixed count or a dice roll.')}
+                  <select
+                    value={organicRatingCountModel}
+                    onChange={(event) => {
+                      const nextValue = event.target.value as RatingCountModel;
+                      setOrganicRatingCountModel(nextValue);
+                      setGuidedRatingCountModel(nextValue);
+                    }}
+                  >
+                    {Object.entries(RATING_COUNT_MODEL_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="policy-subgroup">
+              <div className="section-heading">
+                <h3>Shared participation settings</h3>
+                <p className="muted">These controls apply to the current turn mode whenever users are selected to act.</p>
+              </div>
+              <div className="control-strip__fields control-strip__fields--dynamic">
+                {participationModel === 'fixed-count' ? (
+                  <label className="control">
+                    {labeledControl('Participating Users / Turn', 'Exactly this many users are selected to act when the turn advances.')}
+                    <input
+                      type="number"
+                      value={participatingUsersPerTurn}
+                      onChange={(event) => setParticipatingUsersPerTurn(Number(event.target.value))}
+                      min={1}
+                      max={96}
+                      step={1}
+                    />
+                  </label>
+                ) : (
+                  <label className="control">
+                    {labeledControl('Participation Chance', 'Each user independently has this chance to act during the turn.')}
+                    <input
+                      type="number"
+                      value={participationChance}
+                      onChange={(event) => setParticipationChance(Number(event.target.value))}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                    />
+                  </label>
+                )}
+              </div>
+            </section>
+
+            {turnModeVisibility.showOrganic ? (
+              <section className="policy-subgroup">
+                <div className="section-heading">
+                  <h3>Organic Exploration</h3>
+                  <p className="muted">Users sample unrated islands on their own.</p>
+                </div>
+                <div className="control-strip__fields control-strip__fields--dynamic">
+                  {organicRatingCountModel === 'fixed-count' ? (
+                    <label className="control">
+                      {labeledControl('Organic Ratings / User', 'How many unrated islands each participating user rates during organic exploration.')}
+                      <input
+                        type="number"
+                        value={organicRatingsPerUser}
+                        onChange={(event) => setOrganicRatingsPerUser(Number(event.target.value))}
+                        min={0}
+                        max={8}
+                        step={1}
+                      />
+                    </label>
+                  ) : (
+                    <label className="control">
+                      {labeledControl('Organic Rating Dice', 'The dice roll used to decide how many unrated islands each participating user rates.')}
+                      <select value={organicRatingDice} onChange={(event) => setOrganicRatingDice(event.target.value as typeof organicRatingDice)}>
+                        {['1d2', '1d3', '1d4', '1d6', '2d3', '2d6', '3d6'].map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            {turnModeVisibility.showGuided ? (
+              <section className="policy-subgroup">
+                <div className="section-heading">
+                  <h3>Guided Discovery</h3>
+                  <p className="muted">The router selects unrated islands before the user sees them.</p>
+                </div>
+                <div className="control-strip__fields control-strip__fields--dynamic">
+                  {guidedRatingCountModel === 'fixed-count' ? (
+                    <label className="control">
+                      {labeledControl(
+                        'Guided Recommendations / User',
+                        'How many routed islands each participating user receives during guided discovery.'
+                      )}
+                      <input
+                        type="number"
+                        value={guidedRecommendationsPerUser}
+                        onChange={(event) => setGuidedRecommendationsPerUser(Number(event.target.value))}
+                        min={0}
+                        max={8}
+                        step={1}
+                      />
+                    </label>
+                  ) : (
+                    <label className="control">
+                      {labeledControl('Guided Recommendation Dice', 'The dice roll used to decide how many routed islands each participating user receives.')}
+                      <select value={guidedRecommendationDice} onChange={(event) => setGuidedRecommendationDice(event.target.value as typeof guidedRecommendationDice)}>
+                        {['1d2', '1d3', '1d4', '1d6', '2d3', '2d6', '3d6'].map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <div className="control-strip__fields control-strip__fields--dynamic">
+                  {routingRiskProfile === 'custom' ? (
+                    <>
+                      <label className="control">
+                        {labeledControl(
+                          'Exploration Weight',
+                          'How much discovery value matters after a candidate clears the predicted-fit gate.'
+                        )}
+                        <input
+                          type="number"
+                          value={customExplorationWeight}
+                          onChange={(event) => setCustomExplorationWeight(Number(event.target.value))}
+                          min={0}
+                          max={2}
+                          step={0.05}
+                        />
+                      </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Minimum Predicted Fit',
+                          'Safety gate for guided routing. Islands below this fit are not recommended.'
+                        )}
+                        <input
+                          type="number"
+                          value={customMinimumPredictedFit}
+                          onChange={(event) => setCustomMinimumPredictedFit(Number(event.target.value))}
+                          min={-1}
+                          max={1}
+                          step={0.05}
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      <div className="notice notice--subtle">
+                        <strong>{ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</strong>
+                        <p>{describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}</p>
+                      </div>
+                      <div className="notice notice--subtle">
+                        <strong>Routing is preset</strong>
+                        <p>
+                          Switch to Custom if you want to edit exploration weight and minimum predicted fit directly.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </section>
+            ) : null}
           </div>
         </CollapsiblePanel>
 

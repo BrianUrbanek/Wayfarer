@@ -9,3 +9,5 @@ import './pseudoCohorts.node.test.js';
 import './simulation.node.test.js';
 import './reviewerArchetypes.node.test.js';
 import './dashboardGuidance.node.test.js';
+import './dice.node.test.js';
+import './turnPolicy.node.test.js';

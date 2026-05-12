@@ -6,6 +6,7 @@ import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { computeInference } from '../../model/inference.js';
 import { recommendIslandsForUser } from '../../model/recommendations.js';
 import {
+  advancePolicyTurn,
   advanceActiveTurn,
   advancePassiveTurn,
   createInitialSimulationState,
@@ -196,5 +197,29 @@ describe('simulation layer', () => {
       assert.equal(state.users.find((user) => user.id === event.userId)?.ratings[event.islandId] ?? null, null);
       assert.ok((preTurnRecommendations.get(event.userId) ?? []).includes(event.islandId));
     }
+  });
+
+  it('runs mixed turns through both organic and guided pipelines', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
+    const next = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 3,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 1,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    assert.equal(next.turnHistory.at(-1)?.mode, 'mixed');
+    assert.ok((next.turnHistory.at(-1)?.organicRatingsCreated ?? 0) > 0);
+    assert.ok((next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0) > 0);
   });
 });

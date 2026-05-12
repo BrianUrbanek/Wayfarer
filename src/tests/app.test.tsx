@@ -25,6 +25,18 @@ describe('App analyst console', () => {
     expect(html).toContain('Instruction panel');
     expect(html).toContain('Drilldown targets');
     expect(html).toContain('Pinned drilldown');
+    expect(html).toContain('Turn behavior / Dynamic settings');
+    expect(html).toContain('Turn policy');
+    expect(html).toContain('Rating count policy');
+    expect(html).toContain('Organic Exploration');
+    expect(html).toContain('Guided Discovery');
+    expect(html).toContain('Mixed');
+    expect(html).toContain('Bootstrap Ratings / User');
+    expect(html).toContain('Participating Users / Turn');
+    expect(html).toContain('Organic Ratings / User');
+    expect(html).toContain('Guided Recommendations / User');
+    expect(html).toContain('Minimum Predicted Fit');
+    expect(html).toContain('Turns to Run');
     expect(html).toContain('Goal');
     expect(html).toContain('About');
     expect(html).toContain('Hidden generator archetype');

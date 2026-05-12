@@ -9,6 +9,16 @@ import {
   type RecommendationKind
 } from './recommendations.js';
 import { createSeededRandom, type SeededRng } from '../generator/seededRandom.js';
+import {
+  resolveRatingCount,
+  resolveRoutingRiskProfileValues,
+  selectParticipatingUsers,
+  type ParticipationModel,
+  type RatingCountModel,
+  type RoutingRiskProfile,
+  type TurnMode
+} from './turnPolicy.js';
+import type { SupportedDiceExpression } from './dice.js';
 import type {
   CohortAnchor,
   DiagnosisType,
@@ -34,9 +44,11 @@ export interface RatingEvent {
 
 export interface SimulationTurnSummary {
   turn: number;
-  mode: 'passive' | 'active';
+  mode: 'passive' | 'active' | 'mixed';
   activeUserIds: UserId[];
   ratingsCreated: number;
+  organicRatingsCreated: number;
+  guidedRatingsCreated: number;
   newlyRatedIslandIds: IslandId[];
   routedIslandIds: IslandId[];
   recommendationKinds: Record<RecommendationKind, number>;
@@ -77,6 +89,22 @@ export interface AdvanceTurnConfig {
 export interface AdvanceActiveTurnConfig extends RecommendationOptions {
   activeUsersPerTurn: number;
   routedIslandsPerActiveUser: number;
+}
+
+export interface AdvancePolicyTurnConfig {
+  turnMode: TurnMode;
+  participationModel: ParticipationModel;
+  participatingUsersPerTurn: number;
+  participationChance: number;
+  organicRatingCountModel: RatingCountModel;
+  organicRatingsPerUser: number;
+  organicRatingDice: SupportedDiceExpression;
+  guidedRatingCountModel: RatingCountModel;
+  guidedRecommendationsPerUser: number;
+  guidedRecommendationDice: SupportedDiceExpression;
+  routingRiskProfile: RoutingRiskProfile;
+  customExplorationWeight: number;
+  customMinimumPredictedFit: number;
 }
 
 function buildBlankRatings(islands: readonly Island[]): Record<IslandId, MaybeRating> {
@@ -223,9 +251,11 @@ function summarizeTurn(
   turn: number,
   newEvents: readonly RatingEvent[],
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>,
-  mode: 'passive' | 'active' = 'passive',
+  mode: 'passive' | 'active' | 'mixed' = 'passive',
   routedIslandIds: IslandId[] = [],
-  recommendationKinds: Record<RecommendationKind, number> = buildRecommendationCounts()
+  recommendationKinds: Record<RecommendationKind, number> = buildRecommendationCounts(),
+  organicRatingsCreated = newEvents.length,
+  guidedRatingsCreated = 0
 ): SimulationTurnSummary {
   const newlyRatedIslandIds = Array.from(new Set(newEvents.map((event) => event.islandId))).sort();
 
@@ -234,6 +264,8 @@ function summarizeTurn(
     mode,
     activeUserIds: Array.from(new Set(newEvents.map((event) => event.userId))).sort(),
     ratingsCreated: newEvents.length,
+    organicRatingsCreated,
+    guidedRatingsCreated,
     newlyRatedIslandIds,
     routedIslandIds: routedIslandIds.slice().sort(),
     recommendationKinds: { ...recommendationKinds },
@@ -378,6 +410,263 @@ export function advancePassiveTurn(
   );
 }
 
+function hasUnratedIsland(user: User, islands: readonly Island[]): boolean {
+  return islands.some((island) => (user.ratings[island.id] ?? null) === null);
+}
+
+function buildRoutingOptions(
+  explorationWeight: number,
+  minPredictedFitFloor: number,
+  routeCount: number
+): RecommendationOptions {
+  return {
+    explorationWeight,
+    minPredictedFitFloor,
+    topLimit: Math.max(8, routeCount * 2)
+  };
+}
+
+function createOrganicEventsForUsers(
+  rng: SeededRng,
+  turn: number,
+  visibleUsers: readonly User[],
+  islands: readonly Island[],
+  selectedUsers: readonly User[],
+  ratingCountModel: RatingCountModel,
+  fixedRatingsPerUser: number,
+  diceExpression: SupportedDiceExpression,
+  usedPairs?: Set<string>
+): RatingEvent[] {
+  const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
+  const events: RatingEvent[] = [];
+
+  for (const user of selectedUsers) {
+    const visible = visibleById.get(user.id);
+    if (!visible) {
+      continue;
+    }
+
+    const unratedIslandIds = islands
+      .map((island) => island.id)
+      .filter((islandId) => (visible.ratings[islandId] ?? null) === null && !(usedPairs?.has(eventKey(turn, user.id, islandId)) ?? false));
+
+    if (unratedIslandIds.length === 0) {
+      continue;
+    }
+
+    const ratingsToCreate = Math.min(
+      unratedIslandIds.length,
+      resolveRatingCount(rng, ratingCountModel, fixedRatingsPerUser, diceExpression)
+    );
+    const pickedIslandIds = rng.shuffle(unratedIslandIds).slice(0, ratingsToCreate);
+
+    for (const islandId of pickedIslandIds) {
+      const rating = user.ratings[islandId] ?? 0;
+      const key = eventKey(turn, user.id, islandId);
+      usedPairs?.add(key);
+
+      events.push({
+        id: key,
+        turn,
+        userId: user.id,
+        islandId,
+        rating,
+        source: 'passive'
+      });
+    }
+  }
+
+  return events;
+}
+
+function createGuidedEventsForUsers(
+  rng: SeededRng,
+  turn: number,
+  visibleUsers: readonly User[],
+  islands: readonly Island[],
+  signalProfiles: ReadonlyMap<UserId, RaterSignalProfile>,
+  islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>,
+  selectedUsers: readonly User[],
+  ratingCountModel: RatingCountModel,
+  fixedRecommendationsPerUser: number,
+  diceExpression: SupportedDiceExpression,
+  recommendationOptions: RecommendationOptions,
+  usedPairs?: Set<string>
+): { events: RatingEvent[]; routedIslandIds: IslandId[]; recommendationKinds: Record<RecommendationKind, number> } {
+  const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
+  const events: RatingEvent[] = [];
+  const routedIslandIds: IslandId[] = [];
+  const recommendationKinds = buildRecommendationCounts();
+
+  for (const user of selectedUsers) {
+    const visible = visibleById.get(user.id);
+    if (!visible) {
+      continue;
+    }
+
+    const recommendations = recommendIslandsForUser(
+      visible,
+      islandAffinityReports,
+      signalProfiles,
+      islands,
+      recommendationOptions
+    ).recommendations.filter((entry) => (visible.ratings[entry.islandId] ?? null) === null && !(usedPairs?.has(eventKey(turn, user.id, entry.islandId)) ?? false));
+
+    if (recommendations.length === 0) {
+      continue;
+    }
+
+    const recommendationsToCreate = Math.min(
+      recommendations.length,
+      resolveRatingCount(rng, ratingCountModel, fixedRecommendationsPerUser, diceExpression)
+    );
+    const selectedRecommendations = recommendations.slice(0, recommendationsToCreate);
+
+    for (const recommendation of selectedRecommendations) {
+      const rating = user.ratings[recommendation.islandId] ?? 0;
+      const key = eventKey(turn, user.id, recommendation.islandId);
+      usedPairs?.add(key);
+
+      events.push({
+        id: key,
+        turn,
+        userId: user.id,
+        islandId: recommendation.islandId,
+        rating,
+        source: 'active'
+      });
+      routedIslandIds.push(recommendation.islandId);
+      recommendationKinds[recommendation.recommendationKind] += 1;
+    }
+  }
+
+  return {
+    events,
+    routedIslandIds,
+    recommendationKinds
+  };
+}
+
+export function advancePolicyTurn(
+  state: SimulationState,
+  config: AdvancePolicyTurnConfig
+): SimulationState {
+  const turn = state.currentTurn + 1;
+  const rng = createSeededRandom(state.seed ^ (turn * 2654435761));
+  const visibleUsers = state.users;
+  const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
+  const organicCandidates = state.latentUsers.filter((user) => {
+    const visible = visibleById.get(user.id);
+    return visible ? hasUnratedIsland(visible, state.islands) : false;
+  });
+
+  const routingValues = resolveRoutingRiskProfileValues(config.routingRiskProfile, {
+    explorationWeight: config.customExplorationWeight,
+    minimumPredictedFit: config.customMinimumPredictedFit
+  });
+  const recommendationOptions = buildRoutingOptions(
+    routingValues.explorationWeight,
+    routingValues.minimumPredictedFit,
+    config.guidedRecommendationsPerUser
+  );
+
+  const guidedCandidates = organicCandidates.filter((user) => {
+    const visible = visibleById.get(user.id);
+    if (!visible) {
+      return false;
+    }
+
+    return recommendIslandsForUser(visible, state.islandAffinityReports, state.raterSignalProfiles, state.islands, recommendationOptions).recommendations.length > 0;
+  });
+
+  const selectedOrganicUsers = config.turnMode === 'guided'
+    ? []
+    : selectParticipatingUsers(
+        rng,
+        organicCandidates,
+        config.participationModel,
+        config.participatingUsersPerTurn,
+        config.participationChance
+      );
+  const selectedGuidedUsers = config.turnMode === 'organic'
+    ? []
+    : config.turnMode === 'mixed'
+      ? selectParticipatingUsers(
+          rng,
+          guidedCandidates,
+          config.participationModel,
+          config.participatingUsersPerTurn,
+          config.participationChance
+        )
+      : selectParticipatingUsers(
+          rng,
+          guidedCandidates,
+          config.participationModel,
+          config.participatingUsersPerTurn,
+          config.participationChance
+        );
+  const usedPairs = new Set<string>();
+  const organicEvents =
+    config.turnMode === 'guided'
+      ? []
+      : createOrganicEventsForUsers(
+          rng,
+        turn,
+          visibleUsers,
+          state.islands,
+          selectedOrganicUsers,
+          config.organicRatingCountModel,
+          config.organicRatingsPerUser,
+          config.organicRatingDice,
+          usedPairs
+        );
+  const guided =
+    config.turnMode === 'organic'
+      ? { events: [], routedIslandIds: [], recommendationKinds: buildRecommendationCounts() }
+      : createGuidedEventsForUsers(
+          rng,
+          turn,
+          visibleUsers,
+          state.islands,
+          state.raterSignalProfiles,
+          state.islandAffinityReports,
+          selectedGuidedUsers,
+          config.guidedRatingCountModel,
+          config.guidedRecommendationsPerUser,
+          config.guidedRecommendationDice,
+          recommendationOptions,
+          usedPairs
+        );
+  const newEvents = organicEvents.concat(guided.events);
+  const nextEvents = state.ratingEvents.concat(newEvents);
+  const nextHistory = state.turnHistory.slice();
+
+  const nextVisibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, nextEvents);
+  const nextInferenceByUserId = computeInferenceMap(nextVisibleUsers, state.cohorts, state.islands, state.allTags);
+  nextHistory.push(
+    summarizeTurn(
+      turn,
+      newEvents,
+      nextInferenceByUserId,
+      config.turnMode === 'organic' ? 'passive' : config.turnMode === 'guided' ? 'active' : 'mixed',
+      guided.routedIslandIds,
+      guided.recommendationKinds,
+      organicEvents.length,
+      guided.events.length
+    )
+  );
+
+  return recomputeState(
+    state.seed,
+    state.latentUsers,
+    state.cohorts,
+    state.islands,
+    nextEvents,
+    nextHistory,
+    state.allTags
+  );
+}
+
 function createActiveRatingEventsForUsers(
   rng: SeededRng,
   turn: number,
@@ -488,7 +777,9 @@ export function advanceActiveTurn(
     ),
     'active',
     routed.routedIslandIds,
-    routed.recommendationKinds
+    routed.recommendationKinds,
+    0,
+    routed.events.length
   );
   nextHistory.push(activeSummary);
 
