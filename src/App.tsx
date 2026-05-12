@@ -2048,6 +2048,62 @@ export default function App() {
               />
             </label>
             <label className="control">
+              {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
+              <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="control">
+              {labeledControl(
+                'Participation Model',
+                'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
+              )}
+              <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
+                {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="control">
+              {labeledControl(
+                'Rating Count Model',
+                'Choose whether participating users create a fixed count of ratings or a dice-based count.'
+              )}
+              <select
+                value={organicRatingCountModel}
+                onChange={(event) => {
+                  const nextValue = event.target.value as RatingCountModel;
+                  setOrganicRatingCountModel(nextValue);
+                  setGuidedRatingCountModel(nextValue);
+                }}
+              >
+                {Object.entries(RATING_COUNT_MODEL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="control">
+              {labeledControl(
+                'Routing Risk Profile',
+                'Preset bundle for exploration weight and minimum predicted fit. Select Custom to edit both values.'
+              )}
+              <select value={routingRiskProfile} onChange={(event) => setRoutingRiskProfile(event.target.value as RoutingRiskProfile)}>
+                {Object.entries(ROUTING_RISK_PROFILE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="control">
               {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
               <input
                 type="number"
@@ -2122,67 +2178,6 @@ export default function App() {
           description="Only the controls that matter for the selected turn policy are shown here."
         >
           <div className="policy-stack">
-            <section className="policy-subgroup">
-              <div className="section-heading">
-                <h3>Turn policy</h3>
-                <p className="muted">Choose how the simulation advances on the next turn.</p>
-              </div>
-              <div className="control-strip__fields control-strip__fields--dynamic">
-                <label className="control">
-                  {labeledControl('Turn Mode', 'How users participate this turn: Organic Exploration, Guided Discovery, or both.')}
-                  <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                    {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="control">
-                  {labeledControl(
-                    'Participation Model',
-                    'How participating users are chosen: a fixed count or independent chance per user.'
-                  )}
-                  <select
-                    value={participationModel}
-                    onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}
-                  >
-                    {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="policy-subgroup">
-              <div className="section-heading">
-                <h3>Rating count policy</h3>
-                <p className="muted">Use one shared count policy for both organic and guided turns.</p>
-              </div>
-              <div className="control-strip__fields control-strip__fields--dynamic">
-                <label className="control">
-                  {labeledControl('Rating Count Model', 'How many ratings each participating user creates: fixed count or a dice roll.')}
-                  <select
-                    value={organicRatingCountModel}
-                    onChange={(event) => {
-                      const nextValue = event.target.value as RatingCountModel;
-                      setOrganicRatingCountModel(nextValue);
-                      setGuidedRatingCountModel(nextValue);
-                    }}
-                  >
-                    {Object.entries(RATING_COUNT_MODEL_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
-
             <section className="policy-subgroup">
               <div className="section-heading">
                 <h3>Shared participation settings</h3>
@@ -2292,20 +2287,6 @@ export default function App() {
                     <>
                       <label className="control">
                         {labeledControl(
-                          'Exploration Weight',
-                          'How much discovery value matters after a candidate clears the predicted-fit gate.'
-                        )}
-                        <input
-                          type="number"
-                          value={customExplorationWeight}
-                          onChange={(event) => setCustomExplorationWeight(Number(event.target.value))}
-                          min={0}
-                          max={2}
-                          step={0.05}
-                        />
-                      </label>
-                      <label className="control">
-                        {labeledControl(
                           'Minimum Predicted Fit',
                           'Safety gate for guided routing. Islands below this fit are not recommended.'
                         )}
@@ -2318,20 +2299,26 @@ export default function App() {
                           step={0.05}
                         />
                       </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Exploration Weight',
+                          'How much discovery value matters after a candidate clears the predicted-fit gate.'
+                        )}
+                        <input
+                          type="number"
+                          value={customExplorationWeight}
+                          onChange={(event) => setCustomExplorationWeight(Number(event.target.value))}
+                          min={0}
+                          max={2}
+                          step={0.05}
+                        />
+                      </label>
                     </>
                   ) : (
-                    <>
-                      <div className="notice notice--subtle">
-                        <strong>{ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</strong>
-                        <p>{describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}</p>
-                      </div>
-                      <div className="notice notice--subtle">
-                        <strong>Routing is preset</strong>
-                        <p>
-                          Switch to Custom if you want to edit exploration weight and minimum predicted fit directly.
-                        </p>
-                      </div>
-                    </>
+                    <div className="notice notice--subtle">
+                      <strong>{ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</strong>
+                      <p>{describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}</p>
+                    </div>
                   )}
                 </div>
               </section>
