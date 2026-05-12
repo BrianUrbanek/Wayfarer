@@ -296,11 +296,126 @@ describe('simulation layer', () => {
     });
 
     assert.equal(next.turnHistory.at(-1)?.mode, 'mixed');
+    assert.equal((next.turnHistory.at(-1)?.participatingUserIds.length ?? 0) <= 3, true);
     assert.ok((next.turnHistory.at(-1)?.organicRatingsCreated ?? 0) > 0);
     assert.ok((next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0) > 0);
     assert.equal(
       next.ratingEvents.slice(state.ratingEvents.length).every((event) => event.source === 'organic' || event.source === 'guided'),
       true
     );
+  });
+
+  it('keeps mixed participation capped to the shared selected set', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 1,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 1,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    assert.equal((next.turnHistory.at(-1)?.participatingUserIds.length ?? 0) <= 1, true);
+  });
+
+  it('evaluates organic and guided streams against the same mixed participant set', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 2,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 1,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
+    const participantIds = new Set(next.turnHistory.at(-1)?.participatingUserIds ?? []);
+
+    assert.equal(participantIds.size <= 2, true);
+    assert.equal(freshEvents.every((event) => participantIds.has(event.userId)), true);
+  });
+
+  it('can leave selected mixed participants without events when both streams are disabled', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 2,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 0,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 0,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    assert.equal((next.turnHistory.at(-1)?.participatingUserIds.length ?? 0) <= 2, true);
+    assert.equal(next.turnHistory.at(-1)?.organicRatingsCreated ?? 0, 0);
+    assert.equal(next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0, 0);
+  });
+
+  it('can make selected mixed participants act in either single stream when the other stream is disabled', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
+
+    const organicOnly = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 6,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 0,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    const guidedOnly = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 6,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 0,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 1,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    assert.ok((organicOnly.turnHistory.at(-1)?.organicRatingsCreated ?? 0) > 0);
+    assert.equal(organicOnly.turnHistory.at(-1)?.guidedRatingsCreated ?? 0, 0);
+    assert.equal(guidedOnly.turnHistory.at(-1)?.organicRatingsCreated ?? 0, 0);
+    assert.ok((guidedOnly.turnHistory.at(-1)?.guidedRatingsCreated ?? 0) > 0);
   });
 });

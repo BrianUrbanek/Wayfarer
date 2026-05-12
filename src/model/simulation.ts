@@ -242,6 +242,7 @@ function summarizeTurn(
   newEvents: readonly RatingEvent[],
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>,
   mode: 'organic' | 'guided' | 'mixed' = 'organic',
+  participatingUserIds: UserId[] = Array.from(new Set(newEvents.map((event) => event.userId))).sort(),
   routedIslandIds: IslandId[] = [],
   recommendationKinds: Record<RecommendationKind, number> = buildRecommendationCounts(),
   organicRatingsCreated = newEvents.length,
@@ -252,7 +253,7 @@ function summarizeTurn(
   return {
     turn,
     mode,
-    participatingUserIds: Array.from(new Set(newEvents.map((event) => event.userId))).sort(),
+    participatingUserIds: participatingUserIds.slice().sort(),
     ratingsCreated: newEvents.length,
     organicRatingsCreated,
     guidedRatingsCreated,
@@ -376,6 +377,20 @@ function buildRoutingOptions(
     minPredictedFitFloor,
     topLimit: Math.max(8, routeCount * 2)
   };
+}
+
+function combineUniqueUsers(...groups: readonly (readonly User[])[]): User[] {
+  const usersById = new Map<UserId, User>();
+
+  for (const group of groups) {
+    for (const user of group) {
+      if (!usersById.has(user.id)) {
+        usersById.set(user.id, user);
+      }
+    }
+  }
+
+  return Array.from(usersById.values());
 }
 
 function createOrganicEventsForUsers(
@@ -528,42 +543,41 @@ export function advancePolicyTurn(
     return recommendIslandsForUser(visible, state.islandAffinityReports, state.raterSignalProfiles, state.islands, recommendationOptions).recommendations.length > 0;
   });
 
-  const selectedOrganicUsers = config.turnMode === 'guided'
-    ? []
-    : selectParticipatingUsers(
-        rng,
-        organicCandidates,
-        config.participationModel,
-        config.participatingUsersPerTurn,
-        config.participationChance
-      );
-  const selectedGuidedUsers = config.turnMode === 'organic'
-    ? []
-    : config.turnMode === 'mixed'
+  const mixedCandidates = combineUniqueUsers(organicCandidates, guidedCandidates);
+  const selectedUsers =
+    config.turnMode === 'organic'
       ? selectParticipatingUsers(
           rng,
-          guidedCandidates,
+          organicCandidates,
           config.participationModel,
           config.participatingUsersPerTurn,
           config.participationChance
         )
-      : selectParticipatingUsers(
-          rng,
-          guidedCandidates,
-          config.participationModel,
-          config.participatingUsersPerTurn,
-          config.participationChance
-        );
+      : config.turnMode === 'guided'
+        ? selectParticipatingUsers(
+            rng,
+            guidedCandidates,
+            config.participationModel,
+            config.participatingUsersPerTurn,
+            config.participationChance
+          )
+        : selectParticipatingUsers(
+            rng,
+            mixedCandidates,
+            config.participationModel,
+            config.participatingUsersPerTurn,
+            config.participationChance
+          );
   const usedPairs = new Set<string>();
   const organicEvents =
     config.turnMode === 'guided'
       ? []
       : createOrganicEventsForUsers(
           rng,
-        turn,
+          turn,
           visibleUsers,
           state.islands,
-          selectedOrganicUsers,
+          selectedUsers,
           config.organicRatingCountModel,
           config.organicRatingsPerUser,
           config.organicRatingDice,
@@ -579,7 +593,7 @@ export function advancePolicyTurn(
           state.islands,
           state.raterSignalProfiles,
           state.islandAffinityReports,
-          selectedGuidedUsers,
+          selectedUsers,
           config.guidedRatingCountModel,
           config.guidedRecommendationsPerUser,
           config.guidedRecommendationDice,
@@ -589,6 +603,7 @@ export function advancePolicyTurn(
   const newEvents = organicEvents.concat(guided.events);
   const nextEvents = state.ratingEvents.concat(newEvents);
   const nextHistory = state.turnHistory.slice();
+  const participatingUserIds = Array.from(new Set(selectedUsers.map((user) => user.id))).sort();
 
   const nextVisibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, nextEvents);
   const nextInferenceByUserId = computeInferenceMap(nextVisibleUsers, state.cohorts, state.islands, state.allTags);
@@ -598,6 +613,7 @@ export function advancePolicyTurn(
       newEvents,
       nextInferenceByUserId,
       config.turnMode,
+      participatingUserIds,
       guided.routedIslandIds,
       guided.recommendationKinds,
       organicEvents.length,
