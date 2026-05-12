@@ -8,6 +8,7 @@ import { Panel } from './ui/components/Panel';
 import { ProgressBar } from './ui/components/ProgressBar';
 import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
+import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
 import {
@@ -244,6 +245,8 @@ export default function App() {
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(true);
+  const [controlsCollapsed, setControlsCollapsed] = useState(false);
+  const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(false);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
   const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
@@ -1846,11 +1849,15 @@ export default function App() {
           : 'Pinned drilldown';
 
   const pinnedTraySpace = pinnedTrayCollapsed ? 92 : 456;
+  const instructionTraySpace = showInstructionTray ? (guidanceOpen ? 456 : 92) : 0;
 
   return (
     <main
       className="app-shell analyst-console"
-      style={{ ['--tray-space' as string]: `${pinnedTraySpace}px` }}
+      style={{
+        ['--left-tray-space' as string]: `${instructionTraySpace}px`,
+        ['--right-tray-space' as string]: `${pinnedTraySpace}px`
+      }}
     >
       <header className="hero">
         <div className="hero__eyebrow-row">
@@ -1918,168 +1925,175 @@ export default function App() {
         </div>
       </section>
 
-      <section className="intro-grid" aria-label="Controls and instructions">
-        <div className="intro-column intro-column--controls">
-          <Panel title="Control panel">
-            <div className="control-strip__fields">
-              <label className="control">
-                <span>Seed</span>
-                <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-              </label>
-              <label className="control">
-                <span>Users</span>
-                <input
-                  type="number"
-                  value={numUsers}
-                  onChange={(event) => setNumUsers(Number(event.target.value))}
-                  min={1}
-                  max={400}
-                  step={1}
-                />
-              </label>
-              <label className="control">
-                <span>Islands</span>
-                <input
-                  type="number"
-                  value={numIslands}
-                  onChange={(event) => setNumIslands(Number(event.target.value))}
-                  min={4}
-                  max={96}
-                  step={1}
-                />
-              </label>
-              <label className="control">
-                <span>Initial ratings</span>
-                <input
-                  type="number"
-                  value={initialRatingsPerUser}
-                  onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
-                  min={1}
-                  max={12}
-                  step={1}
-                />
-              </label>
-              <label className="control">
-                <span>Turn mode</span>
-                <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                  <option value="passive">Passive / random</option>
-                  <option value="active">Active discovery</option>
-                </select>
-              </label>
-              <label className="control">
-                <span>Exploration weight</span>
-                <input
-                  type="number"
-                  value={explorationWeight}
-                  onChange={(event) => setExplorationWeight(Number(event.target.value))}
-                  min={0}
-                  max={2}
-                  step={0.05}
-                />
-              </label>
-              <label className="control">
-                <span>Fit floor</span>
-                <input
-                  type="number"
-                  value={minPredictedFitFloor}
-                  onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
-                  min={-1}
-                  max={1}
-                  step={0.05}
-                />
-              </label>
-              <label className="control">
-                <span>Routed / active user</span>
-                <input
-                  type="number"
-                  value={routedIslandsPerActiveUser}
-                  onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
-                  min={1}
-                  max={8}
-                  step={1}
-                />
-              </label>
-              <label className="control">
-                <span>Active users / turn</span>
-                <input
-                  type="number"
-                  value={activeUsersPerTurn}
-                  onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
-                  min={1}
-                  max={96}
-                  step={1}
-                />
-              </label>
-              <label className="control">
-                <span>Passive ratings / user</span>
-                <input
-                  type="number"
-                  value={maxRatingsPerActiveUser}
-                  onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
-                  min={1}
-                  max={8}
-                  step={1}
-                />
-              </label>
-              <label className="control">
-                <span>Turn batch</span>
-                <input
-                  type="number"
-                  value={turnBatchCount}
-                  onChange={(event) => setTurnBatchCount(Number(event.target.value))}
-                  min={1}
-                  max={20}
-                  step={1}
-                />
-              </label>
+      <section className="top-stack" aria-label="Controls and drilldown">
+        <CollapsiblePanel
+          title="Control panel"
+          collapsed={controlsCollapsed}
+          onToggle={() => setControlsCollapsed((value) => !value)}
+          description="Simulation and generation settings."
+        >
+          <div className="control-strip__fields">
+            <label className="control">
+              <span>Seed</span>
+              <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+            </label>
+            <label className="control">
+              <span>Users</span>
+              <input
+                type="number"
+                value={numUsers}
+                onChange={(event) => setNumUsers(Number(event.target.value))}
+                min={1}
+                max={400}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Islands</span>
+              <input
+                type="number"
+                value={numIslands}
+                onChange={(event) => setNumIslands(Number(event.target.value))}
+                min={4}
+                max={96}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Initial ratings</span>
+              <input
+                type="number"
+                value={initialRatingsPerUser}
+                onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
+                min={1}
+                max={12}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Turn mode</span>
+              <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                <option value="passive">Passive / random</option>
+                <option value="active">Active discovery</option>
+              </select>
+            </label>
+            <label className="control">
+              <span>Exploration weight</span>
+              <input
+                type="number"
+                value={explorationWeight}
+                onChange={(event) => setExplorationWeight(Number(event.target.value))}
+                min={0}
+                max={2}
+                step={0.05}
+              />
+            </label>
+            <label className="control">
+              <span>Fit floor</span>
+              <input
+                type="number"
+                value={minPredictedFitFloor}
+                onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
+                min={-1}
+                max={1}
+                step={0.05}
+              />
+            </label>
+            <label className="control">
+              <span>Routed / active user</span>
+              <input
+                type="number"
+                value={routedIslandsPerActiveUser}
+                onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
+                min={1}
+                max={8}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Active users / turn</span>
+              <input
+                type="number"
+                value={activeUsersPerTurn}
+                onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
+                min={1}
+                max={96}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Passive ratings / user</span>
+              <input
+                type="number"
+                value={maxRatingsPerActiveUser}
+                onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
+                min={1}
+                max={8}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Turn batch</span>
+              <input
+                type="number"
+                value={turnBatchCount}
+                onChange={(event) => setTurnBatchCount(Number(event.target.value))}
+                min={1}
+                max={20}
+                step={1}
+              />
+            </label>
+          </div>
+          <div className="control-strip__actions">
+            <button type="button" className="button" onClick={randomizeSeed}>
+              Regenerate dataset
+            </button>
+            <button type="button" className="button" onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}>
+              Take 1 Turn
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() =>
+                setSimulationState((state) => {
+                  let next = state;
+
+                  for (let index = 0; index < turnBatchCount; index += 1) {
+                    next = advanceCurrentTurn(next);
+                  }
+
+                  return next;
+                })
+              }
+            >
+              Take X Turns
+            </button>
+            <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
+              Reset Simulation
+            </button>
+            <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
+              {showDebug ? 'Hide debug' : 'Show debug'}
+            </button>
+          </div>
+        </CollapsiblePanel>
+
+        <CollapsiblePanel
+          title="Drilldown targets"
+          collapsed={drilldownTargetsCollapsed}
+          onToggle={() => setDrilldownTargetsCollapsed((value) => !value)}
+          description="Pin a user, island, or cohort for quick reference."
+        >
+          <div className="section-toolbar section-toolbar--stacked">
+            <p className="muted">
+              Pin a user, island, or cohort here for quick reference while you inspect the reports below.
+            </p>
+            <div className="section-toolbar__buttons">
+              {openSelectionButton('user', 'Select user')}
+              {openSelectionButton('island', 'Select island')}
+              {openSelectionButton('cohort', 'Select cohort')}
             </div>
-            <div className="control-strip__actions">
-              <button type="button" className="button" onClick={randomizeSeed}>
-                Regenerate dataset
-              </button>
-              <button type="button" className="button" onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}>
-                Take 1 Turn
-              </button>
-              <button
-                type="button"
-                className="button"
-                onClick={() =>
-                  setSimulationState((state) => {
-                    let next = state;
-
-                    for (let index = 0; index < turnBatchCount; index += 1) {
-                      next = advanceCurrentTurn(next);
-                    }
-
-                    return next;
-                  })
-                }
-              >
-                Take X Turns
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
-                Reset Simulation
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
-                {showDebug ? 'Hide debug' : 'Show debug'}
-              </button>
-            </div>
-          </Panel>
-
-          <Panel title="Drilldown targets">
-            <div className="section-toolbar section-toolbar--stacked">
-              <p className="muted">
-                Pin a user, island, or cohort here for quick reference while you inspect the reports below.
-              </p>
-              <div className="section-toolbar__buttons">
-                {openSelectionButton('user', 'Select user')}
-                {openSelectionButton('island', 'Select island')}
-                {openSelectionButton('cohort', 'Select cohort')}
-              </div>
-            </div>
-          </Panel>
-        </div>
-
+          </div>
+        </CollapsiblePanel>
       </section>
 
       <section className="dashboard-shell" aria-label="Analyst dashboard">
@@ -2114,10 +2128,11 @@ export default function App() {
         <Tray
           collapsed={!guidanceOpen}
           title="Instruction panel"
-          className="tray--instruction"
+          className="tray--instruction tray--left"
           style={{
             top: '140px',
-            right: 'calc(18px + var(--tray-space, 0px))',
+            left: '18px',
+            right: 'auto',
             height: 'calc(100vh - 158px)'
           }}
           toggleCollapsedLabel="Expand guidance"

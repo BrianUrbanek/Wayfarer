@@ -47,7 +47,8 @@ select {
 .app-shell {
   min-height: 100vh;
   padding: 32px;
-  padding-right: calc(32px + var(--tray-space, 0px));
+  padding-left: calc(32px + var(--left-tray-space, 0px));
+  padding-right: calc(32px + var(--right-tray-space, 0px));
 }
 
 .hero {
@@ -243,31 +244,11 @@ select {
   flex: 1 1 360px;
 }
 
-.intro-grid {
+.top-stack {
   max-width: 1440px;
   margin: 0 auto 24px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
-}
-
-.intro-grid--expert {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.intro-column {
-  display: grid;
-  gap: 18px;
-}
-
-.intro-column--reference {
-  position: relative;
-}
-
-.panel--sticky {
-  position: sticky;
-  top: 18px;
 }
 
 .section-toolbar--stacked {
@@ -300,6 +281,11 @@ select {
     width 180ms ease,
     transform 180ms ease,
     opacity 180ms ease;
+}
+
+.tray--left {
+  left: 18px;
+  right: auto;
 }
 
 .tray--collapsed {
@@ -356,6 +342,14 @@ select {
 
 .tray--collapsed .tray__body {
   display: none;
+}
+
+.tray--instruction {
+  z-index: 26;
+}
+
+.tray--pinned {
+  z-index: 25;
 }
 
 .instruction-grid {
@@ -748,6 +742,11 @@ select {
   background: rgba(255, 211, 111, 0.08);
 }
 
+.notice--subtle {
+  border-color: rgba(141, 164, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .notice strong {
   display: block;
   margin-bottom: 6px;
@@ -789,8 +788,36 @@ select {
   margin: 12px 0 0;
 }
 
+.collapsible-panel {
+  gap: 14px;
+}
+
+.collapsible-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.collapsible-panel__header h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #f2f5ff;
+}
+
+.collapsible-panel__header p {
+  margin: 6px 0 0;
+}
+
+.collapsible-panel__toggle {
+  white-space: nowrap;
+}
+
 @media (max-width: 1180px) {
   .app-shell {
+    padding-left: 32px;
     padding-right: 32px;
   }
 
@@ -815,17 +842,8 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .intro-grid,
   .dashboard-section__panels {
     grid-template-columns: 1fr;
-  }
-
-  .intro-column--reference {
-    order: -1;
-  }
-
-  .intro-column--controls {
-    order: 0;
   }
 
   .panel--users,
@@ -842,15 +860,22 @@ select {
     height: calc(100vh - 24px);
   }
 
+  .tray--left {
+    left: 12px;
+    right: auto;
+  }
+
   .stack--two-up {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .app-shell {
-    padding: 18px;
-  }
+.app-shell {
+  padding: 18px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
 
   .hero {
     padding: 8px 4px 0;
@@ -1407,6 +1432,10 @@ select {
 
   .control-strip__fields {
     grid-template-columns: 1fr;
+  }
+
+  .tray {
+    width: min(320px, calc(100vw - 24px));
   }
 
   .modal,
