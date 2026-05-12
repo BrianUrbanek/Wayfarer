@@ -34,7 +34,7 @@ export interface ReviewerArchetypeReport {
   nicheScore: number;
   dudScore: number;
   undecidedScore: number;
-  activeTurnBias: number;
+  guidedTurnBias: number;
   recoveryStatus: ReviewerRecoveryStatus;
   analystFlags: string[];
   reviewCandidate: boolean;
@@ -126,13 +126,13 @@ function averageRatingForClass(user: User, islands: readonly Island[], targetCla
   return average(getRatingsForClass(user, islands, targetClasses));
 }
 
-function activeTurnBias(events: readonly ReviewerRatingEventLike[], userId: UserId): number {
+function guidedTurnBias(events: readonly ReviewerRatingEventLike[], userId: UserId): number {
   const userEvents = events.filter((event) => event.userId === userId);
   if (userEvents.length === 0) {
     return 0;
   }
 
-  const activeTurns = userEvents.filter((event) => event.source === 'active').map((event) => event.turn);
+  const activeTurns = userEvents.filter((event) => event.source === 'guided').map((event) => event.turn);
   if (activeTurns.length === 0) {
     return 0;
   }
@@ -217,18 +217,18 @@ function buildAnalystFlags(
     flags.push('candidate-seed');
   }
 
-  if (report.activeTurnBias >= optionThresholds.turnBiasThreshold) {
-    flags.push('active-router');
+  if (report.guidedTurnBias >= optionThresholds.turnBiasThreshold) {
+    flags.push('guided-router');
   }
 
   switch (report.hiddenReviewerArchetype) {
     case 'EARLY_SCOUT':
-      if (report.activeTurnBias <= 0.35) {
+      if (report.guidedTurnBias <= 0.35) {
         flags.push('early-scout');
       }
       break;
     case 'LATE_CONSENSUS_FOLLOWER':
-      if (report.activeTurnBias >= 0.65) {
+      if (report.guidedTurnBias >= 0.65) {
         flags.push('late-consensus');
       }
       break;
@@ -347,7 +347,7 @@ export function analyzeReviewerArchetypes(
     const nicheScore = averageRatingForClass(user, islands, ['NICHE_COHORT']);
     const dudScore = averageRatingForClass(user, islands, ['BROAD_DUD']);
     const undecidedScore = averageRatingForClass(user, islands, ['UNDECIDED']);
-    const activeTurnBiasValue = activeTurnBias(ratingEvents, user.id);
+    const guidedTurnBiasValue = guidedTurnBias(ratingEvents, user.id);
     const reportBase = {
       userId: user.id,
       label: user.label,
@@ -368,7 +368,7 @@ export function analyzeReviewerArchetypes(
       nicheScore,
       dudScore,
       undecidedScore,
-      activeTurnBias: activeTurnBiasValue
+      guidedTurnBias: guidedTurnBiasValue
     };
 
     const analystFlags = buildAnalystFlags(reportBase, mergedOptions);

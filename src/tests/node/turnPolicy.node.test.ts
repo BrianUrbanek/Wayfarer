@@ -58,6 +58,12 @@ describe('turn policy helpers', () => {
     );
   });
 
+  it('describes non-custom routing profiles with their preset values', () => {
+    const description = describeRoutingRiskProfile('conservative', DEFAULT_TURN_POLICY.customRoutingValues);
+
+    assert.equal(description, 'Conservative: exploration 0.25 | minimum fit 0.45');
+  });
+
   it('selects participating users by fixed count or chance per user', () => {
     const users = buildUsers(5);
     const fixed = selectParticipatingUsers(createSeededRandom(12), users, 'fixed-count', 3, 0.5);
@@ -74,5 +80,13 @@ describe('turn policy helpers', () => {
 
     const value = resolveRatingCount(createSeededRandom(12), 'dice-expression', 4, '2d6');
     assert.ok(value >= 2 && value <= 12);
+  });
+
+  it('treats seeded chance-per-user selection deterministically', () => {
+    const users = buildUsers(8);
+    const first = selectParticipatingUsers(createSeededRandom(99), users, 'chance-per-user', 4, 0.5);
+    const second = selectParticipatingUsers(createSeededRandom(99), users, 'chance-per-user', 4, 0.5);
+
+    assert.deepEqual(first.map((user) => user.id), second.map((user) => user.id));
   });
 });

@@ -5,8 +5,7 @@ import { generateColumbusDataset } from '../generator/columbusGenerator';
 import { computeInference } from '../model/inference';
 import { recommendIslandsForUser } from '../model/recommendations';
 import {
-  advanceActiveTurn,
-  advancePassiveTurn,
+  advancePolicyTurn,
   createInitialSimulationState,
   deriveVisibleUsersFromEvents,
   type RatingEvent
@@ -42,6 +41,38 @@ function visibleUserWithEvents(events: RatingEvent[], index = 0) {
   return { bootstrap, user };
 }
 
+const ORGANIC_TURN_CONFIG = {
+  turnMode: 'organic' as const,
+  participationModel: 'fixed-count' as const,
+  participatingUsersPerTurn: 2,
+  participationChance: 0.5,
+  organicRatingCountModel: 'fixed-count' as const,
+  organicRatingsPerUser: 2,
+  organicRatingDice: '1d2' as const,
+  guidedRatingCountModel: 'fixed-count' as const,
+  guidedRecommendationsPerUser: 0,
+  guidedRecommendationDice: '1d2' as const,
+  routingRiskProfile: 'custom' as const,
+  customExplorationWeight: 0.55,
+  customMinimumPredictedFit: -1
+};
+
+const GUIDED_TURN_CONFIG = {
+  turnMode: 'guided' as const,
+  participationModel: 'fixed-count' as const,
+  participatingUsersPerTurn: 4,
+  participationChance: 0.5,
+  organicRatingCountModel: 'fixed-count' as const,
+  organicRatingsPerUser: 0,
+  organicRatingDice: '1d2' as const,
+  guidedRatingCountModel: 'fixed-count' as const,
+  guidedRecommendationsPerUser: 3,
+  guidedRecommendationDice: '1d2' as const,
+  routingRiskProfile: 'custom' as const,
+  customExplorationWeight: 0.55,
+  customMinimumPredictedFit: -1
+};
+
 describe('simulation layer', () => {
   it('starts sparse at turn 0 when no initial ratings are seeded', () => {
     const bootstrap = buildBootstrap();
@@ -52,10 +83,10 @@ describe('simulation layer', () => {
     expect(state.users.every((user) => Object.values(user.ratings).every((rating) => rating === null))).toBe(true);
   });
 
-  it('advances turns and only adds previously unrated pairs', () => {
+  it('advances organic turns and only adds previously unrated pairs', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
-    const next = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+    const next = advancePolicyTurn(state, ORGANIC_TURN_CONFIG);
 
     expect(next.currentTurn).toBe(1);
     expect(next.ratingEvents.length).toBeGreaterThan(state.ratingEvents.length);
@@ -72,14 +103,14 @@ describe('simulation layer', () => {
     }
   });
 
-  it('keeps passive turn events marked as passive', () => {
+  it('keeps organic turn events marked as organic', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
-    const next = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+    const next = advancePolicyTurn(state, ORGANIC_TURN_CONFIG);
     const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
 
     expect(freshEvents.length).toBeGreaterThan(0);
-    expect(freshEvents.every((event) => event.source === 'passive')).toBe(true);
+    expect(freshEvents.every((event) => event.source === 'organic')).toBe(true);
   });
 
   it('preserves neutral 0 ratings separately from unrated nulls', () => {
@@ -93,7 +124,7 @@ describe('simulation layer', () => {
         userId,
         islandId: island.id,
         rating: 0,
-        source: 'passive'
+        source: 'organic'
       }
     ]);
 
@@ -116,7 +147,7 @@ describe('simulation layer', () => {
           userId: latentUser.id,
           islandId: islandIds[0],
           rating: 0,
-          source: 'passive'
+          source: 'organic'
         }
       ],
       0
@@ -129,7 +160,7 @@ describe('simulation layer', () => {
         userId: latentUser.id,
         islandId,
         rating: 0,
-        source: 'passive' as const
+        source: 'organic' as const
       }))
     ).user;
 
@@ -142,11 +173,11 @@ describe('simulation layer', () => {
     );
   });
 
-  it('accumulates events across multiple passive turns', () => {
+  it('accumulates events across multiple organic turns', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
-    const firstTurn = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
-    const secondTurn = advancePassiveTurn(firstTurn, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+    const firstTurn = advancePolicyTurn(state, ORGANIC_TURN_CONFIG);
+    const secondTurn = advancePolicyTurn(firstTurn, ORGANIC_TURN_CONFIG);
 
     expect(secondTurn.currentTurn).toBe(2);
     expect(secondTurn.ratingEvents.length).toBeGreaterThan(firstTurn.ratingEvents.length);
@@ -156,13 +187,13 @@ describe('simulation layer', () => {
   it('derives rater signal profiles and island affinity reports from sparse turns', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
-    const next = advancePassiveTurn(state, { activeUsersPerTurn: 2, maxRatingsPerActiveUser: 2 });
+    const next = advancePolicyTurn(state, ORGANIC_TURN_CONFIG);
 
     expect(next.raterSignalProfiles.size).toBe(next.users.length);
     expect(next.islandAffinityReports.size).toBe(next.islands.length);
   });
 
-  it('routes active turns from pre-turn recommendations and marks events as active', () => {
+  it('routes guided turns from pre-turn recommendations and marks events as guided', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
     const preTurnRecommendations = new Map(
@@ -177,21 +208,43 @@ describe('simulation layer', () => {
         ).recommendations.map((recommendation) => recommendation.islandId)
       ])
     );
-    const next = advanceActiveTurn(state, {
-      activeUsersPerTurn: 4,
-      routedIslandsPerActiveUser: 3,
-      explorationWeight: 0.55,
-      minPredictedFitFloor: -1
-    });
+    const next = advancePolicyTurn(state, GUIDED_TURN_CONFIG);
     const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
 
-    expect(next.turnHistory.at(-1)?.mode).toBe('active');
+    expect(next.turnHistory.at(-1)?.mode).toBe('guided');
     expect(freshEvents.length).toBeGreaterThan(0);
-    expect(freshEvents.every((event) => event.source === 'active')).toBe(true);
+    expect(freshEvents.every((event) => event.source === 'guided')).toBe(true);
 
     for (const event of freshEvents) {
       expect(state.users.find((user) => user.id === event.userId)?.ratings[event.islandId] ?? null).toBe(null);
       expect(preTurnRecommendations.get(event.userId) ?? []).toContain(event.islandId);
     }
+  });
+
+  it('runs mixed turns through both organic and guided pipelines', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
+    const next = advancePolicyTurn(state, {
+      turnMode: 'mixed',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 3,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 1,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 1,
+      customMinimumPredictedFit: -1
+    });
+
+    expect(next.turnHistory.at(-1)?.mode).toBe('mixed');
+    expect(next.turnHistory.at(-1)?.organicRatingsCreated ?? 0).toBeGreaterThan(0);
+    expect(next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0).toBeGreaterThan(0);
+    expect(
+      next.ratingEvents.slice(state.ratingEvents.length).every((event) => event.source === 'organic' || event.source === 'guided')
+    ).toBe(true);
   });
 });

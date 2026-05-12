@@ -237,7 +237,7 @@ export default function App() {
   const [seed, setSeed] = useState(INITIAL_CONFIG.seed);
   const [numUsers, setNumUsers] = useState(INITIAL_CONFIG.numUsers);
   const [numIslands, setNumIslands] = useState(INITIAL_CONFIG.numIslands);
-  const [initialRatingsPerUser, setInitialRatingsPerUser] = useState(4);
+  const [bootstrapRatingsPerUser, setBootstrapRatingsPerUser] = useState(4);
   const [turnMode, setTurnMode] = useState<TurnMode>(DEFAULT_TURN_POLICY.turnMode);
   const [participationModel, setParticipationModel] = useState<ParticipationModel>(DEFAULT_TURN_POLICY.participationModel);
   const [participatingUsersPerTurn, setParticipatingUsersPerTurn] = useState(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
@@ -251,7 +251,7 @@ export default function App() {
   const [routingRiskProfile, setRoutingRiskProfile] = useState<RoutingRiskProfile>(DEFAULT_TURN_POLICY.routingRiskProfile);
   const [customExplorationWeight, setCustomExplorationWeight] = useState(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
   const [customMinimumPredictedFit, setCustomMinimumPredictedFit] = useState(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
-  const [turnBatchCount, setTurnBatchCount] = useState(5);
+  const [turnsToRun, setTurnsToRun] = useState(5);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
@@ -279,9 +279,9 @@ export default function App() {
         latentUsers: latentDataset.users,
         cohorts: latentDataset.cohorts,
         islands: latentDataset.islands,
-        initialRatingsPerUser
+        initialRatingsPerUser: bootstrapRatingsPerUser
       }),
-    [initialRatingsPerUser, latentDataset, seed]
+    [bootstrapRatingsPerUser, latentDataset, seed]
   );
 
   const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
@@ -1686,7 +1686,7 @@ export default function App() {
     setSeed(INITIAL_CONFIG.seed);
     setNumUsers(INITIAL_CONFIG.numUsers);
     setNumIslands(INITIAL_CONFIG.numIslands);
-    setInitialRatingsPerUser(4);
+    setBootstrapRatingsPerUser(4);
     setTurnMode(DEFAULT_TURN_POLICY.turnMode);
     setParticipationModel(DEFAULT_TURN_POLICY.participationModel);
     setParticipatingUsersPerTurn(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
@@ -1700,7 +1700,7 @@ export default function App() {
     setRoutingRiskProfile(DEFAULT_TURN_POLICY.routingRiskProfile);
     setCustomExplorationWeight(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
     setCustomMinimumPredictedFit(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
-    setTurnBatchCount(DEFAULT_TURN_POLICY.turnBatchCount);
+    setTurnsToRun(DEFAULT_TURN_POLICY.turnBatchCount);
   };
 
   const currentTurnPolicy = {
@@ -1733,7 +1733,7 @@ export default function App() {
             <MetricCard
               label="Mode"
               value={
-                currentTurnSummary?.mode === 'active'
+                currentTurnSummary?.mode === 'guided'
                   ? TURN_MODE_LABELS.guided
                   : currentTurnSummary?.mode === 'mixed'
                     ? TURN_MODE_LABELS.mixed
@@ -1745,7 +1745,10 @@ export default function App() {
             <MetricCard label="Ratings this turn" value={currentTurnSummary?.ratingsCreated ?? 0} />
             <MetricCard label="Organic events this turn" value={currentTurnSummary?.organicRatingsCreated ?? 0} />
             <MetricCard label="Guided events this turn" value={currentTurnSummary?.guidedRatingsCreated ?? 0} />
-            <MetricCard label="Participating users this turn" value={currentTurnSummary?.activeUserIds.length ?? 0} />
+            <MetricCard
+              label="Participating users this turn"
+              value={currentTurnSummary?.participatingUserIds.length ?? 0}
+            />
             <MetricCard label="New islands rated" value={currentTurnSummary?.newlyRatedIslandIds.length ?? 0} />
             <MetricCard label="Safe fits routed" value={currentTurnSummary?.recommendationKinds.SAFE_FIT ?? 0} />
             <MetricCard
@@ -1757,7 +1760,11 @@ export default function App() {
             {(dataset.turnHistory.slice(-3) ?? []).map((turn) => (
               <Badge key={turn.turn} tone="neutral">
                 Turn {turn.turn}:{' '}
-                {turn.mode === 'active' ? TURN_MODE_LABELS.guided : turn.mode === 'mixed' ? TURN_MODE_LABELS.mixed : TURN_MODE_LABELS.organic} ·{' '}
+                {turn.mode === 'guided'
+                  ? TURN_MODE_LABELS.guided
+                  : turn.mode === 'mixed'
+                    ? TURN_MODE_LABELS.mixed
+                    : TURN_MODE_LABELS.organic} ·{' '}
                 {turn.ratingsCreated} ratings
               </Badge>
             ))}
@@ -2044,8 +2051,8 @@ export default function App() {
               {labeledControl('Bootstrap Ratings / User', 'Initial sparse rating events created at Turn 0. These are evidence, not signal.')}
               <input
                 type="number"
-                value={initialRatingsPerUser}
-                onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
+                value={bootstrapRatingsPerUser}
+                onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
                 min={1}
                 max={12}
                 step={1}
@@ -2078,8 +2085,8 @@ export default function App() {
               {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
               <input
                 type="number"
-                value={turnBatchCount}
-                onChange={(event) => setTurnBatchCount(Number(event.target.value))}
+                value={turnsToRun}
+                onChange={(event) => setTurnsToRun(Number(event.target.value))}
                 min={1}
                 max={20}
                 step={1}
@@ -2100,7 +2107,7 @@ export default function App() {
                 setSimulationState((state) => {
                   let next = state;
 
-                  for (let index = 0; index < turnBatchCount; index += 1) {
+                  for (let index = 0; index < turnsToRun; index += 1) {
                     next = advanceCurrentTurn(next);
                   }
 

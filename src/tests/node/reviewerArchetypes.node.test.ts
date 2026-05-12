@@ -197,16 +197,19 @@ function buildHiddenFixture() {
   const ratingEvents = users.flatMap((user) => {
     const turn = user.hiddenReviewerArchetype === 'EARLY_SCOUT' ? 1 : user.hiddenReviewerArchetype === 'LATE_CONSENSUS_FOLLOWER' ? 10 : 0;
 
-    return Object.entries(user.ratings)
-      .filter(([, rating]) => rating !== null)
-      .map(([islandId, rating]) => ({
-        id: `${turn}:${user.id}:${islandId}`,
-        turn,
-        userId: user.id,
-        islandId,
-        rating: rating as Rating,
-        source: user.hiddenReviewerArchetype === 'EARLY_SCOUT' || user.hiddenReviewerArchetype === 'LATE_CONSENSUS_FOLLOWER' ? 'active' : 'passive'
-      }));
+      return Object.entries(user.ratings)
+        .filter(([, rating]) => rating !== null)
+        .map(([islandId, rating]) => ({
+          id: `${turn}:${user.id}:${islandId}`,
+          turn,
+          userId: user.id,
+          islandId,
+          rating: rating as Rating,
+          source:
+            user.hiddenReviewerArchetype === 'EARLY_SCOUT' || user.hiddenReviewerArchetype === 'LATE_CONSENSUS_FOLLOWER'
+              ? 'guided'
+              : 'organic'
+        }));
   });
 
   return { islands, cohorts, users, ratingEvents, allTags };

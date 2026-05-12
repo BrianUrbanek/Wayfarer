@@ -11,6 +11,7 @@ describe('dice helpers', () => {
   it('recognizes only supported expressions', () => {
     assert.equal(isSupportedDiceExpression('1d6'), true);
     assert.equal(isSupportedDiceExpression('4d8'), false);
+    assert.deepEqual(SUPPORTED_DICE_EXPRESSIONS, ['1d2', '1d3', '1d4', '1d6', '2d3', '2d6', '3d6']);
   });
 
   it('rolls supported dice within the expected bounds', () => {

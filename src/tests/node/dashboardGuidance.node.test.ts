@@ -15,6 +15,7 @@ describe('dashboard guidance data', () => {
       getUseCaseStory('find-unexplained-high-signal-users').goal,
       'Surface users whose behavior is predictive but not well explained by current cohorts.'
     );
+    assert.equal(getUseCaseStory('compare-organic-vs-guided').title, 'Compare organic vs guided learning');
   });
 
   it('keeps dashboard ordering explicit and user directed', () => {

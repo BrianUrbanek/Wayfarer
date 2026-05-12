@@ -31,7 +31,7 @@ import type {
   UserId
 } from './types.js';
 
-export type RatingEventSource = 'passive' | 'active';
+export type RatingEventSource = 'organic' | 'guided';
 
 export interface RatingEvent {
   readonly id: string;
@@ -44,8 +44,8 @@ export interface RatingEvent {
 
 export interface SimulationTurnSummary {
   turn: number;
-  mode: 'passive' | 'active' | 'mixed';
-  activeUserIds: UserId[];
+  mode: 'organic' | 'guided' | 'mixed';
+  participatingUserIds: UserId[];
   ratingsCreated: number;
   organicRatingsCreated: number;
   guidedRatingsCreated: number;
@@ -79,16 +79,6 @@ export interface SimulationBootstrapConfig {
   cohorts: CohortAnchor[];
   islands: Island[];
   initialRatingsPerUser: number;
-}
-
-export interface AdvanceTurnConfig {
-  activeUsersPerTurn: number;
-  maxRatingsPerActiveUser: number;
-}
-
-export interface AdvanceActiveTurnConfig extends RecommendationOptions {
-  activeUsersPerTurn: number;
-  routedIslandsPerActiveUser: number;
 }
 
 export interface AdvancePolicyTurnConfig {
@@ -190,10 +180,10 @@ function createRatingEventsForUsers(
   latentUsers: readonly User[],
   visibleUsers: readonly User[],
   islands: readonly Island[],
-  activeUsersPerTurn: number,
-  maxRatingsPerActiveUser: number
+  participatingUsersPerTurn: number,
+  maxRatingsPerUser: number
 ): RatingEvent[] {
-  if (latentUsers.length === 0 || islands.length === 0 || activeUsersPerTurn <= 0 || maxRatingsPerActiveUser <= 0) {
+  if (latentUsers.length === 0 || islands.length === 0 || participatingUsersPerTurn <= 0 || maxRatingsPerUser <= 0) {
     return [];
   }
 
@@ -207,7 +197,7 @@ function createRatingEventsForUsers(
     return islands.some((island) => (visible.ratings[island.id] ?? null) === null);
   });
 
-  const selectedUsers = rng.shuffle(candidateUsers).slice(0, Math.min(activeUsersPerTurn, candidateUsers.length));
+  const selectedUsers = rng.shuffle(candidateUsers).slice(0, Math.min(participatingUsersPerTurn, candidateUsers.length));
   const events: RatingEvent[] = [];
 
   for (const user of selectedUsers) {
@@ -226,7 +216,7 @@ function createRatingEventsForUsers(
 
     const ratingsToCreate = Math.min(
       unratedIslandIds.length,
-      Math.max(1, rng.range(1, Math.max(1, maxRatingsPerActiveUser)))
+      Math.max(1, rng.range(1, Math.max(1, maxRatingsPerUser)))
     );
     const pickedIslandIds = rng.shuffle(unratedIslandIds).slice(0, ratingsToCreate);
 
@@ -239,7 +229,7 @@ function createRatingEventsForUsers(
         userId: user.id,
         islandId,
         rating,
-        source: 'passive'
+        source: 'organic'
       });
     }
   }
@@ -251,7 +241,7 @@ function summarizeTurn(
   turn: number,
   newEvents: readonly RatingEvent[],
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>,
-  mode: 'passive' | 'active' | 'mixed' = 'passive',
+  mode: 'organic' | 'guided' | 'mixed' = 'organic',
   routedIslandIds: IslandId[] = [],
   recommendationKinds: Record<RecommendationKind, number> = buildRecommendationCounts(),
   organicRatingsCreated = newEvents.length,
@@ -262,7 +252,7 @@ function summarizeTurn(
   return {
     turn,
     mode,
-    activeUserIds: Array.from(new Set(newEvents.map((event) => event.userId))).sort(),
+    participatingUserIds: Array.from(new Set(newEvents.map((event) => event.userId))).sort(),
     ratingsCreated: newEvents.length,
     organicRatingsCreated,
     guidedRatingsCreated,
@@ -333,7 +323,7 @@ function recomputeState(
     reviewerArchetypeAnalysis,
     turnHistory: turnHistory.map((summary) => ({
       ...summary,
-      activeUserIds: summary.activeUserIds.slice(),
+      participatingUserIds: summary.participatingUserIds.slice(),
       newlyRatedIslandIds: summary.newlyRatedIslandIds.slice()
     }))
   };
@@ -369,44 +359,6 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     initialState.ratingEvents,
     [initialSummary],
     config.allTags
-  );
-}
-
-export function advancePassiveTurn(
-  state: SimulationState,
-  config: AdvanceTurnConfig
-): SimulationState {
-  const turn = state.currentTurn + 1;
-  const rng = createSeededRandom(state.seed ^ (turn * 2654435761));
-  const newEvents = createRatingEventsForUsers(
-    rng,
-    turn,
-    state.latentUsers,
-    state.users,
-    state.islands,
-    config.activeUsersPerTurn,
-    config.maxRatingsPerActiveUser
-  );
-  const nextEvents = state.ratingEvents.concat(newEvents);
-  const nextHistory = state.turnHistory.slice();
-
-  const nextVisibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, nextEvents);
-  const nextInferenceByUserId = computeInferenceMap(
-    nextVisibleUsers,
-    state.cohorts,
-    state.islands,
-    state.allTags
-  );
-  nextHistory.push(summarizeTurn(turn, newEvents, nextInferenceByUserId));
-
-  return recomputeState(
-    state.seed,
-    state.latentUsers,
-    state.cohorts,
-    state.islands,
-    nextEvents,
-    nextHistory,
-    state.allTags
   );
 }
 
@@ -471,7 +423,7 @@ function createOrganicEventsForUsers(
         userId: user.id,
         islandId,
         rating,
-        source: 'passive'
+        source: 'organic'
       });
     }
   }
@@ -479,7 +431,7 @@ function createOrganicEventsForUsers(
   return events;
 }
 
-function createGuidedEventsForUsers(
+function createGuidedRatingEventsForUsers(
   rng: SeededRng,
   turn: number,
   visibleUsers: readonly User[],
@@ -516,10 +468,7 @@ function createGuidedEventsForUsers(
       continue;
     }
 
-    const recommendationsToCreate = Math.min(
-      recommendations.length,
-      resolveRatingCount(rng, ratingCountModel, fixedRecommendationsPerUser, diceExpression)
-    );
+    const recommendationsToCreate = Math.min(recommendations.length, resolveRatingCount(rng, ratingCountModel, fixedRecommendationsPerUser, diceExpression));
     const selectedRecommendations = recommendations.slice(0, recommendationsToCreate);
 
     for (const recommendation of selectedRecommendations) {
@@ -533,7 +482,7 @@ function createGuidedEventsForUsers(
         userId: user.id,
         islandId: recommendation.islandId,
         rating,
-        source: 'active'
+        source: 'guided'
       });
       routedIslandIds.push(recommendation.islandId);
       recommendationKinds[recommendation.recommendationKind] += 1;
@@ -623,7 +572,7 @@ export function advancePolicyTurn(
   const guided =
     config.turnMode === 'organic'
       ? { events: [], routedIslandIds: [], recommendationKinds: buildRecommendationCounts() }
-      : createGuidedEventsForUsers(
+      : createGuidedRatingEventsForUsers(
           rng,
           turn,
           visibleUsers,
@@ -648,140 +597,13 @@ export function advancePolicyTurn(
       turn,
       newEvents,
       nextInferenceByUserId,
-      config.turnMode === 'organic' ? 'passive' : config.turnMode === 'guided' ? 'active' : 'mixed',
+      config.turnMode,
       guided.routedIslandIds,
       guided.recommendationKinds,
       organicEvents.length,
       guided.events.length
     )
   );
-
-  return recomputeState(
-    state.seed,
-    state.latentUsers,
-    state.cohorts,
-    state.islands,
-    nextEvents,
-    nextHistory,
-    state.allTags
-  );
-}
-
-function createActiveRatingEventsForUsers(
-  rng: SeededRng,
-  turn: number,
-  latentUsers: readonly User[],
-  visibleUsers: readonly User[],
-  islands: readonly Island[],
-  signalProfiles: ReadonlyMap<UserId, RaterSignalProfile>,
-  islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>,
-  activeUsersPerTurn: number,
-  routedIslandsPerActiveUser: number,
-  recommendationOptions: RecommendationOptions
-): { events: RatingEvent[]; routedIslandIds: IslandId[]; recommendationKinds: Record<RecommendationKind, number> } {
-  if (
-    latentUsers.length === 0 ||
-    islands.length === 0 ||
-    activeUsersPerTurn <= 0 ||
-    routedIslandsPerActiveUser <= 0
-  ) {
-    return {
-      events: [],
-      routedIslandIds: [],
-      recommendationKinds: buildRecommendationCounts()
-    };
-  }
-
-  const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
-  const candidateUsers = latentUsers.filter((user) => {
-    const visible = visibleById.get(user.id);
-    if (!visible) {
-      return false;
-    }
-
-    return islands.some((island) => (visible.ratings[island.id] ?? null) === null);
-  });
-
-  const selectedUsers = rng.shuffle(candidateUsers).slice(0, Math.min(activeUsersPerTurn, candidateUsers.length));
-  const events: RatingEvent[] = [];
-  const routedIslandIds: IslandId[] = [];
-  const recommendationKinds = buildRecommendationCounts();
-
-  for (const user of selectedUsers) {
-    const visible = visibleById.get(user.id);
-    if (!visible) {
-      continue;
-    }
-
-    const recommendations = recommendIslandsForUser(
-      visible,
-      islandAffinityReports,
-      signalProfiles,
-      islands,
-      recommendationOptions
-    ).recommendations
-      .filter((entry) => (visible.ratings[entry.islandId] ?? null) === null)
-      .slice(0, routedIslandsPerActiveUser);
-
-    for (const recommendation of recommendations) {
-      const rating = user.ratings[recommendation.islandId] ?? 0;
-      events.push({
-        id: eventKey(turn, user.id, recommendation.islandId),
-        turn,
-        userId: user.id,
-        islandId: recommendation.islandId,
-        rating,
-        source: 'active'
-      });
-      routedIslandIds.push(recommendation.islandId);
-      recommendationKinds[recommendation.recommendationKind] += 1;
-    }
-  }
-
-  return {
-    events,
-    routedIslandIds,
-    recommendationKinds
-  };
-}
-
-export function advanceActiveTurn(
-  state: SimulationState,
-  config: AdvanceActiveTurnConfig
-): SimulationState {
-  const turn = state.currentTurn + 1;
-  const rng = createSeededRandom(state.seed ^ (turn * 2654435761));
-  const routed = createActiveRatingEventsForUsers(
-    rng,
-    turn,
-    state.latentUsers,
-    state.users,
-    state.islands,
-    state.raterSignalProfiles,
-    state.islandAffinityReports,
-    config.activeUsersPerTurn,
-    config.routedIslandsPerActiveUser,
-    config
-  );
-  const nextEvents = state.ratingEvents.concat(routed.events);
-  const nextHistory = state.turnHistory.slice();
-
-  const activeSummary = summarizeTurn(
-    turn,
-    routed.events,
-    computeInferenceMap(
-      deriveVisibleUsersFromEvents(state.latentUsers, state.islands, nextEvents),
-      state.cohorts,
-      state.islands,
-      state.allTags
-    ),
-    'active',
-    routed.routedIslandIds,
-    routed.recommendationKinds,
-    0,
-    routed.events.length
-  );
-  nextHistory.push(activeSummary);
 
   return recomputeState(
     state.seed,

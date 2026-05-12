@@ -13,7 +13,7 @@ export type UseCaseStoryId =
   | 'compare-safe-vs-discovery'
   | 'find-unexplained-high-signal-users'
   | 'diagnose-tag-taxonomy'
-  | 'compare-passive-vs-active';
+  | 'compare-organic-vs-guided';
 
 export interface UseCaseStory {
   id: UseCaseStoryId;
@@ -200,8 +200,8 @@ export const USE_CASE_STORIES: UseCaseStory[] = [
     recommendedOrdering: 'debug-first'
   },
   {
-    id: 'compare-passive-vs-active',
-    title: 'Compare passive vs active learning',
+    id: 'compare-organic-vs-guided',
+    title: 'Compare organic vs guided learning',
     goal: 'See whether routed turns produce more useful evidence than random exposure.',
     steps: [
       'Use Routing first ordering.',
