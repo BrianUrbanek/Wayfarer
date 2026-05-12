@@ -1825,8 +1825,7 @@ export default function App() {
     }
   };
 
-  const showInstructionPanel = guidanceMode === 'novice' && guidanceOpen;
-  const showCollapsedInstruction = guidanceMode === 'novice' && !guidanceOpen;
+  const showInstructionTray = guidanceMode === 'novice';
 
   const pinnedDrilldownContent =
     pinnedDrilldownKind === 'user'
@@ -1919,7 +1918,7 @@ export default function App() {
         </div>
       </section>
 
-      <section className={`intro-grid${showInstructionPanel ? '' : ' intro-grid--expert'}`} aria-label="Controls and instructions">
+      <section className="intro-grid" aria-label="Controls and instructions">
         <div className="intro-column intro-column--controls">
           <Panel title="Control panel">
             <div className="control-strip__fields">
@@ -2083,59 +2082,6 @@ export default function App() {
 
       </section>
 
-      {showInstructionPanel ? (
-        <Panel title="Instruction panel">
-          <div className="summary-header">
-            <div>
-              <p className="eyebrow">Use case</p>
-              <h3>{selectedStory.title}</h3>
-            </div>
-            <div className="summary-header__actions">
-              <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
-              <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen((value) => !value)}>
-                {guidanceOpen ? 'Collapse guidance' : 'Expand guidance'}
-              </button>
-            </div>
-          </div>
-          <div className="instruction-grid">
-            <section className="detail-block">
-              <h4>Goal</h4>
-              <p>{selectedStory.goal}</p>
-            </section>
-            <section className="detail-block">
-              <h4>Steps</h4>
-              <ol className="instruction-list">
-                {selectedStory.steps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
-            </section>
-            <section className="detail-block">
-              <h4>Expected result</h4>
-              <p>{selectedStory.expectedResult}</p>
-            </section>
-            <section className="detail-block">
-              <h4>Failure signs</h4>
-              <ul className="diagnosis-list">
-                {selectedStory.failureSigns.map((failureSign) => (
-                  <li key={failureSign}>{failureSign}</li>
-                ))}
-              </ul>
-            </section>
-          </div>
-        </Panel>
-      ) : showCollapsedInstruction ? (
-        <Panel title="Instruction panel">
-          <div className="notice">
-            <strong>Guidance collapsed.</strong>
-            <p>This panel is here to tell a new reader what to prove next. Expand it if the current story is unclear.</p>
-            <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen(true)}>
-              Expand guidance
-            </button>
-          </div>
-        </Panel>
-      ) : null}
-
       <section className="dashboard-shell" aria-label="Analyst dashboard">
         {visibleDashboardSections.map((sectionKey) => {
           if (sectionKey === 'debug' && !showDebug) {
@@ -2164,14 +2110,68 @@ export default function App() {
         })}
       </section>
 
+      {showInstructionTray ? (
+        <Tray
+          collapsed={!guidanceOpen}
+          title="Instruction panel"
+          className="tray--instruction"
+          style={{
+            top: '140px',
+            right: 'calc(18px + var(--tray-space, 0px))',
+            height: 'calc(100vh - 158px)'
+          }}
+          toggleCollapsedLabel="Expand guidance"
+          toggleExpandedLabel="Collapse guidance"
+          onToggle={() => setGuidanceOpen((value) => !value)}
+        >
+          <div className="summary-header">
+            <div>
+              <p className="eyebrow">Use case</p>
+              <h3>{selectedStory.title}</h3>
+            </div>
+            <div className="summary-header__actions">
+              <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
+            </div>
+          </div>
+          <div className="instruction-grid">
+            <section className="detail-block">
+              <h4>Goal</h4>
+              <p>{selectedStory.goal}</p>
+            </section>
+            <section className="detail-block">
+              <h4>Steps</h4>
+              <ol className="instruction-list">
+                {selectedStory.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+            <section className="detail-block">
+              <h4>Expected result</h4>
+              <p>{selectedStory.expectedResult}</p>
+            </section>
+            <section className="detail-block">
+              <h4>Failure signs</h4>
+              <ul className="diagnosis-list">
+                {selectedStory.failureSigns.map((failureSign) => (
+                  <li key={failureSign}>{failureSign}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </Tray>
+      ) : null}
+
       <Tray
         collapsed={pinnedTrayCollapsed}
         title={pinnedDrilldownTitle}
+        className="tray--pinned"
         onToggle={() => setPinnedTrayCollapsed((value) => !value)}
-        onClear={() => {
+        onSecondaryAction={() => {
           setPinnedDrilldownKind(null);
           setPinnedTrayCollapsed(true);
         }}
+        secondaryActionLabel="Clear"
       >
         {pinnedDrilldownContent ? (
           pinnedDrilldownContent
