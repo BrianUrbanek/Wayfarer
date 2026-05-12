@@ -2021,9 +2021,12 @@ export default function App() {
               </button>
             </div>
           </div>
-          <p className="muted">{selectedStory.goal}</p>
           {guidanceOpen ? (
             <div className="instruction-grid">
+              <section className="detail-block">
+                <h4>Goal</h4>
+                <p>{selectedStory.goal}</p>
+              </section>
               <section className="detail-block">
                 <h4>Steps</h4>
                 <ol className="instruction-list">
