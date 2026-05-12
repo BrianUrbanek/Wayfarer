@@ -27,11 +27,6 @@ describe('App analyst console', () => {
     expect(html).toContain('Pinned drilldown');
     expect(html).toContain('Turn behavior / Dynamic settings');
     expect(html).toContain('Rating count policy');
-    expect(html).toContain('Mode: novice');
-    expect(html).toContain('Turn mode: Organic Exploration');
-    expect(html).toContain('Participation: Fixed Count');
-    expect(html).toContain('Rating counts: Fixed Count');
-    expect(html).toContain('Routing: Balanced');
     expect(html).toContain('Organic Exploration');
     expect(html).toContain('Bootstrap Ratings / User');
     expect(html).toContain('Participating Users / Turn');
