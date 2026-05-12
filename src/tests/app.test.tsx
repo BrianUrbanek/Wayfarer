@@ -18,9 +18,15 @@ describe('App analyst console', () => {
     expect(html).toContain('Reviewer Archetype Recovery');
     expect(html).toContain('Debug Data');
     expect(html).toContain('Turn Summary');
-    expect(html).toContain('Turn mode');
+    expect(html).toContain('Novice');
+    expect(html).toContain('Expert');
+    expect(html).toContain('Dashboard ordering');
+    expect(html).toContain('Use Case / Story');
+    expect(html).toContain('Instruction panel');
+    expect(html).toContain('Goal');
     expect(html).toContain('About');
     expect(html).toContain('Hidden generator archetype');
     expect(html).toContain('Take 1 Turn');
+    expect(html).toContain('First-time walkthrough');
   });
 });

@@ -9,6 +9,16 @@ import { ProgressBar } from './ui/components/ProgressBar';
 import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
 import { DistributionList } from './ui/components/DistributionList';
+import {
+  DASHBOARD_ORDERINGS,
+  DASHBOARD_ORDERING_LABELS,
+  getUseCaseStory,
+  USE_CASE_STORIES,
+  type DashboardOrderingPreset,
+  type DashboardPanelGroupKey,
+  type GuidanceMode,
+  type UseCaseStoryId
+} from './ui/dashboardGuidance';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
@@ -224,6 +234,10 @@ export default function App() {
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
   const [showDebug, setShowDebug] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
+  const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>('novice');
+  const [guidanceOpen, setGuidanceOpen] = useState(true);
+  const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
+  const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
 
@@ -247,6 +261,10 @@ export default function App() {
   useEffect(() => {
     setSimulationState(initialSimulationState);
   }, [initialSimulationState]);
+
+  useEffect(() => {
+    setGuidanceOpen(guidanceMode === 'novice');
+  }, [guidanceMode]);
 
   const dataset = simulationState;
   const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
@@ -441,6 +459,11 @@ export default function App() {
     selectedInference !== undefined &&
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
+
+  const selectedStory = useMemo(() => getUseCaseStory(useCaseId), [useCaseId]);
+  const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
+  const visibleDashboardSections = orderedDashboardSections;
+  const appStatus = `Turn ${dataset.currentTurn} · ${turnMode === 'active' ? 'Active discovery' : 'Passive random'} · ${dataset.users.length} users · ${dataset.islands.length} islands`;
 
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
@@ -813,8 +836,8 @@ export default function App() {
 
         <div className="report-section__column">
           <div className="section-heading">
-            <h3>Candidate New Seed / Tina-like</h3>
-            <p>High-value reviewers that do not fit known cohorts cleanly.</p>
+            <h3>Candidate New Seed Users / Unexplained High-Signal Users</h3>
+            <p>High-value reviewers that do not fit known cohorts cleanly and should stay analyst-review only.</p>
           </div>
           <ReportTable
             columns={reviewerReportColumns}
@@ -1595,180 +1618,11 @@ export default function App() {
     });
   };
 
-  return (
-    <main className="app-shell analyst-console">
-      <header className="hero">
-        <div className="hero__eyebrow-row">
-          <p className="eyebrow">Wayfarer analyst console</p>
-          <span className="hero__pill">Columbus debug engine</span>
-        </div>
-        <div className="hero__title-row">
-          <h1>Wayfarer</h1>
-          <button type="button" className="button button--ghost hero__about-button" onClick={() => setShowAbout(true)}>
-            About
-          </button>
-        </div>
-        <p className="subtitle">
-          Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and
-          pseudo-cohort reports at scale.
-        </p>
-      </header>
-
-      <section className="control-strip" aria-label="Dashboard controls">
-        <div className="control-strip__fields">
-          <label className="control">
-            <span>Seed</span>
-            <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-          </label>
-          <label className="control">
-            <span>Users</span>
-            <input
-              type="number"
-              value={numUsers}
-              onChange={(event) => setNumUsers(Number(event.target.value))}
-              min={1}
-              max={400}
-              step={1}
-            />
-          </label>
-          <label className="control">
-            <span>Islands</span>
-            <input
-              type="number"
-              value={numIslands}
-              onChange={(event) => setNumIslands(Number(event.target.value))}
-              min={4}
-              max={96}
-              step={1}
-            />
-          </label>
-          <label className="control">
-            <span>Initial ratings</span>
-            <input
-              type="number"
-              value={initialRatingsPerUser}
-              onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
-              min={1}
-              max={12}
-              step={1}
-            />
-          </label>
-          <label className="control">
-            <span>Turn mode</span>
-            <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-              <option value="passive">Passive / random</option>
-              <option value="active">Active discovery</option>
-            </select>
-          </label>
-          <label className="control">
-            <span>Exploration weight</span>
-            <input
-              type="number"
-              value={explorationWeight}
-              onChange={(event) => setExplorationWeight(Number(event.target.value))}
-              min={0}
-              max={2}
-              step={0.05}
-            />
-          </label>
-          <label className="control">
-            <span>Fit floor</span>
-            <input
-              type="number"
-              value={minPredictedFitFloor}
-              onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
-              min={-1}
-              max={1}
-              step={0.05}
-            />
-          </label>
-          <label className="control">
-            <span>Routed / active user</span>
-            <input
-              type="number"
-              value={routedIslandsPerActiveUser}
-              onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
-              min={1}
-              max={8}
-              step={1}
-            />
-          </label>
-          <label className="control">
-            <span>Active users / turn</span>
-            <input
-              type="number"
-              value={activeUsersPerTurn}
-              onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
-              min={1}
-              max={96}
-              step={1}
-            />
-          </label>
-          <label className="control">
-            <span>Passive ratings / user</span>
-            <input
-              type="number"
-              value={maxRatingsPerActiveUser}
-              onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
-              min={1}
-              max={8}
-              step={1}
-            />
-          </label>
-          <label className="control">
-            <span>Turn batch</span>
-            <input
-              type="number"
-              value={turnBatchCount}
-              onChange={(event) => setTurnBatchCount(Number(event.target.value))}
-              min={1}
-              max={20}
-              step={1}
-            />
-          </label>
-        </div>
-        <div className="control-strip__actions">
-          <button type="button" className="button" onClick={randomizeSeed}>
-            Regenerate dataset
-          </button>
-          <button
-            type="button"
-            className="button"
-            onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}
-          >
-            Take 1 Turn
-          </button>
-          <button
-            type="button"
-            className="button"
-            onClick={() =>
-              setSimulationState((state) => {
-                let next = state;
-
-                for (let index = 0; index < turnBatchCount; index += 1) {
-                  next = advanceCurrentTurn(next);
-                }
-
-                return next;
-              })
-            }
-          >
-            Take X Turns
-          </button>
-          <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
-            Reset Simulation
-          </button>
-          <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
-            {showDebug ? 'Hide debug' : 'Show debug'}
-          </button>
-          {openSelectionButton('user', 'Select user')}
-          {openSelectionButton('island', 'Select island')}
-          {openSelectionButton('cohort', 'Select cohort')}
-        </div>
-      </section>
-
-      <section className="summary-grid">
-        <Panel title="Turn Summary" className="panel--full">
+  const dashboardSections: Record<DashboardPanelGroupKey, { title: string; panels: JSX.Element[] }> = {
+    overview: {
+      title: 'Overview',
+      panels: [
+        <Panel key="turn-summary" title="Turn Summary" className="panel--full">
           <div className="metric-grid metric-grid--compact">
             <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
             <MetricCard
@@ -1793,9 +1647,8 @@ export default function App() {
               </Badge>
             ))}
           </div>
-        </Panel>
-
-        <Panel title="Population Summary" className="panel--full">
+        </Panel>,
+        <Panel key="population-summary" title="Population Summary" className="panel--full">
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
             <MetricCard label="Seeded anchors" value={dataset.cohorts.length} />
@@ -1818,32 +1671,35 @@ export default function App() {
             />
           </div>
         </Panel>
-
-        <Panel title="Reviewer Archetype Recovery" className="panel--wide">
+      ]
+    },
+    recovery: {
+      title: 'Recovery',
+      panels: [
+        <Panel key="reviewer-archetype" title="Reviewer Archetype Recovery" className="panel--wide">
           {reviewerArchetypeSummary}
-        </Panel>
-
-        <Panel title="Selected User Summary">
+        </Panel>,
+        <Panel key="selected-user" title="Selected User Summary">
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>
-
-        <Panel title="Discovery Routing" className="panel--wide">
+      ]
+    },
+    routing: {
+      title: 'Routing',
+      panels: [
+        <Panel key="discovery-routing" title="Discovery Routing" className="panel--wide">
           {discoveryRoutingSummary}
-        </Panel>
-
-        <Panel title="Selected Island Summary">
+        </Panel>,
+        <Panel key="selected-island" title="Selected Island Summary">
           {selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />}
-        </Panel>
-
-        <Panel title="Model Explanation" className="panel--wide">
+        </Panel>,
+        <Panel key="model-explanation" title="Model Explanation" className="panel--wide">
           {modelExplanation}
-        </Panel>
-
-        <Panel title="Island Comparison" className="panel--wide">
+        </Panel>,
+        <Panel key="island-comparison" title="Island Comparison" className="panel--wide">
           {islandComparison}
-        </Panel>
-
-        <Panel title="Pseudo-Cohort Reports" className="panel--wide">
+        </Panel>,
+        <Panel key="pseudo-cohorts" title="Pseudo-Cohort Reports" className="panel--wide">
           <div className="section-toolbar">
             <button type="button" className="button button--ghost" onClick={() => setModalKind('pseudo')}>
               Select report row
@@ -1881,52 +1737,351 @@ export default function App() {
             </div>
           </div>
         </Panel>
+      ]
+    },
+    debug: {
+      title: 'Debug',
+      panels: showDebug
+        ? [
+            <Panel key="debug-data" title="Debug Data" className="panel--wide">
+              {selectedUser && selectedInference ? (
+                <div className="debug-grid">
+                  <MetricCard
+                    label="Hidden seed"
+                    value={selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}
+                    helper="Debug and validation only."
+                  />
+                  <MetricCard
+                    label="Hidden generator archetype"
+                    value={selectedUser.hiddenReviewerArchetype ? archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
+                    helper="Debug and validation only."
+                  />
+                  <MetricCard
+                    label="Hidden tag alignment"
+                    value={selectedUser.hiddenTagAlignment ?? 'n/a'}
+                    helper="Debug and validation only."
+                  />
+                  <MetricCard
+                    label="Hidden rating alignment"
+                    value={selectedUser.hiddenRatingAlignment ?? 'n/a'}
+                    helper="Debug and validation only."
+                  />
+                  <MetricCard
+                    label="Hidden vs inferred"
+                    value={
+                      selectedUser.hiddenSeedCohortId === selectedInference.behaviorTop.cohortId
+                        ? 'Recovered hidden seed'
+                        : 'Different visible fit'
+                    }
+                    helper="Hidden data is not a model input."
+                  />
+                  <MetricCard
+                    label="Recovery status"
+                    value={selectedUserReviewerReport?.recoveryStatus ?? 'n/a'}
+                    helper="Debug checksum status for the selected user."
+                  />
+                </div>
+              ) : (
+                <EmptyState title="No debug data" description="Select a user to inspect hidden generation fields." />
+              )}
+            </Panel>
+          ]
+        : []
+    }
+  };
 
-        {showDebug ? (
-          <Panel title="Debug Data" className="panel--wide">
-            {selectedUser && selectedInference ? (
-              <div className="debug-grid">
-                <MetricCard
-                  label="Hidden seed"
-                  value={selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}
-                  helper="Debug and validation only."
-                />
-                <MetricCard
-                  label="Hidden generator archetype"
-                  value={selectedUser.hiddenReviewerArchetype ? archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
-                  helper="Debug and validation only."
-                />
-                <MetricCard
-                  label="Hidden tag alignment"
-                  value={selectedUser.hiddenTagAlignment ?? 'n/a'}
-                  helper="Debug and validation only."
-                />
-                <MetricCard
-                  label="Hidden rating alignment"
-                  value={selectedUser.hiddenRatingAlignment ?? 'n/a'}
-                  helper="Debug and validation only."
-                />
-                <MetricCard
-                  label="Hidden vs inferred"
-                  value={
-                    selectedUser.hiddenSeedCohortId === selectedInference.behaviorTop.cohortId
-                      ? 'Recovered hidden seed'
-                      : 'Different visible fit'
+  return (
+    <main className="app-shell analyst-console">
+      <header className="hero">
+        <div className="hero__eyebrow-row">
+          <p className="eyebrow">Wayfarer analyst console</p>
+          <span className="hero__pill">Columbus debug engine</span>
+          <span className="hero__pill hero__pill--status">{appStatus}</span>
+        </div>
+        <div className="hero__title-row">
+          <h1>Wayfarer</h1>
+          <button type="button" className="button button--ghost hero__about-button" onClick={() => setShowAbout(true)}>
+            About
+          </button>
+        </div>
+        <p className="subtitle">
+          Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and pseudo-cohort reports
+          at scale.
+        </p>
+      </header>
+
+      <section className="topbar" aria-label="Dashboard guidance">
+        <div className="topbar__left">
+          <div className="topbar__mode" role="group" aria-label="Guidance mode">
+            <button
+              type="button"
+              className={`segmented-button${guidanceMode === 'novice' ? ' segmented-button--active' : ''}`}
+              aria-pressed={guidanceMode === 'novice'}
+              onClick={() => setGuidanceMode('novice')}
+            >
+              Novice
+            </button>
+            <button
+              type="button"
+              className={`segmented-button${guidanceMode === 'expert' ? ' segmented-button--active' : ''}`}
+              aria-pressed={guidanceMode === 'expert'}
+              onClick={() => setGuidanceMode('expert')}
+            >
+              Expert
+            </button>
+          </div>
+          <label className="control control--inline">
+            <span>Dashboard ordering</span>
+            <select value={dashboardOrdering} onChange={(event) => setDashboardOrdering(event.target.value as DashboardOrderingPreset)}>
+              {Object.entries(DASHBOARD_ORDERING_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="control control--inline control--wide">
+            <span>Use Case / Story</span>
+            <select value={useCaseId} onChange={(event) => setUseCaseId(event.target.value as UseCaseStoryId)}>
+              {USE_CASE_STORIES.map((story) => (
+                <option key={story.id} value={story.id}>
+                  {story.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="topbar__right">
+          <Badge tone="accent">Story: {selectedStory.title}</Badge>
+          <Badge tone="neutral">Mode: {guidanceMode}</Badge>
+          <Badge tone="neutral">Ordering: {DASHBOARD_ORDERING_LABELS[dashboardOrdering]}</Badge>
+        </div>
+      </section>
+
+      <section className="intro-grid" aria-label="Controls and instructions">
+        <Panel title="Control panel">
+          <div className="control-strip__fields">
+            <label className="control">
+              <span>Seed</span>
+              <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+            </label>
+            <label className="control">
+              <span>Users</span>
+              <input
+                type="number"
+                value={numUsers}
+                onChange={(event) => setNumUsers(Number(event.target.value))}
+                min={1}
+                max={400}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Islands</span>
+              <input
+                type="number"
+                value={numIslands}
+                onChange={(event) => setNumIslands(Number(event.target.value))}
+                min={4}
+                max={96}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Initial ratings</span>
+              <input
+                type="number"
+                value={initialRatingsPerUser}
+                onChange={(event) => setInitialRatingsPerUser(Number(event.target.value))}
+                min={1}
+                max={12}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Turn mode</span>
+              <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                <option value="passive">Passive / random</option>
+                <option value="active">Active discovery</option>
+              </select>
+            </label>
+            <label className="control">
+              <span>Exploration weight</span>
+              <input
+                type="number"
+                value={explorationWeight}
+                onChange={(event) => setExplorationWeight(Number(event.target.value))}
+                min={0}
+                max={2}
+                step={0.05}
+              />
+            </label>
+            <label className="control">
+              <span>Fit floor</span>
+              <input
+                type="number"
+                value={minPredictedFitFloor}
+                onChange={(event) => setMinPredictedFitFloor(Number(event.target.value))}
+                min={-1}
+                max={1}
+                step={0.05}
+              />
+            </label>
+            <label className="control">
+              <span>Routed / active user</span>
+              <input
+                type="number"
+                value={routedIslandsPerActiveUser}
+                onChange={(event) => setRoutedIslandsPerActiveUser(Number(event.target.value))}
+                min={1}
+                max={8}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Active users / turn</span>
+              <input
+                type="number"
+                value={activeUsersPerTurn}
+                onChange={(event) => setActiveUsersPerTurn(Number(event.target.value))}
+                min={1}
+                max={96}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Passive ratings / user</span>
+              <input
+                type="number"
+                value={maxRatingsPerActiveUser}
+                onChange={(event) => setMaxRatingsPerActiveUser(Number(event.target.value))}
+                min={1}
+                max={8}
+                step={1}
+              />
+            </label>
+            <label className="control">
+              <span>Turn batch</span>
+              <input
+                type="number"
+                value={turnBatchCount}
+                onChange={(event) => setTurnBatchCount(Number(event.target.value))}
+                min={1}
+                max={20}
+                step={1}
+              />
+            </label>
+          </div>
+          <div className="control-strip__actions">
+            <button type="button" className="button" onClick={randomizeSeed}>
+              Regenerate dataset
+            </button>
+            <button type="button" className="button" onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}>
+              Take 1 Turn
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() =>
+                setSimulationState((state) => {
+                  let next = state;
+
+                  for (let index = 0; index < turnBatchCount; index += 1) {
+                    next = advanceCurrentTurn(next);
                   }
-                  helper="Hidden data is not a model input."
-                />
-                <MetricCard
-                  label="Recovery status"
-                  value={selectedUserReviewerReport?.recoveryStatus ?? 'n/a'}
-                  helper="Debug checksum status for the selected user."
-                />
-              </div>
-            ) : (
-              <EmptyState title="No debug data" description="Select a user to inspect hidden generation fields." />
-            )}
-          </Panel>
-        ) : null}
 
+                  return next;
+                })
+              }
+            >
+              Take X Turns
+            </button>
+            <button type="button" className="button button--ghost" onClick={() => setSimulationState(initialSimulationState)}>
+              Reset Simulation
+            </button>
+            <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
+              {showDebug ? 'Hide debug' : 'Show debug'}
+            </button>
+            {openSelectionButton('user', 'Select user')}
+            {openSelectionButton('island', 'Select island')}
+            {openSelectionButton('cohort', 'Select cohort')}
+          </div>
+        </Panel>
+
+        <Panel title="Instruction panel">
+          <div className="summary-header">
+            <div>
+              <p className="eyebrow">Use case</p>
+              <h3>{selectedStory.title}</h3>
+            </div>
+            <div className="summary-header__actions">
+              <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
+              <button type="button" className="button button--ghost" onClick={() => setGuidanceOpen((value) => !value)}>
+                {guidanceOpen ? 'Collapse guidance' : 'Expand guidance'}
+              </button>
+            </div>
+          </div>
+          <p className="muted">{selectedStory.goal}</p>
+          {guidanceOpen ? (
+            <div className="instruction-grid">
+              <section className="detail-block">
+                <h4>Steps</h4>
+                <ol className="instruction-list">
+                  {selectedStory.steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </section>
+              <section className="detail-block">
+                <h4>Expected result</h4>
+                <p>{selectedStory.expectedResult}</p>
+              </section>
+              <section className="detail-block">
+                <h4>Failure signs</h4>
+                <ul className="diagnosis-list">
+                  {selectedStory.failureSigns.map((failureSign) => (
+                    <li key={failureSign}>{failureSign}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          ) : (
+            <div className="notice">
+              <strong>Guidance collapsed.</strong>
+              <p>
+                This panel is here to tell a new reader what to prove next. Expand it if the current story is unclear.
+              </p>
+            </div>
+          )}
+        </Panel>
+      </section>
+
+      <section className="dashboard-shell" aria-label="Analyst dashboard">
+        {visibleDashboardSections.map((sectionKey) => {
+          if (sectionKey === 'debug' && !showDebug) {
+            return null;
+          }
+
+          const section = dashboardSections[sectionKey];
+
+          return (
+            <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
+              <div className="section-heading dashboard-section__heading">
+                <p className="eyebrow">{section.title}</p>
+                <p className="muted">
+                  {sectionKey === 'overview'
+                    ? 'Summary and current state'
+                    : sectionKey === 'recovery'
+                      ? 'Checks on seeded anchors, signal, and recovery'
+                      : sectionKey === 'routing'
+                        ? 'Recommendations, island comparison, and pseudo-cohorts'
+                        : 'Checksums, hidden metadata, and debug-only fields'}
+                </p>
+              </div>
+              <div className="dashboard-section__panels">{section.panels}</div>
+            </section>
+          );
+        })}
       </section>
 
       <Modal open={showAbout} title="About / Prior Art" placement="top" onClose={() => setShowAbout(false)}>

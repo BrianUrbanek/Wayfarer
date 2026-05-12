@@ -100,7 +100,7 @@ const ARCHETYPE_NAMES: Record<ReviewerArchetype, string> = {
   MISLABELED_USER: 'Mislabeled User',
   INVERSE_RATER: 'Inverse Rater',
   RANDOM_NOISY_USER: 'Random / Noisy User',
-  TINA_LIKE_DETACHED_PREDICTOR: 'Tina-like Detached Predictor',
+  TINA_LIKE_DETACHED_PREDICTOR: 'Unexplained High-Signal User',
   EARLY_SCOUT: 'Early Scout',
   LATE_CONSENSUS_FOLLOWER: 'Late Consensus Follower',
   POPULARITY_CHASER: 'Popularity Chaser',
