@@ -21,6 +21,7 @@ import {
 import type { SupportedDiceExpression } from './dice.js';
 import type {
   CohortAnchor,
+  CohortId,
   DiagnosisType,
   Island,
   IslandId,
@@ -40,6 +41,7 @@ export interface RatingEvent {
   readonly islandId: IslandId;
   readonly rating: Rating;
   readonly source: RatingEventSource;
+  readonly raterSignalWeights: Record<CohortId, number>;
 }
 
 export interface SimulationTurnSummary {
@@ -120,6 +122,20 @@ function buildRecommendationCounts(): Record<RecommendationKind, number> {
   };
 }
 
+function buildSignalWeightSnapshot(
+  cohorts: readonly CohortAnchor[],
+  weightsByCohortId: ReadonlyMap<CohortId, number>,
+  defaultWeight: number
+): Record<CohortId, number> {
+  return Object.fromEntries(
+    cohorts.map((cohort) => [cohort.id, weightsByCohortId.get(cohort.id) ?? defaultWeight])
+  ) as Record<CohortId, number>;
+}
+
+function buildBootstrapSignalWeightSnapshot(cohorts: readonly CohortAnchor[]): Record<CohortId, number> {
+  return Object.fromEntries(cohorts.map((cohort) => [cohort.id, 1])) as Record<CohortId, number>;
+}
+
 export function deriveVisibleUsersFromEvents(
   latentUsers: readonly User[],
   islands: readonly Island[],
@@ -180,6 +196,7 @@ function createRatingEventsForUsers(
   latentUsers: readonly User[],
   visibleUsers: readonly User[],
   islands: readonly Island[],
+  cohorts: readonly CohortAnchor[],
   participatingUsersPerTurn: number,
   maxRatingsPerUser: number
 ): RatingEvent[] {
@@ -229,7 +246,8 @@ function createRatingEventsForUsers(
         userId: user.id,
         islandId,
         rating,
-        source: 'organic'
+        source: 'organic',
+        raterSignalWeights: buildBootstrapSignalWeightSnapshot(cohorts)
       });
     }
   }
@@ -338,6 +356,7 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     config.latentUsers,
     deriveVisibleUsersFromEvents(config.latentUsers, config.islands, []),
     config.islands,
+    config.cohorts,
     config.latentUsers.length,
     config.initialRatingsPerUser
   );
@@ -398,6 +417,8 @@ function createOrganicEventsForUsers(
   turn: number,
   visibleUsers: readonly User[],
   islands: readonly Island[],
+  cohorts: readonly CohortAnchor[],
+  signalProfiles: ReadonlyMap<UserId, RaterSignalProfile>,
   selectedUsers: readonly User[],
   ratingCountModel: RatingCountModel,
   fixedRatingsPerUser: number,
@@ -431,6 +452,10 @@ function createOrganicEventsForUsers(
       const rating = user.ratings[islandId] ?? 0;
       const key = eventKey(turn, user.id, islandId);
       usedPairs?.add(key);
+      const profile = signalProfiles.get(user.id);
+      const weights = profile
+        ? buildSignalWeightSnapshot(cohorts, new Map(cohorts.map((cohort) => [cohort.id, profile.cohortWeights[cohort.id] ?? 0])), 0)
+        : buildSignalWeightSnapshot(cohorts, new Map(), 0);
 
       events.push({
         id: key,
@@ -438,7 +463,8 @@ function createOrganicEventsForUsers(
         userId: user.id,
         islandId,
         rating,
-        source: 'organic'
+        source: 'organic',
+        raterSignalWeights: weights
       });
     }
   }
@@ -451,6 +477,7 @@ function createGuidedRatingEventsForUsers(
   turn: number,
   visibleUsers: readonly User[],
   islands: readonly Island[],
+  cohorts: readonly CohortAnchor[],
   signalProfiles: ReadonlyMap<UserId, RaterSignalProfile>,
   islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>,
   selectedUsers: readonly User[],
@@ -490,6 +517,10 @@ function createGuidedRatingEventsForUsers(
       const rating = user.ratings[recommendation.islandId] ?? 0;
       const key = eventKey(turn, user.id, recommendation.islandId);
       usedPairs?.add(key);
+      const profile = signalProfiles.get(user.id);
+      const weights = profile
+        ? buildSignalWeightSnapshot(cohorts, new Map(cohorts.map((cohort) => [cohort.id, profile.cohortWeights[cohort.id] ?? 0])), 0)
+        : buildSignalWeightSnapshot(cohorts, new Map(), 0);
 
       events.push({
         id: key,
@@ -497,7 +528,8 @@ function createGuidedRatingEventsForUsers(
         userId: user.id,
         islandId: recommendation.islandId,
         rating,
-        source: 'guided'
+        source: 'guided',
+        raterSignalWeights: weights
       });
       routedIslandIds.push(recommendation.islandId);
       recommendationKinds[recommendation.recommendationKind] += 1;
@@ -577,6 +609,8 @@ export function advancePolicyTurn(
           turn,
           visibleUsers,
           state.islands,
+          state.cohorts,
+          state.raterSignalProfiles,
           selectedUsers,
           config.organicRatingCountModel,
           config.organicRatingsPerUser,
@@ -591,6 +625,7 @@ export function advancePolicyTurn(
           turn,
           visibleUsers,
           state.islands,
+          state.cohorts,
           state.raterSignalProfiles,
           state.islandAffinityReports,
           selectedUsers,

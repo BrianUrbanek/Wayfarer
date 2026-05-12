@@ -39,6 +39,7 @@ export interface AffinityRatingEvent {
   userId: UserId;
   islandId: IslandId;
   rating: Rating;
+  raterSignalWeights?: Readonly<Record<CohortId, number>>;
 }
 
 export interface BuildAffinityOptions {
@@ -180,15 +181,14 @@ export function buildIslandAffinityReports(
       islandCounts.neutralCount += 1;
     }
 
-    const profile = signalProfiles.get(event.userId);
-
     for (const cohort of cohorts) {
       const accumulator = cohortAccumulators.get(cohort.id);
       if (!accumulator) {
         continue;
       }
 
-      const raterSignal = profile?.cohortWeights[cohort.id] ?? 0;
+      const profile = signalProfiles.get(event.userId);
+      const raterSignal = event.raterSignalWeights?.[cohort.id] ?? profile?.cohortWeights[cohort.id] ?? 0;
       if (raterSignal <= 0) {
         continue;
       }

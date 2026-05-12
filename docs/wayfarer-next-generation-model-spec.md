@@ -504,6 +504,8 @@ The next turn may expand exposure to adjacent cohorts.
 
 This turn-based framing is the preferred language for the prototype. Avoid using day/week language except as optional flavor.
 
+Bootstrap Turn 0 is a special seed pass. Initial ratings can establish the starting analyst-console state with a default bootstrap signal snapshot, but from Turn 1 onward affinity weighting should use prior-turn signal snapshots rather than the same turn's newly derived signal.
+
 ## Tag Taxonomy as an Output
 
 A correct tag taxonomy is not assumed at startup. It is a long-term output of the data analysis enabled by the system.

@@ -32,6 +32,30 @@ function buildBootstrap(seed = 24680) {
   };
 }
 
+function buildSingleUserBootstrap(seed = 13579) {
+  const dataset = generateColumbusDataset({
+    seed,
+    numUsers: 1,
+    numIslands: 6,
+    allTags: DEFAULT_TAGS,
+    cohorts: createDefaultCohorts(),
+    tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+    ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+  });
+
+  return {
+    seed,
+    allTags: dataset.allTags,
+    latentUsers: dataset.users,
+    cohorts: dataset.cohorts,
+    islands: dataset.islands
+  };
+}
+
+function buildSignalWeights(bootstrap: ReturnType<typeof buildBootstrap>, defaultWeight = 1) {
+  return Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, defaultWeight])) as Record<string, number>;
+}
+
 function visibleUserWithEvents(events: RatingEvent[], index = 0) {
   const bootstrap = buildBootstrap();
   const [user] = deriveVisibleUsersFromEvents([bootstrap.latentUsers[index]], bootstrap.islands, events);
@@ -48,6 +72,19 @@ describe('simulation layer', () => {
     assert.equal(state.ratingEvents.length, 0);
     assert.equal(
       state.users.every((user) => Object.values(user.ratings).every((rating) => rating === null)),
+      true
+    );
+  });
+
+  it('bootstraps turn 0 ratings with default signal weights', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
+    const firstEvent = state.ratingEvents[0];
+
+    assert.ok(firstEvent);
+    assert.equal(firstEvent.turn, 0);
+    assert.equal(
+      Object.values(firstEvent.raterSignalWeights).every((weight) => weight === 1),
       true
     );
   });
@@ -121,7 +158,8 @@ describe('simulation layer', () => {
         userId,
         islandId: island.id,
         rating: 0,
-        source: 'organic'
+        source: 'organic',
+        raterSignalWeights: buildSignalWeights(bootstrap)
       }
     ]);
 
@@ -145,7 +183,8 @@ describe('simulation layer', () => {
           userId: latentUser.id,
           islandId: islandIds[0],
           rating: 0,
-          source: 'organic'
+          source: 'organic',
+          raterSignalWeights: buildSignalWeights(bootstrap)
         }
       ],
       0
@@ -158,7 +197,8 @@ describe('simulation layer', () => {
         userId: latentUser.id,
         islandId,
         rating: 0,
-        source: 'organic' as const
+        source: 'organic' as const,
+        raterSignalWeights: buildSignalWeights(bootstrap)
       }))
     ).user;
 
@@ -232,6 +272,68 @@ describe('simulation layer', () => {
 
     assert.equal(next.raterSignalProfiles.size, next.users.length);
     assert.equal(next.islandAffinityReports.size, next.islands.length);
+  });
+
+  it('lags affinity weighting behind same-turn signal updates', () => {
+    const bootstrap = buildSingleUserBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const firstTurn = advancePolicyTurn(state, {
+      turnMode: 'organic',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 1,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 3,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 0,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 0.55,
+      customMinimumPredictedFit: -1
+    });
+    const firstEvent = firstTurn.ratingEvents.at(-1);
+
+    assert.ok(firstEvent);
+    assert.ok((firstTurn.raterSignalProfiles.get(firstEvent.userId)?.overallSignal ?? 0) > 0);
+    assert.equal(firstEvent.raterSignalWeights[bootstrap.cohorts[0].id], 0);
+
+    const firstEstimate = firstTurn.islandAffinityReports
+      .get(firstEvent.islandId)
+      ?.estimates.find((entry) => entry.cohortId === bootstrap.cohorts[0].id);
+    const firstContribution = firstEstimate?.contributions.find((entry) => entry.userId === firstEvent.userId);
+
+    assert.equal(firstContribution, undefined);
+    assert.equal(firstEstimate?.effectiveWeight ?? 1, 0);
+
+    const secondTurn = advancePolicyTurn(firstTurn, {
+      turnMode: 'organic',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 1,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 0,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 0.55,
+      customMinimumPredictedFit: -1
+    });
+    const secondEvent = secondTurn.ratingEvents.at(-1);
+
+    assert.ok(secondEvent);
+    assert.ok((secondTurn.raterSignalProfiles.get(secondEvent.userId)?.overallSignal ?? 0) > 0);
+    assert.ok(secondEvent.raterSignalWeights[bootstrap.cohorts[0].id] > 0);
+
+    const secondEstimate = secondTurn.islandAffinityReports
+      .get(secondEvent.islandId)
+      ?.estimates.find((entry) => entry.cohortId === bootstrap.cohorts[0].id);
+    const secondContribution = secondEstimate?.contributions.find((entry) => entry.userId === secondEvent.userId);
+
+    assert.ok((secondContribution?.raterSignal ?? 0) > 0);
+    assert.ok((secondContribution?.weightedContribution ?? 0) !== 0);
   });
 
   it('routes guided turns from pre-turn recommendations and marks events as guided', () => {
