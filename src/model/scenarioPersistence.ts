@@ -1,6 +1,7 @@
 import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import type { AdvancePolicyTurnConfig, SimulationState, SimulationTurnSummary, RatingEvent, SerializedSimulationState } from './simulation.js';
 import { hydrateSimulationState, serializeSimulationState } from './simulation.js';
+import type { ScenarioPresetMetadata } from './scenarioPresets.js';
 import type { CohortAnchor, Island, IslandClass, User } from './types.js';
 
 export type SavedScenarioKind = 'simulation-state';
@@ -21,6 +22,7 @@ export interface SavedWayfarerScenarioV1 {
   kind: SavedScenarioKind;
   label: string;
   createdAt: string;
+  scenarioPreset?: ScenarioPresetMetadata | null;
   generatorConfig: SavedScenarioGeneratorConfig;
   turnPolicy: AdvancePolicyTurnConfig;
   turnsToRun: number;
@@ -213,6 +215,13 @@ function validateGeneratorConfig(value: unknown): value is SavedScenarioGenerato
     return false;
   }
 
+  if (
+    value.islandClassWeights !== undefined &&
+    (value.islandClassWeights === null || !isRecord(value.islandClassWeights) || !Object.values(value.islandClassWeights).every(isNumber))
+  ) {
+    return false;
+  }
+
   return true;
 }
 
@@ -244,6 +253,7 @@ function validateTurnPolicy(value: unknown): value is AdvancePolicyTurnConfig {
 export function exportSavedWayfarerScenario(input: {
   label: string;
   createdAt: string;
+  scenarioPreset?: ScenarioPresetMetadata | null;
   generatorConfig: SavedScenarioGeneratorConfig;
   turnPolicy: AdvancePolicyTurnConfig;
   turnsToRun: number;
@@ -254,6 +264,7 @@ export function exportSavedWayfarerScenario(input: {
     kind: 'simulation-state',
     label: input.label,
     createdAt: input.createdAt,
+    scenarioPreset: input.scenarioPreset ? { ...input.scenarioPreset } : undefined,
     generatorConfig: { ...input.generatorConfig },
     turnPolicy: { ...input.turnPolicy },
     turnsToRun: input.turnsToRun,
@@ -287,6 +298,17 @@ export function validateSavedWayfarerScenario(value: unknown): SavedScenarioVali
     return {
       ok: false,
       error: 'Saved scenario is missing label or createdAt.'
+    };
+  }
+
+  if (
+    value.scenarioPreset !== undefined &&
+    value.scenarioPreset !== null &&
+    (!isRecord(value.scenarioPreset) || !isString(value.scenarioPreset.id) || !isString(value.scenarioPreset.label))
+  ) {
+    return {
+      ok: false,
+      error: 'Saved scenario has an invalid scenarioPreset.'
     };
   }
 

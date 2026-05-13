@@ -5,6 +5,7 @@ import { createDefaultCohorts } from '../../data/defaultCohorts.js';
 import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { advancePolicyTurn, createInitialSimulationState, serializeSimulationState } from '../../model/simulation.js';
 import { exportSavedWayfarerScenario, parseSavedWayfarerScenario } from '../../model/scenarioPersistence.js';
+import { getScenarioPresetMetadata } from '../../model/scenarioPresets.js';
 import { DEFAULT_TURN_POLICY } from '../../model/turnPolicy.js';
 
 function buildBootstrap(seed = 86420) {
@@ -46,6 +47,7 @@ describe('scenario persistence', () => {
     const scenario = exportSavedWayfarerScenario({
       label: 'baseline export',
       createdAt: '2026-05-13T02:30:00.000Z',
+      scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
       generatorConfig: {
         seed: bootstrap.seed,
         numUsers: bootstrap.latentUsers.length,
@@ -61,6 +63,7 @@ describe('scenario persistence', () => {
 
     assert.equal(scenario.version, 1);
     assert.equal(scenario.kind, 'simulation-state');
+    assert.equal(scenario.scenarioPreset?.id, 'small-smoke-test');
     assert.equal(scenario.generatorConfig.seed, bootstrap.seed);
     assert.equal(scenario.turnPolicy.turnMode, 'organic');
     assert.equal(scenario.turnsToRun, 5);
@@ -78,6 +81,7 @@ describe('scenario persistence', () => {
         kind: 'simulation-state',
         label: 'broken',
         createdAt: '2026-05-13T02:30:00.000Z',
+        scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
         generatorConfig: {
           seed: 1,
           numUsers: 1,
@@ -124,6 +128,7 @@ describe('scenario persistence', () => {
     const saved = exportSavedWayfarerScenario({
       label: 'continuation case',
       createdAt: '2026-05-13T02:30:00.000Z',
+      scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
       generatorConfig: {
         seed: bootstrap.seed,
         numUsers: bootstrap.latentUsers.length,
@@ -144,6 +149,7 @@ describe('scenario persistence', () => {
     assert.equal(parsedB.ok, true);
 
     if (parsedA.ok && parsedB.ok) {
+      assert.equal(parsedA.scenario.scenarioPreset?.id, 'small-smoke-test');
       const nextA = advancePolicyTurn(parsedA.restoredState, buildTurnPolicy());
       const nextB = advancePolicyTurn(parsedB.restoredState, buildTurnPolicy());
 

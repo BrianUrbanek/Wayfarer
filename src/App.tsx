@@ -56,22 +56,25 @@ import {
   type SavedScenarioGeneratorConfig,
   type SavedWayfarerScenarioV1
 } from './model/scenarioPersistence';
+import {
+  applyScenarioPreset,
+  getScenarioPreset,
+  getScenarioPresetMetadata,
+  listScenarioPresets,
+  resolveScenarioPresetFromControls,
+  type ScenarioPresetMetadata,
+  type ScenarioPresetId,
+  type ScenarioPreset,
+  type ScenarioPresetControls
+} from './model/scenarioPresets';
 import type { CohortAnchor, Island, User } from './model/types';
 
-const INITIAL_CONFIG = {
-  seed: 48291,
-  numUsers: 48,
-  numIslands: 18
-};
+const INITIAL_SCENARIO_PRESET: ScenarioPreset = getScenarioPreset('small-smoke-test');
+const SCENARIO_PRESET_OPTIONS = listScenarioPresets();
 
-const GENERATOR_CONFIG: SavedScenarioGeneratorConfig = {
-  seed: INITIAL_CONFIG.seed,
-  numUsers: INITIAL_CONFIG.numUsers,
-  numIslands: INITIAL_CONFIG.numIslands,
-  bootstrapRatingsPerUser: 4,
-  tagAlignmentDistribution: { kind: 'uniform', min: 2, max: 10 },
-  ratingAlignmentDistribution: { kind: 'uniform', min: 2, max: 10 }
-};
+function scenarioPresetMetadataFromPreset(preset: ScenarioPreset): ScenarioPresetMetadata {
+  return getScenarioPresetMetadata(preset.id);
+}
 
 type SelectionModalKind = 'user' | 'island' | 'cohort' | 'pseudo' | null;
 
@@ -86,15 +89,23 @@ type DrawerState =
   | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
 
-function buildDataset(seed: number, numUsers: number, numIslands: number) {
+function buildDataset(config: {
+  seed: number;
+  numUsers: number;
+  numIslands: number;
+  tagAlignmentDistribution: SavedScenarioGeneratorConfig['tagAlignmentDistribution'];
+  ratingAlignmentDistribution: SavedScenarioGeneratorConfig['ratingAlignmentDistribution'];
+  islandClassWeights?: SavedScenarioGeneratorConfig['islandClassWeights'];
+}) {
   return generateColumbusDataset({
-    seed,
-    numUsers,
-    numIslands,
+    seed: config.seed,
+    numUsers: config.numUsers,
+    numIslands: config.numIslands,
     cohorts: createDefaultCohorts(),
     allTags: DEFAULT_TAGS,
-    tagAlignmentDistribution: GENERATOR_CONFIG.tagAlignmentDistribution,
-    ratingAlignmentDistribution: GENERATOR_CONFIG.ratingAlignmentDistribution
+    tagAlignmentDistribution: config.tagAlignmentDistribution,
+    ratingAlignmentDistribution: config.ratingAlignmentDistribution,
+    islandClassWeights: config.islandClassWeights
   });
 }
 
@@ -250,11 +261,26 @@ function reviewerRecoveryTone(status: string) {
   }
 }
 
-export default function App() {
-  const [seed, setSeed] = useState(INITIAL_CONFIG.seed);
-  const [numUsers, setNumUsers] = useState(INITIAL_CONFIG.numUsers);
-  const [numIslands, setNumIslands] = useState(INITIAL_CONFIG.numIslands);
-  const [bootstrapRatingsPerUser, setBootstrapRatingsPerUser] = useState(4);
+interface AppProps {
+  initialGuidanceMode?: GuidanceMode;
+}
+
+export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
+  const [scenarioPresetSource, setScenarioPresetSource] = useState<ScenarioPresetMetadata | null>(
+    scenarioPresetMetadataFromPreset(INITIAL_SCENARIO_PRESET)
+  );
+  const [seed, setSeed] = useState(INITIAL_SCENARIO_PRESET.generatorConfig.seed);
+  const [numUsers, setNumUsers] = useState(INITIAL_SCENARIO_PRESET.generatorConfig.numUsers);
+  const [numIslands, setNumIslands] = useState(INITIAL_SCENARIO_PRESET.generatorConfig.numIslands);
+  const [bootstrapRatingsPerUser, setBootstrapRatingsPerUser] = useState(
+    INITIAL_SCENARIO_PRESET.generatorConfig.bootstrapRatingsPerUser
+  );
+  const [tagAlignmentDistribution, setTagAlignmentDistribution] = useState(
+    INITIAL_SCENARIO_PRESET.generatorConfig.tagAlignmentDistribution
+  );
+  const [ratingAlignmentDistribution, setRatingAlignmentDistribution] = useState(
+    INITIAL_SCENARIO_PRESET.generatorConfig.ratingAlignmentDistribution
+  );
   const [turnMode, setTurnMode] = useState<TurnMode>(DEFAULT_TURN_POLICY.turnMode);
   const [participationModel, setParticipationModel] = useState<ParticipationModel>(DEFAULT_TURN_POLICY.participationModel);
   const [participatingUsersPerTurn, setParticipatingUsersPerTurn] = useState(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
@@ -272,9 +298,10 @@ export default function App() {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
-  const [showDebug, setShowDebug] = useState(true);
+  const showDebugInitial = initialGuidanceMode !== 'novice';
+  const [showDebug, setShowDebug] = useState(showDebugInitial);
   const [showAbout, setShowAbout] = useState(false);
-  const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>('novice');
+  const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(true);
   const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
@@ -282,8 +309,8 @@ export default function App() {
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(true);
   const [controlsCollapsed, setControlsCollapsed] = useState(false);
-  const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(false);
-  const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(false);
+  const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(initialGuidanceMode === 'novice');
+  const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(initialGuidanceMode === 'novice');
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
   const [importedScenario, setImportedScenario] = useState<SavedWayfarerScenarioV1 | null>(null);
   const [scenarioMessage, setScenarioMessage] = useState<string>('');
@@ -291,7 +318,17 @@ export default function App() {
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const isNoviceMode = guidanceMode === 'novice';
 
-  const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
+  const latentDataset = useMemo(
+    () =>
+      buildDataset({
+        seed,
+        numUsers,
+        numIslands,
+        tagAlignmentDistribution,
+        ratingAlignmentDistribution
+      }),
+    [numIslands, numUsers, ratingAlignmentDistribution, seed, tagAlignmentDistribution]
+  );
 
   const initialSimulationState = useMemo(
     () =>
@@ -307,15 +344,6 @@ export default function App() {
   );
 
   const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
-
-  useEffect(() => {
-    if (importedScenario) {
-      setSimulationState(hydrateSimulationState(importedScenario.simulationState));
-      return;
-    }
-
-    setSimulationState(initialSimulationState);
-  }, [importedScenario, initialSimulationState]);
 
   useEffect(() => {
     if (guidanceMode === 'novice') {
@@ -1716,6 +1744,36 @@ export default function App() {
     </span>
   );
 
+  const applyScenarioPresetSelection = (presetId: ScenarioPresetId) => {
+    const preset = getScenarioPreset(presetId);
+    const controls = applyScenarioPreset(preset);
+
+    setImportedScenario(null);
+    setScenarioError('');
+    setScenarioMessage('');
+    setScenarioPresetSource(getScenarioPresetMetadata(preset.id));
+    setSeed(controls.seed);
+    setNumUsers(controls.numUsers);
+    setNumIslands(controls.numIslands);
+    setBootstrapRatingsPerUser(controls.bootstrapRatingsPerUser);
+    setTagAlignmentDistribution(controls.tagAlignmentDistribution);
+    setRatingAlignmentDistribution(controls.ratingAlignmentDistribution);
+    setTurnMode(controls.turnPolicy.turnMode);
+    setParticipationModel(controls.turnPolicy.participationModel);
+    setParticipatingUsersPerTurn(controls.turnPolicy.participatingUsersPerTurn);
+    setParticipationChance(controls.turnPolicy.participationChance);
+    setOrganicRatingCountModel(controls.turnPolicy.organicRatingCountModel);
+    setOrganicRatingsPerUser(controls.turnPolicy.organicRatingsPerUser);
+    setOrganicRatingDice(controls.turnPolicy.organicRatingDice);
+    setGuidedRatingCountModel(controls.turnPolicy.guidedRatingCountModel);
+    setGuidedRecommendationsPerUser(controls.turnPolicy.guidedRecommendationsPerUser);
+    setGuidedRecommendationDice(controls.turnPolicy.guidedRecommendationDice);
+    setRoutingRiskProfile(controls.turnPolicy.routingRiskProfile);
+    setCustomExplorationWeight(controls.turnPolicy.customExplorationWeight);
+    setCustomMinimumPredictedFit(controls.turnPolicy.customMinimumPredictedFit);
+    setTurnsToRun(controls.turnsToRun);
+  };
+
   const randomizeSeed = () => {
     setImportedScenario(null);
     setScenarioMessage('');
@@ -1724,19 +1782,22 @@ export default function App() {
   };
 
   const exportCurrentSimulationJson = () => {
+    const scenarioPreset = scenarioPresetSource ?? activeScenarioPresetMetadata ?? null;
     const savedScenario = exportSavedWayfarerScenario({
       label: `Wayfarer turn ${simulationState.currentTurn}`,
       createdAt: new Date().toISOString(),
+      scenarioPreset,
       generatorConfig: {
-        ...GENERATOR_CONFIG,
         seed,
         numUsers,
         numIslands,
-        bootstrapRatingsPerUser
+        bootstrapRatingsPerUser,
+        tagAlignmentDistribution,
+        ratingAlignmentDistribution
       },
-    turnPolicy: currentTurnPolicy,
-    turnsToRun,
-    simulationState
+      turnPolicy: currentTurnPolicy,
+      turnsToRun,
+      simulationState
   });
     const blob = new Blob([`${JSON.stringify(savedScenario, null, 2)}\n`], { type: 'application/json' });
     const objectUrl = URL.createObjectURL(blob);
@@ -1761,11 +1822,25 @@ export default function App() {
     }
 
     const { scenario, restoredState } = result;
+    const importedPresetMatch = resolveScenarioPresetFromControls({
+      seed: scenario.generatorConfig.seed,
+      numUsers: scenario.generatorConfig.numUsers,
+      numIslands: scenario.generatorConfig.numIslands,
+      bootstrapRatingsPerUser: scenario.generatorConfig.bootstrapRatingsPerUser,
+      tagAlignmentDistribution: scenario.generatorConfig.tagAlignmentDistribution,
+      ratingAlignmentDistribution: scenario.generatorConfig.ratingAlignmentDistribution,
+      islandClassWeights: scenario.generatorConfig.islandClassWeights,
+      turnPolicy: scenario.turnPolicy,
+      turnsToRun: scenario.turnsToRun
+    });
     setImportedScenario(scenario);
+    setScenarioPresetSource(scenario.scenarioPreset ?? (importedPresetMatch ? scenarioPresetMetadataFromPreset(importedPresetMatch) : null));
     setSeed(scenario.generatorConfig.seed);
     setNumUsers(scenario.generatorConfig.numUsers);
     setNumIslands(scenario.generatorConfig.numIslands);
     setBootstrapRatingsPerUser(scenario.generatorConfig.bootstrapRatingsPerUser);
+    setTagAlignmentDistribution(scenario.generatorConfig.tagAlignmentDistribution);
+    setRatingAlignmentDistribution(scenario.generatorConfig.ratingAlignmentDistribution);
     setTurnMode(scenario.turnPolicy.turnMode);
     setParticipationModel(scenario.turnPolicy.participationModel);
     setParticipatingUsersPerTurn(scenario.turnPolicy.participatingUsersPerTurn);
@@ -1782,7 +1857,11 @@ export default function App() {
     setTurnsToRun(scenario.turnsToRun);
     setSimulationState(restoredState);
     setScenarioError('');
-    setScenarioMessage(`Imported ${scenario.label}`);
+    setScenarioMessage(
+      scenario.scenarioPreset
+        ? `Imported ${scenario.label} from ${scenario.scenarioPreset.label}`
+        : `Imported ${scenario.label}`
+    );
   };
 
   const handleScenarioFileChange = async (event: { target: HTMLInputElement; currentTarget: HTMLInputElement }) => {
@@ -1821,55 +1900,145 @@ export default function App() {
     setScenarioMessage('');
     setScenarioError('');
     resetControlPolicy();
-    const defaultBootstrap = buildDataset(INITIAL_CONFIG.seed, INITIAL_CONFIG.numUsers, INITIAL_CONFIG.numIslands);
+    const defaultBootstrap = buildDataset({
+      seed: INITIAL_SCENARIO_PRESET.generatorConfig.seed,
+      numUsers: INITIAL_SCENARIO_PRESET.generatorConfig.numUsers,
+      numIslands: INITIAL_SCENARIO_PRESET.generatorConfig.numIslands,
+      tagAlignmentDistribution: INITIAL_SCENARIO_PRESET.generatorConfig.tagAlignmentDistribution,
+      ratingAlignmentDistribution: INITIAL_SCENARIO_PRESET.generatorConfig.ratingAlignmentDistribution
+    });
     setSimulationState(
       createInitialSimulationState({
-        seed: INITIAL_CONFIG.seed,
+        seed: INITIAL_SCENARIO_PRESET.generatorConfig.seed,
         allTags: defaultBootstrap.allTags,
         latentUsers: defaultBootstrap.users,
         cohorts: defaultBootstrap.cohorts,
         islands: defaultBootstrap.islands,
-        initialRatingsPerUser: 4
+        initialRatingsPerUser: INITIAL_SCENARIO_PRESET.generatorConfig.bootstrapRatingsPerUser
       })
     );
   };
 
   const resetControlPolicy = () => {
-    setSeed(INITIAL_CONFIG.seed);
-    setNumUsers(INITIAL_CONFIG.numUsers);
-    setNumIslands(INITIAL_CONFIG.numIslands);
-    setBootstrapRatingsPerUser(4);
-    setTurnMode(DEFAULT_TURN_POLICY.turnMode);
-    setParticipationModel(DEFAULT_TURN_POLICY.participationModel);
-    setParticipatingUsersPerTurn(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
-    setParticipationChance(DEFAULT_TURN_POLICY.participationChance);
-    setOrganicRatingCountModel(DEFAULT_TURN_POLICY.organicRatingCountModel);
-    setOrganicRatingsPerUser(DEFAULT_TURN_POLICY.organicRatingsPerUser);
-    setOrganicRatingDice(DEFAULT_TURN_POLICY.organicRatingDice);
-    setGuidedRatingCountModel(DEFAULT_TURN_POLICY.guidedRatingCountModel);
-    setGuidedRecommendationsPerUser(DEFAULT_TURN_POLICY.guidedRecommendationsPerUser);
-    setGuidedRecommendationDice(DEFAULT_TURN_POLICY.guidedRecommendationDice);
-    setRoutingRiskProfile(DEFAULT_TURN_POLICY.routingRiskProfile);
-    setCustomExplorationWeight(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
-    setCustomMinimumPredictedFit(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
-    setTurnsToRun(DEFAULT_TURN_POLICY.turnBatchCount);
+    applyScenarioPresetSelection(INITIAL_SCENARIO_PRESET.id);
   };
 
-  const currentTurnPolicy = {
-    turnMode,
-    participationModel,
-    participatingUsersPerTurn,
-    participationChance,
-    organicRatingCountModel,
-    organicRatingsPerUser,
-    organicRatingDice,
-    guidedRatingCountModel,
-    guidedRecommendationsPerUser,
-    guidedRecommendationDice,
-    routingRiskProfile,
-    customExplorationWeight,
-    customMinimumPredictedFit
-  };
+  const currentTurnPolicy = useMemo(
+    () => ({
+      turnMode,
+      participationModel,
+      participatingUsersPerTurn,
+      participationChance,
+      organicRatingCountModel,
+      organicRatingsPerUser,
+      organicRatingDice,
+      guidedRatingCountModel,
+      guidedRecommendationsPerUser,
+      guidedRecommendationDice,
+      routingRiskProfile,
+      customExplorationWeight,
+      customMinimumPredictedFit
+    }),
+    [
+      customExplorationWeight,
+      customMinimumPredictedFit,
+      guidedRatingCountModel,
+      guidedRecommendationDice,
+      guidedRecommendationsPerUser,
+      organicRatingCountModel,
+      organicRatingDice,
+      organicRatingsPerUser,
+      participationChance,
+      participationModel,
+      participatingUsersPerTurn,
+      routingRiskProfile,
+      turnMode
+    ]
+  );
+
+  const currentScenarioControls = useMemo<ScenarioPresetControls>(
+    () => ({
+      seed,
+      numUsers,
+      numIslands,
+      bootstrapRatingsPerUser,
+      tagAlignmentDistribution,
+      ratingAlignmentDistribution,
+      turnPolicy: currentTurnPolicy,
+      turnsToRun
+    }),
+    [
+      bootstrapRatingsPerUser,
+      currentTurnPolicy,
+      numIslands,
+      numUsers,
+      ratingAlignmentDistribution,
+      seed,
+      tagAlignmentDistribution,
+      turnsToRun
+    ]
+  );
+
+  useEffect(() => {
+    if (importedScenario) {
+      const importedControls = {
+        seed: importedScenario.generatorConfig.seed,
+        numUsers: importedScenario.generatorConfig.numUsers,
+        numIslands: importedScenario.generatorConfig.numIslands,
+        bootstrapRatingsPerUser: importedScenario.generatorConfig.bootstrapRatingsPerUser,
+        tagAlignmentDistribution: importedScenario.generatorConfig.tagAlignmentDistribution,
+        ratingAlignmentDistribution: importedScenario.generatorConfig.ratingAlignmentDistribution,
+        turnPolicy: importedScenario.turnPolicy,
+        turnsToRun: importedScenario.turnsToRun
+      };
+      const importedMatchesCurrent =
+        importedControls.seed === currentScenarioControls.seed &&
+        importedControls.numUsers === currentScenarioControls.numUsers &&
+        importedControls.numIslands === currentScenarioControls.numIslands &&
+        importedControls.bootstrapRatingsPerUser === currentScenarioControls.bootstrapRatingsPerUser &&
+        JSON.stringify(importedControls.tagAlignmentDistribution) === JSON.stringify(currentScenarioControls.tagAlignmentDistribution) &&
+        JSON.stringify(importedControls.ratingAlignmentDistribution) === JSON.stringify(currentScenarioControls.ratingAlignmentDistribution) &&
+        importedControls.turnPolicy.turnMode === currentScenarioControls.turnPolicy.turnMode &&
+        importedControls.turnPolicy.participationModel === currentScenarioControls.turnPolicy.participationModel &&
+        importedControls.turnPolicy.participatingUsersPerTurn === currentScenarioControls.turnPolicy.participatingUsersPerTurn &&
+        importedControls.turnPolicy.participationChance === currentScenarioControls.turnPolicy.participationChance &&
+        importedControls.turnPolicy.organicRatingCountModel === currentScenarioControls.turnPolicy.organicRatingCountModel &&
+        importedControls.turnPolicy.organicRatingsPerUser === currentScenarioControls.turnPolicy.organicRatingsPerUser &&
+        importedControls.turnPolicy.organicRatingDice === currentScenarioControls.turnPolicy.organicRatingDice &&
+        importedControls.turnPolicy.guidedRatingCountModel === currentScenarioControls.turnPolicy.guidedRatingCountModel &&
+        importedControls.turnPolicy.guidedRecommendationsPerUser === currentScenarioControls.turnPolicy.guidedRecommendationsPerUser &&
+        importedControls.turnPolicy.guidedRecommendationDice === currentScenarioControls.turnPolicy.guidedRecommendationDice &&
+        importedControls.turnPolicy.routingRiskProfile === currentScenarioControls.turnPolicy.routingRiskProfile &&
+        importedControls.turnPolicy.customExplorationWeight === currentScenarioControls.turnPolicy.customExplorationWeight &&
+        importedControls.turnPolicy.customMinimumPredictedFit === currentScenarioControls.turnPolicy.customMinimumPredictedFit &&
+        importedControls.turnsToRun === currentScenarioControls.turnsToRun;
+
+      if (!importedMatchesCurrent) {
+        setImportedScenario(null);
+        setScenarioMessage('');
+        setScenarioError('');
+        setSimulationState(initialSimulationState);
+        return;
+      }
+
+      setSimulationState(hydrateSimulationState(importedScenario.simulationState));
+      return;
+    }
+
+    setSimulationState(initialSimulationState);
+  }, [currentScenarioControls, importedScenario, initialSimulationState]);
+
+  const activeScenarioPreset = useMemo(
+    () => resolveScenarioPresetFromControls(currentScenarioControls),
+    [currentScenarioControls]
+  );
+  const activeScenarioPresetMetadata = activeScenarioPreset ? scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
+  const scenarioPresetDisplay =
+    activeScenarioPreset ?? (scenarioPresetSource ? (getScenarioPreset(scenarioPresetSource.id as ScenarioPresetId) ?? null) : null);
+  const scenarioPresetSourceNote =
+    scenarioPresetSource && (!activeScenarioPresetMetadata || scenarioPresetSource.id !== activeScenarioPresetMetadata.id)
+      ? scenarioPresetSource
+      : null;
 
   const advanceCurrentTurn = (state: SimulationState) => {
     return advancePolicyTurn(state, currentTurnPolicy);
@@ -2183,80 +2352,162 @@ export default function App() {
           title="Simulation setup"
           collapsed={controlsCollapsed}
           onToggle={() => setControlsCollapsed((value) => !value)}
-          description="Stable settings for the simulation world."
+          description="Named scenario presets and stable settings for the simulation world."
         >
-          <div className="control-strip__fields">
-            <label className="control">
-              {labeledControl('Seed', 'Controls the reproducible random number stream for the generated world and turns.')}
-              <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-            </label>
-            <label className="control">
-              {labeledControl('Users', 'How many synthetic users the generator creates.')}
-              <input
-                type="number"
-                value={numUsers}
-                onChange={(event) => setNumUsers(Number(event.target.value))}
-                min={1}
-                max={400}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
-              <input
-                type="number"
-                value={numIslands}
-                onChange={(event) => setNumIslands(Number(event.target.value))}
-                min={4}
-                max={96}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              {labeledControl('Bootstrap Ratings / User', 'Initial sparse rating events created at Turn 0. These are evidence, not signal.')}
-              <input
-                type="number"
-                value={bootstrapRatingsPerUser}
-                onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
-                min={1}
-                max={12}
-                step={1}
-              />
-            </label>
-            <label className="control">
-              {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
-              <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+          <div className="stack">
+            <div className="control-strip__fields control-strip__fields--preset">
+              <label className="control">
+                {labeledControl(
+                  'Scenario preset',
+                  'Curated scenario presets coordinate seed-data generation and turn policy into named experimental conditions.'
+                )}
+                <select
+                  value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
+                  onChange={(event) => {
+                    const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
+                    if (nextPresetId !== 'custom') {
+                      applyScenarioPresetSelection(nextPresetId);
+                    }
+                  }}
+                >
+                  <option value="custom" disabled>
+                    Custom / imported
                   </option>
-                ))}
-              </select>
-            </label>
-            <label className="control">
-              {labeledControl(
-                'Participation Model',
-                'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
-              )}
-              <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
-                {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="control">
-              {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
-              <input
-                type="number"
-                value={turnsToRun}
-                onChange={(event) => setTurnsToRun(Number(event.target.value))}
-                min={1}
-                max={20}
-                step={1}
-              />
-            </label>
+                  {SCENARIO_PRESET_OPTIONS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="control control--wide">
+                <span className="control__label-row">
+                  <span>What this is good for</span>
+                  <InfoTip
+                    label="What this is good for help"
+                    text="Use the preset description as the short story of why this scenario exists and what kind of inspection it is good for."
+                  />
+                </span>
+                <p>{scenarioPresetDisplay?.goodFor ?? 'Custom / imported scenario with no named preset match.'}</p>
+                <p className="muted">
+                  {scenarioPresetDisplay?.description ??
+                    'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
+                </p>
+                {scenarioPresetSourceNote ? <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
+              </div>
+            </div>
+            <p className="muted">
+              {isNoviceMode
+                ? 'Novice mode keeps the preset and the setup summary visible while hiding the raw knobs.'
+                : 'Expert mode exposes the resolved controls so you can inspect and edit the preset directly.'}
+            </p>
+            {!isNoviceMode ? (
+              <>
+                <div className="control-strip__fields">
+                  <label className="control">
+                    {labeledControl(
+                      'Seed',
+                      'Controls the reproducible random number stream for the generated world and turns.'
+                    )}
+                    <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+                  </label>
+                  <label className="control">
+                    {labeledControl('Users', 'How many synthetic users the generator creates.')}
+                    <input
+                      type="number"
+                      value={numUsers}
+                      onChange={(event) => setNumUsers(Number(event.target.value))}
+                      min={1}
+                      max={400}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
+                    <input
+                      type="number"
+                      value={numIslands}
+                      onChange={(event) => setNumIslands(Number(event.target.value))}
+                      min={4}
+                      max={96}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Bootstrap Ratings / User',
+                      'Initial sparse rating events created at Turn 0. These are evidence, not signal.'
+                    )}
+                    <input
+                      type="number"
+                      value={bootstrapRatingsPerUser}
+                      onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
+                      min={1}
+                      max={12}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl('Tag Alignment', 'Distribution used when generating hidden tag alignment for users.')}
+                    <select
+                      value={JSON.stringify(tagAlignmentDistribution)}
+                      onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
+                    >
+                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl('Rating Alignment', 'Distribution used when generating hidden rating alignment for users.')}
+                    <select
+                      value={JSON.stringify(ratingAlignmentDistribution)}
+                      onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
+                    >
+                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
+                    <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                      {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Participation Model',
+                      'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
+                    )}
+                    <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
+                      {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
+                    <input
+                      type="number"
+                      value={turnsToRun}
+                      onChange={(event) => setTurnsToRun(Number(event.target.value))}
+                      min={1}
+                      max={20}
+                      step={1}
+                    />
+                  </label>
+                </div>
+              </>
+            ) : null}
           </div>
           <div className="control-strip__actions">
             <button type="button" className="button button--ghost" onClick={randomizeSeed}>

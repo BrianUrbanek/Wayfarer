@@ -3,8 +3,8 @@ import { renderToString } from 'react-dom/server';
 import App from '../App';
 
 describe('App analyst console', () => {
-  it('renders the analyst console sections', () => {
-    const html = renderToString(<App />);
+  it('renders the analyst console sections and preset-first novice setup', () => {
+    const html = renderToString(<App initialGuidanceMode="novice" />);
 
     expect(html).toContain('Wayfarer analyst console');
     expect(html).toContain('Primary workflow');
@@ -14,7 +14,6 @@ describe('App analyst console', () => {
     expect(html).toContain('Cohort-local island affinity');
     expect(html).toContain('Discovery Routing');
     expect(html).toContain('Reviewer Archetype Recovery');
-    expect(html).toContain('Debug Data');
     expect(html).toContain('Turn Summary');
     expect(html).toContain('Novice');
     expect(html).toContain('Expert');
@@ -23,29 +22,49 @@ describe('App analyst console', () => {
     expect(html).toContain('Curator notes');
     expect(html).toContain('Drilldown targets');
     expect(html).toContain('Pinned reference');
+    expect(html).toContain('Scenario preset');
+    expect(html).toContain('What this is good for');
+    expect(html).toContain('Golden Demo');
+    expect(html).toContain('Small Smoke Test');
+    expect(html).toContain('Novice mode keeps the preset and the setup summary visible while hiding the raw knobs.');
     expect(html).toContain('Turn behavior / Dynamic settings');
-    expect(html).toContain('Rating count policy');
-    expect(html).toContain('Organic Exploration');
-    expect(html).toContain('Bootstrap Ratings / User');
-    expect(html).toContain('Participating Users / Turn');
-    expect(html).toContain('Organic Ratings / User');
-    expect(html).toContain('Turns to Run');
+    expect(html).not.toContain('Bootstrap Ratings / User');
+    expect(html).not.toContain('Rating count policy');
+    expect(html).not.toContain('Organic Ratings / User');
+    expect(html).not.toContain('Tag Alignment');
+    expect(html).not.toContain('Rating Alignment');
+    expect(html).not.toContain('Participating Users / Turn');
+    expect(html).not.toContain('Turns to Run');
+    expect(html).toContain('Open About');
+    expect(html).toContain('Show debug');
+    expect(html).toContain('Take 1 Turn');
+    expect(html).toContain('Export Current Simulation JSON');
+    expect(html).toContain('Import Scenario JSON');
+    expect(html).toContain('Show debug');
+    expect(html).toContain('First-time walkthrough');
     expect(html).toContain('System use case');
     expect(html).toContain('Player journey');
     expect(html).toContain('Shared steps');
     expect(html).toContain('Expected system result');
     expect(html).toContain('Expected player result');
-    expect(html).toContain('Open About');
-    expect(html).toContain('Hidden generator archetype');
-    expect(html).toContain('Take 1 Turn');
-    expect(html).toContain('Export Current Simulation JSON');
-    expect(html).toContain('Import Scenario JSON');
-    expect(html).toContain('Turns to Run');
-    expect(html).toContain('First-time walkthrough');
     expect(html).not.toContain('Model Explanation');
     expect(html).not.toContain('Island Comparison');
     expect(html).not.toContain('Pseudo-Cohort Reports');
+    expect(html).not.toContain('Debug Data');
     expect(html).not.toContain('Passive');
     expect(html).not.toContain('Active Discovery Turns');
+  });
+
+  it('renders expert preset controls', () => {
+    const html = renderToString(<App initialGuidanceMode="expert" />);
+
+    expect(html).toContain('Scenario preset');
+    expect(html).toContain('Bootstrap Ratings / User');
+    expect(html).toContain('Tag Alignment');
+    expect(html).toContain('Rating Alignment');
+    expect(html).toContain('Turn Mode');
+    expect(html).toContain('Participation Model');
+    expect(html).toContain('Turns to Run');
+    expect(html).toContain('Expert mode exposes the resolved controls so you can inspect and edit the preset directly.');
   });
 });

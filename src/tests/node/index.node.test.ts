@@ -13,4 +13,5 @@ import './dice.node.test.js';
 import './turnPolicy.node.test.js';
 import './experimentHarness.node.test.js';
 import './experimentOpen.node.test.js';
+import './scenarioPresets.node.test.js';
 import './scenarioPersistence.node.test.js';
