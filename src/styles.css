@@ -178,6 +178,18 @@ select {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.button--primary {
+  border-color: rgba(103, 215, 199, 0.42);
+  background: linear-gradient(180deg, rgba(103, 215, 199, 0.32), rgba(103, 215, 199, 0.12));
+  box-shadow: 0 16px 34px rgba(32, 112, 101, 0.24);
+}
+
+.button--quiet {
+  border-color: rgba(255, 179, 107, 0.2);
+  background: rgba(255, 179, 107, 0.08);
+  color: #ffe3c7;
+}
+
 .hero__pill--status {
   border-color: rgba(141, 164, 255, 0.26);
   background: rgba(141, 164, 255, 0.08);
@@ -252,6 +264,59 @@ select {
   margin: 0 auto 24px;
   display: grid;
   gap: 18px;
+}
+
+.stage-panel {
+  padding: 24px;
+  border-color: rgba(103, 215, 199, 0.2);
+  background:
+    radial-gradient(circle at top right, rgba(103, 215, 199, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(18, 31, 44, 0.96), rgba(12, 17, 30, 0.92));
+}
+
+.stage-panel h2 {
+  margin: 6px 0 0;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.stage-panel__lead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.stage-panel__lead p {
+  margin: 10px 0 0;
+  max-width: 62ch;
+}
+
+.stage-panel__badges,
+.stage-panel__action-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.stage-panel__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.stage-panel__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .section-toolbar--stacked {
@@ -349,6 +414,8 @@ select {
 
 .tray--instruction {
   z-index: 26;
+  border-color: rgba(141, 164, 255, 0.12);
+  background: rgba(8, 13, 24, 0.94);
 }
 
 .tray--pinned {
@@ -378,6 +445,14 @@ select {
   gap: 22px;
 }
 
+.dashboard-shell--novice .dashboard-section:not(.dashboard-section--overview) .dashboard-section__heading .muted {
+  color: rgba(174, 185, 218, 0.76);
+}
+
+.dashboard-shell--expert .dashboard-section {
+  gap: 14px;
+}
+
 .dashboard-section {
   display: grid;
   gap: 12px;
@@ -399,6 +474,10 @@ select {
 
 .dashboard-section__heading h3 {
   margin: 0;
+}
+
+.dashboard-section--overview .panel:first-child {
+  border-color: rgba(103, 215, 199, 0.22);
 }
 
 .dashboard-section--overview .dashboard-section__panels,
@@ -867,6 +946,10 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .stage-panel__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .panel--users,
   .panel--model,
   .panel--pseudo {
@@ -931,6 +1014,15 @@ select {
   .rating-row__cells {
     grid-template-columns: 1fr;
   }
+
+  .stage-panel__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-panel__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 /* Analyst console rework */
@@ -960,6 +1052,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  justify-content: flex-end;
 }
 
 .summary-grid {

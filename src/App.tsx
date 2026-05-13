@@ -268,6 +268,7 @@ export default function App() {
   const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(false);
   const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(false);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
+  const isNoviceMode = guidanceMode === 'novice';
 
   const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
 
@@ -291,7 +292,18 @@ export default function App() {
   }, [initialSimulationState]);
 
   useEffect(() => {
-    setGuidanceOpen(guidanceMode === 'novice');
+    if (guidanceMode === 'novice') {
+      setGuidanceOpen(false);
+      setDynamicSettingsCollapsed(true);
+      setDrilldownTargetsCollapsed(true);
+      setShowDebug(false);
+      return;
+    }
+
+    setGuidanceOpen(false);
+    setDynamicSettingsCollapsed(false);
+    setDrilldownTargetsCollapsed(false);
+    setShowDebug(true);
   }, [guidanceMode]);
 
   useEffect(() => {
@@ -985,10 +997,10 @@ export default function App() {
         </div>
         <div className="summary-header__actions">
           <button type="button" className="button button--ghost" onClick={() => setDrawerState(selectedUser ? { type: 'user', id: selectedUser.id } : null)}>
-            Open detail
+            Open user detail
           </button>
           <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
-            Select user
+            Choose user
           </button>
         </div>
       </div>
@@ -1112,10 +1124,10 @@ export default function App() {
               )
             }
           >
-            Open top recommendation
+            Open top route
           </button>
           <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
-            Select user
+            Choose user
           </button>
         </div>
       </div>
@@ -1171,10 +1183,10 @@ export default function App() {
         </div>
         <div className="summary-header__actions">
           <button type="button" className="button button--ghost" onClick={() => setDrawerState({ type: 'island', id: selectedIsland.id })}>
-            Open detail
+            Open island detail
           </button>
           <button type="button" className="button button--ghost" onClick={() => setModalKind('island')}>
-            Select island
+            Choose island
           </button>
         </div>
       </div>
@@ -1665,8 +1677,8 @@ export default function App() {
   const pseudoConsistentRows = dataset.pseudoCohortAnalysis.topConsistentPseudoCohorts;
   const pseudoInconsistentRows = dataset.pseudoCohortAnalysis.topInconsistentPseudoCohorts;
 
-  const openSelectionButton = (kind: Exclude<SelectionModalKind, null>, label: string) => (
-    <button type="button" className="button" onClick={() => setModalKind(kind)}>
+  const openSelectionButton = (kind: Exclude<SelectionModalKind, null>, label: string, className = 'button button--ghost') => (
+    <button type="button" className={className} onClick={() => setModalKind(kind)}>
       {label}
     </button>
   );
@@ -1680,6 +1692,37 @@ export default function App() {
 
   const randomizeSeed = () => {
     setSeed(Math.floor(Math.random() * 1_000_000_000));
+  };
+
+  const takeSingleTurn = () => {
+    setSimulationState((state) => advanceCurrentTurn(state));
+  };
+
+  const takeBatchTurns = () => {
+    setSimulationState((state) => {
+      let next = state;
+
+      for (let index = 0; index < turnsToRun; index += 1) {
+        next = advanceCurrentTurn(next);
+      }
+
+      return next;
+    });
+  };
+
+  const resetSimulation = () => {
+    resetControlPolicy();
+    const defaultBootstrap = buildDataset(INITIAL_CONFIG.seed, INITIAL_CONFIG.numUsers, INITIAL_CONFIG.numIslands);
+    setSimulationState(
+      createInitialSimulationState({
+        seed: INITIAL_CONFIG.seed,
+        allTags: defaultBootstrap.allTags,
+        latentUsers: defaultBootstrap.users,
+        cohorts: defaultBootstrap.cohorts,
+        islands: defaultBootstrap.islands,
+        initialRatingsPerUser: 4
+      })
+    );
   };
 
   const resetControlPolicy = () => {
@@ -1722,6 +1765,15 @@ export default function App() {
   const advanceCurrentTurn = (state: SimulationState) => {
     return advancePolicyTurn(state, currentTurnPolicy);
   };
+
+  const stageTopRecommendation = selectedUserRecommendations[0] ?? null;
+  const participationDisplay =
+    participationModel === 'fixed-count'
+      ? `${participatingUsersPerTurn} users`
+      : `${Math.round(participationChance * 100)}% chance`;
+  const routingSurfaceLabel = stageTopRecommendation
+    ? dataset.islands.find((island) => island.id === stageTopRecommendation.islandId)?.label ?? stageTopRecommendation.islandId
+    : 'No routed island';
 
   const dashboardSections: Record<DashboardPanelGroupKey, { title: string; panels: JSX.Element[] }> = {
     overview: {
@@ -1798,11 +1850,11 @@ export default function App() {
     recovery: {
       title: 'Recovery',
       panels: [
-        <Panel key="reviewer-archetype" title="Reviewer Archetype Recovery" className="panel--wide">
-          {reviewerArchetypeSummary}
-        </Panel>,
         <Panel key="selected-user" title="Selected User Summary">
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
+        </Panel>,
+        <Panel key="reviewer-archetype" title="Reviewer Archetype Recovery" className="panel--wide">
+          {reviewerArchetypeSummary}
         </Panel>
       ]
     },
@@ -1815,50 +1867,54 @@ export default function App() {
         <Panel key="selected-island" title="Selected Island Summary">
           {selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />}
         </Panel>,
-        <Panel key="model-explanation" title="Model Explanation" className="panel--wide">
-          {modelExplanation}
-        </Panel>,
-        <Panel key="island-comparison" title="Island Comparison" className="panel--wide">
-          {islandComparison}
-        </Panel>,
-        <Panel key="pseudo-cohorts" title="Pseudo-Cohort Reports" className="panel--wide">
-          <div className="section-toolbar">
-            <button type="button" className="button button--ghost" onClick={() => setModalKind('pseudo')}>
-              Select report row
-            </button>
-          </div>
-          <div className="report-section">
-            <div className="report-section__column">
-              <div className="section-heading">
-                <h3>Top Consistent Pseudo-Cohorts</h3>
-                <p>High agreement, meaningful evidence, and low known-cohort fit.</p>
-              </div>
-              <ReportTable
-                columns={pseudoConsistentColumns}
-                rows={pseudoConsistentRows}
-                getRowKey={(row) => row.key}
-                onRowClick={(row) => setDrawerState({ type: 'pseudo', key: row.key })}
-                emptyTitle="No consistent pseudo-cohorts"
-                emptyDescription="Increase user count or vary the generator seed."
-              />
-            </div>
+        ...(isNoviceMode
+          ? []
+          : [
+              <Panel key="model-explanation" title="Model Explanation" className="panel--wide">
+                {modelExplanation}
+              </Panel>,
+              <Panel key="island-comparison" title="Island Comparison" className="panel--wide">
+                {islandComparison}
+              </Panel>,
+              <Panel key="pseudo-cohorts" title="Pseudo-Cohort Reports" className="panel--wide">
+                <div className="section-toolbar">
+                  <button type="button" className="button button--ghost" onClick={() => setModalKind('pseudo')}>
+                    Choose report row
+                  </button>
+                </div>
+                <div className="report-section">
+                  <div className="report-section__column">
+                    <div className="section-heading">
+                      <h3>Top Consistent Pseudo-Cohorts</h3>
+                      <p>High agreement, meaningful evidence, and low known-cohort fit.</p>
+                    </div>
+                    <ReportTable
+                      columns={pseudoConsistentColumns}
+                      rows={pseudoConsistentRows}
+                      getRowKey={(row) => row.key}
+                      onRowClick={(row) => setDrawerState({ type: 'pseudo', key: row.key })}
+                      emptyTitle="No consistent pseudo-cohorts"
+                      emptyDescription="Increase user count or vary the generator seed."
+                    />
+                  </div>
 
-            <div className="report-section__column">
-              <div className="section-heading">
-                <h3>Top Inconsistent Pseudo-Cohorts</h3>
-                <p>Tag combinations whose members do not rate coherently.</p>
-              </div>
-              <ReportTable
-                columns={pseudoInconsistentColumns}
-                rows={pseudoInconsistentRows}
-                getRowKey={(row) => row.key}
-                onRowClick={(row) => setDrawerState({ type: 'pseudo', key: row.key })}
-                emptyTitle="No inconsistent pseudo-cohorts"
-                emptyDescription="Increase user count or vary the generator seed."
-              />
-            </div>
-          </div>
-        </Panel>
+                  <div className="report-section__column">
+                    <div className="section-heading">
+                      <h3>Top Inconsistent Pseudo-Cohorts</h3>
+                      <p>Tag combinations whose members do not rate coherently.</p>
+                    </div>
+                    <ReportTable
+                      columns={pseudoInconsistentColumns}
+                      rows={pseudoInconsistentRows}
+                      getRowKey={(row) => row.key}
+                      onRowClick={(row) => setDrawerState({ type: 'pseudo', key: row.key })}
+                      emptyTitle="No inconsistent pseudo-cohorts"
+                      emptyDescription="Increase user count or vary the generator seed."
+                    />
+                  </div>
+                </div>
+              </Panel>
+            ])
       ]
     },
     debug: {
@@ -1930,7 +1986,7 @@ export default function App() {
         ? `Pinned island: ${selectedIsland?.label ?? 'none'}`
         : pinnedDrilldownKind === 'cohort'
           ? `Pinned cohort: ${selectedComparisonLabel}`
-          : 'Pinned drilldown';
+          : 'Pinned reference';
 
   const pinnedTraySpace = pinnedTrayCollapsed ? 92 : 456;
   const instructionTraySpace = showInstructionTray ? (guidanceOpen ? 456 : 92) : 0;
@@ -1952,12 +2008,12 @@ export default function App() {
         <div className="hero__title-row">
           <h1>Wayfarer</h1>
           <button type="button" className="button button--ghost hero__about-button" onClick={() => setShowAbout(true)}>
-            About
+            Open About
           </button>
         </div>
         <p className="subtitle">
-          Analyst-first dashboard for inspecting synthetic cohorts, user signal, island fit, and pseudo-cohort reports
-          at scale.
+          Browser-based analyst console for walking through synthetic cohort recovery, guided routing, and island-fit
+          evidence on a widescreen desktop canvas.
         </p>
       </header>
 
@@ -1982,7 +2038,7 @@ export default function App() {
             </button>
           </div>
           <label className="control control--inline">
-            <span>Dashboard ordering</span>
+            <span>Read path</span>
             <select value={dashboardOrdering} onChange={(event) => setDashboardOrdering(event.target.value as DashboardOrderingPreset)}>
               {Object.entries(DASHBOARD_ORDERING_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>
@@ -1992,7 +2048,7 @@ export default function App() {
             </select>
           </label>
           <label className="control control--inline control--wide">
-            <span>Use Case / Story</span>
+            <span>Demo narrative</span>
             <select value={useCaseId} onChange={(event) => setUseCaseId(event.target.value as UseCaseStoryId)}>
               {USE_CASE_STORIES.map((story) => (
                 <option key={story.id} value={story.id}>
@@ -2003,7 +2059,7 @@ export default function App() {
           </label>
         </div>
         <div className="topbar__right">
-          <Badge tone="accent">Story: {selectedStory.title}</Badge>
+          <Badge tone="accent">Narrative: {selectedStory.title}</Badge>
           <Badge tone="neutral">Mode: {guidanceMode}</Badge>
           <Badge tone="neutral">Ordering: {DASHBOARD_ORDERING_LABELS[dashboardOrdering]}</Badge>
           <Badge tone="neutral">Turn mode: {TURN_MODE_LABELS[turnMode]}</Badge>
@@ -2014,6 +2070,56 @@ export default function App() {
       </section>
 
       <section className="top-stack" aria-label="Controls and drilldown">
+        <section className="panel stage-panel" aria-label="Primary workflow">
+          <div className="stage-panel__lead">
+            <div>
+              <p className="eyebrow">Primary workflow</p>
+              <h2>Inspect the current state, then advance one turn.</h2>
+              <p className="muted">
+                Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a
+                time.
+              </p>
+            </div>
+            <div className="stage-panel__badges">
+              <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+              <Badge tone="neutral">{visibleTurnModeLabel}</Badge>
+              <Badge tone="neutral">{PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+            </div>
+          </div>
+          <div className="stage-panel__metrics">
+            <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
+            <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
+            <MetricCard
+              label="Top routed island"
+              value={routingSurfaceLabel}
+              helper="Highest available guided route for the current user."
+              tone="success"
+            />
+            <MetricCard
+              label="Participating users / turn"
+              value={participationDisplay}
+              helper="Turn policy cap or chance applied before stream filtering."
+            />
+          </div>
+          <div className="stage-panel__actions">
+            <div className="stage-panel__action-group">
+              <button type="button" className="button button--primary" onClick={takeSingleTurn}>
+                Take 1 Turn
+              </button>
+              <button type="button" className="button" onClick={takeBatchTurns}>
+                Take {turnsToRun} Turns
+              </button>
+            </div>
+            <div className="stage-panel__action-group">
+              {openSelectionButton('user', 'Choose user')}
+              {openSelectionButton('island', 'Choose island')}
+              <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)}>
+                Open About
+              </button>
+            </div>
+          </div>
+        </section>
+
         <CollapsiblePanel
           title="Simulation setup"
           collapsed={controlsCollapsed}
@@ -2094,47 +2200,10 @@ export default function App() {
             </label>
           </div>
           <div className="control-strip__actions">
-            <button type="button" className="button" onClick={randomizeSeed}>
+            <button type="button" className="button button--ghost" onClick={randomizeSeed}>
               Regenerate dataset
             </button>
-            <button type="button" className="button" onClick={() => setSimulationState((state) => advanceCurrentTurn(state))}>
-              Take 1 Turn
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() =>
-                setSimulationState((state) => {
-                  let next = state;
-
-                  for (let index = 0; index < turnsToRun; index += 1) {
-                    next = advanceCurrentTurn(next);
-                  }
-
-                  return next;
-                })
-              }
-            >
-              Take X Turns
-            </button>
-            <button
-              type="button"
-              className="button button--ghost"
-              onClick={() => {
-                resetControlPolicy();
-                const defaultBootstrap = buildDataset(INITIAL_CONFIG.seed, INITIAL_CONFIG.numUsers, INITIAL_CONFIG.numIslands);
-                setSimulationState(
-                  createInitialSimulationState({
-                    seed: INITIAL_CONFIG.seed,
-                    allTags: defaultBootstrap.allTags,
-                    latentUsers: defaultBootstrap.users,
-                    cohorts: defaultBootstrap.cohorts,
-                    islands: defaultBootstrap.islands,
-                    initialRatingsPerUser: 4
-                  })
-                );
-              }}
-            >
+            <button type="button" className="button button--quiet" onClick={resetSimulation}>
               Reset Simulation
             </button>
             <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
@@ -2344,15 +2413,15 @@ export default function App() {
               Pin a user, island, or cohort here for quick reference while you inspect the reports below.
             </p>
             <div className="section-toolbar__buttons">
-              {openSelectionButton('user', 'Select user')}
-              {openSelectionButton('island', 'Select island')}
-              {openSelectionButton('cohort', 'Select cohort')}
+              {openSelectionButton('user', 'Choose user')}
+              {openSelectionButton('island', 'Choose island')}
+              {openSelectionButton('cohort', 'Choose cohort')}
             </div>
           </div>
         </CollapsiblePanel>
       </section>
 
-      <section className="dashboard-shell" aria-label="Analyst dashboard">
+      <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
         {visibleDashboardSections.map((sectionKey) => {
           if (sectionKey === 'debug' && !showDebug) {
             return null;
@@ -2383,7 +2452,7 @@ export default function App() {
       {showInstructionTray ? (
         <Tray
           collapsed={!guidanceOpen}
-          title="Instruction panel"
+          title="Curator notes"
           className="tray--instruction tray--left"
           style={{
             top: '140px',
@@ -2391,13 +2460,13 @@ export default function App() {
             right: 'auto',
             height: 'calc(100vh - 158px)'
           }}
-          toggleCollapsedLabel="Expand guidance"
-          toggleExpandedLabel="Collapse guidance"
+          toggleCollapsedLabel="Open curator notes"
+          toggleExpandedLabel="Collapse curator notes"
           onToggle={() => setGuidanceOpen((value) => !value)}
         >
           <div className="summary-header">
             <div>
-              <p className="eyebrow">Use case</p>
+              <p className="eyebrow">Demo narrative</p>
               <h3>{selectedStory.title}</h3>
             </div>
             <div className="summary-header__actions">
@@ -2410,7 +2479,7 @@ export default function App() {
               <p>{selectedStory.goal}</p>
             </section>
             <section className="detail-block">
-              <h4>Steps</h4>
+              <h4>Suggested read path</h4>
               <ol className="instruction-list">
                 {selectedStory.steps.map((step) => (
                   <li key={step}>{step}</li>
@@ -2437,12 +2506,14 @@ export default function App() {
         collapsed={pinnedTrayCollapsed}
         title={pinnedDrilldownTitle}
         className="tray--pinned"
+        toggleCollapsedLabel="Open pinned drilldown"
+        toggleExpandedLabel="Collapse pinned drilldown"
         onToggle={() => setPinnedTrayCollapsed((value) => !value)}
         onSecondaryAction={() => {
           setPinnedDrilldownKind(null);
           setPinnedTrayCollapsed(true);
         }}
-        secondaryActionLabel="Clear"
+        secondaryActionLabel="Clear pinned drilldown"
       >
         {pinnedDrilldownContent ? (
           pinnedDrilldownContent
