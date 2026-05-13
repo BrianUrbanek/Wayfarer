@@ -15,6 +15,7 @@ The harness is a measurement layer, not a model redesign. It does not change rec
 
 ```powershell
 npm run analyze:runs
+npm run analyze:open
 ```
 
 Default behavior:
@@ -79,3 +80,5 @@ npm run analyze:runs
 ```
 
 The final command should leave an artifact path under `artifacts/experiments/` that you can inspect directly.
+
+`npm run analyze:open` opens the most recent `experiment-suite.md` from that directory in the system default viewer. You can also point it at a specific report path with `-- --path ...` if needed.

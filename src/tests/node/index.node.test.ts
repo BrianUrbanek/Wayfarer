@@ -12,3 +12,4 @@ import './dashboardGuidance.node.test.js';
 import './dice.node.test.js';
 import './turnPolicy.node.test.js';
 import './experimentHarness.node.test.js';
+import './experimentOpen.node.test.js';
