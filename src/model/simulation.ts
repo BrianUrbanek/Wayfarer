@@ -74,6 +74,17 @@ export interface SimulationState {
   turnHistory: SimulationTurnSummary[];
 }
 
+export interface SerializedSimulationState {
+  seed: number;
+  currentTurn: number;
+  allTags: TagId[];
+  latentUsers: User[];
+  cohorts: CohortAnchor[];
+  islands: Island[];
+  ratingEvents: RatingEvent[];
+  turnHistory: SimulationTurnSummary[];
+}
+
 export interface SimulationBootstrapConfig {
   seed: number;
   allTags: TagId[];
@@ -346,6 +357,52 @@ function recomputeState(
       newlyRatedIslandIds: summary.newlyRatedIslandIds.slice()
     }))
   };
+}
+
+export function serializeSimulationState(state: SimulationState): SerializedSimulationState {
+  return {
+    seed: state.seed,
+    currentTurn: state.currentTurn,
+    allTags: state.allTags.slice(),
+    latentUsers: state.latentUsers.map((user) => ({
+      ...user,
+      declaredTags: user.declaredTags.slice(),
+      ratings: { ...user.ratings }
+    })),
+    cohorts: state.cohorts.map((cohort) => ({
+      ...cohort,
+      tags: cohort.tags.slice(),
+      ratings: { ...cohort.ratings }
+    })),
+    islands: state.islands.map((island) => ({
+      ...island,
+      hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined
+    })),
+    ratingEvents: state.ratingEvents.map((event) => ({
+      ...event,
+      raterSignalWeights: { ...event.raterSignalWeights }
+    })),
+    turnHistory: state.turnHistory.map((summary) => ({
+      ...summary,
+      participatingUserIds: summary.participatingUserIds.slice(),
+      newlyRatedIslandIds: summary.newlyRatedIslandIds.slice(),
+      routedIslandIds: summary.routedIslandIds.slice(),
+      recommendationKinds: { ...summary.recommendationKinds },
+      diagnosisCounts: { ...summary.diagnosisCounts }
+    }))
+  };
+}
+
+export function hydrateSimulationState(snapshot: SerializedSimulationState): SimulationState {
+  return recomputeState(
+    snapshot.seed,
+    snapshot.latentUsers,
+    snapshot.cohorts,
+    snapshot.islands,
+    snapshot.ratingEvents,
+    snapshot.turnHistory,
+    snapshot.allTags
+  );
 }
 
 export function createInitialSimulationState(config: SimulationBootstrapConfig): SimulationState {

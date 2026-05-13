@@ -12,6 +12,7 @@ import { SelectionModal, type SelectionOption } from './ui/components/SelectionM
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
+import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
   DASHBOARD_ORDERING_LABELS,
@@ -46,14 +47,30 @@ import { recommendIslandsForUser, type IslandRecommendation } from './model/reco
 import {
   advancePolicyTurn,
   createInitialSimulationState,
+  hydrateSimulationState,
   type SimulationState
 } from './model/simulation';
+import {
+  exportSavedWayfarerScenario,
+  parseSavedWayfarerScenario,
+  type SavedScenarioGeneratorConfig,
+  type SavedWayfarerScenarioV1
+} from './model/scenarioPersistence';
 import type { CohortAnchor, Island, User } from './model/types';
 
 const INITIAL_CONFIG = {
   seed: 48291,
   numUsers: 48,
   numIslands: 18
+};
+
+const GENERATOR_CONFIG: SavedScenarioGeneratorConfig = {
+  seed: INITIAL_CONFIG.seed,
+  numUsers: INITIAL_CONFIG.numUsers,
+  numIslands: INITIAL_CONFIG.numIslands,
+  bootstrapRatingsPerUser: 4,
+  tagAlignmentDistribution: { kind: 'uniform', min: 2, max: 10 },
+  ratingAlignmentDistribution: { kind: 'uniform', min: 2, max: 10 }
 };
 
 type SelectionModalKind = 'user' | 'island' | 'cohort' | 'pseudo' | null;
@@ -76,8 +93,8 @@ function buildDataset(seed: number, numUsers: number, numIslands: number) {
     numIslands,
     cohorts: createDefaultCohorts(),
     allTags: DEFAULT_TAGS,
-    tagAlignmentDistribution: { kind: 'uniform', min: 2, max: 10 },
-    ratingAlignmentDistribution: { kind: 'uniform', min: 2, max: 10 }
+    tagAlignmentDistribution: GENERATOR_CONFIG.tagAlignmentDistribution,
+    ratingAlignmentDistribution: GENERATOR_CONFIG.ratingAlignmentDistribution
   });
 }
 
@@ -268,6 +285,10 @@ export default function App() {
   const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(false);
   const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(false);
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
+  const [importedScenario, setImportedScenario] = useState<SavedWayfarerScenarioV1 | null>(null);
+  const [scenarioMessage, setScenarioMessage] = useState<string>('');
+  const [scenarioError, setScenarioError] = useState<string>('');
+  const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const isNoviceMode = guidanceMode === 'novice';
 
   const latentDataset = useMemo(() => buildDataset(seed, numUsers, numIslands), [seed, numUsers, numIslands]);
@@ -288,8 +309,13 @@ export default function App() {
   const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
 
   useEffect(() => {
+    if (importedScenario) {
+      setSimulationState(hydrateSimulationState(importedScenario.simulationState));
+      return;
+    }
+
     setSimulationState(initialSimulationState);
-  }, [initialSimulationState]);
+  }, [importedScenario, initialSimulationState]);
 
   useEffect(() => {
     if (guidanceMode === 'novice') {
@@ -1691,7 +1717,87 @@ export default function App() {
   );
 
   const randomizeSeed = () => {
+    setImportedScenario(null);
+    setScenarioMessage('');
+    setScenarioError('');
     setSeed(Math.floor(Math.random() * 1_000_000_000));
+  };
+
+  const exportCurrentSimulationJson = () => {
+    const savedScenario = exportSavedWayfarerScenario({
+      label: `Wayfarer turn ${simulationState.currentTurn}`,
+      createdAt: new Date().toISOString(),
+      generatorConfig: {
+        ...GENERATOR_CONFIG,
+        seed,
+        numUsers,
+        numIslands,
+        bootstrapRatingsPerUser
+      },
+    turnPolicy: currentTurnPolicy,
+    turnsToRun,
+    simulationState
+  });
+    const blob = new Blob([`${JSON.stringify(savedScenario, null, 2)}\n`], { type: 'application/json' });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const fileName = `wayfarer-turn-${String(simulationState.currentTurn).padStart(3, '0')}.json`;
+
+    link.href = objectUrl;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+    setScenarioError('');
+    setScenarioMessage(`Exported ${fileName}`);
+  };
+
+  const importScenarioFromFile = async (file: File) => {
+    const result = parseSavedWayfarerScenario(await file.text());
+
+    if (!result.ok) {
+      setScenarioError(result.error);
+      setScenarioMessage('');
+      return;
+    }
+
+    const { scenario, restoredState } = result;
+    setImportedScenario(scenario);
+    setSeed(scenario.generatorConfig.seed);
+    setNumUsers(scenario.generatorConfig.numUsers);
+    setNumIslands(scenario.generatorConfig.numIslands);
+    setBootstrapRatingsPerUser(scenario.generatorConfig.bootstrapRatingsPerUser);
+    setTurnMode(scenario.turnPolicy.turnMode);
+    setParticipationModel(scenario.turnPolicy.participationModel);
+    setParticipatingUsersPerTurn(scenario.turnPolicy.participatingUsersPerTurn);
+    setParticipationChance(scenario.turnPolicy.participationChance);
+    setOrganicRatingCountModel(scenario.turnPolicy.organicRatingCountModel);
+    setOrganicRatingsPerUser(scenario.turnPolicy.organicRatingsPerUser);
+    setOrganicRatingDice(scenario.turnPolicy.organicRatingDice);
+    setGuidedRatingCountModel(scenario.turnPolicy.guidedRatingCountModel);
+    setGuidedRecommendationsPerUser(scenario.turnPolicy.guidedRecommendationsPerUser);
+    setGuidedRecommendationDice(scenario.turnPolicy.guidedRecommendationDice);
+    setRoutingRiskProfile(scenario.turnPolicy.routingRiskProfile);
+    setCustomExplorationWeight(scenario.turnPolicy.customExplorationWeight);
+    setCustomMinimumPredictedFit(scenario.turnPolicy.customMinimumPredictedFit);
+    setTurnsToRun(scenario.turnsToRun);
+    setSimulationState(restoredState);
+    setScenarioError('');
+    setScenarioMessage(`Imported ${scenario.label}`);
+  };
+
+  const handleScenarioFileChange = async (event: { target: HTMLInputElement; currentTarget: HTMLInputElement }) => {
+    const file = event.target.files?.[0];
+    event.currentTarget.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    await importScenarioFromFile(file);
+  };
+
+  const openScenarioFilePicker = () => {
+    scenarioFileInputRef.current?.click();
   };
 
   const takeSingleTurn = () => {
@@ -1711,6 +1817,9 @@ export default function App() {
   };
 
   const resetSimulation = () => {
+    setImportedScenario(null);
+    setScenarioMessage('');
+    setScenarioError('');
     resetControlPolicy();
     const defaultBootstrap = buildDataset(INITIAL_CONFIG.seed, INITIAL_CONFIG.numUsers, INITIAL_CONFIG.numIslands);
     setSimulationState(
@@ -2209,7 +2318,26 @@ export default function App() {
             <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
               {showDebug ? 'Hide debug' : 'Show debug'}
             </button>
+            <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson}>
+              Export Current Simulation JSON
+            </button>
+            <button type="button" className="button button--ghost" onClick={openScenarioFilePicker}>
+              Import Scenario JSON
+            </button>
           </div>
+          <input
+            ref={scenarioFileInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleScenarioFileChange}
+            style={{ display: 'none' }}
+          />
+          {(scenarioMessage || scenarioError) && (
+            <div className="control-strip__notes">
+              {scenarioMessage ? <p className="muted">{scenarioMessage}</p> : null}
+              {scenarioError ? <p className="text-danger">{scenarioError}</p> : null}
+            </div>
+          )}
         </CollapsiblePanel>
 
         <CollapsiblePanel

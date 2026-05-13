@@ -34,6 +34,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Open About');
     expect(html).toContain('Hidden generator archetype');
     expect(html).toContain('Take 1 Turn');
+    expect(html).toContain('Export Current Simulation JSON');
+    expect(html).toContain('Import Scenario JSON');
     expect(html).toContain('Turns to Run');
     expect(html).toContain('First-time walkthrough');
     expect(html).not.toContain('Model Explanation');

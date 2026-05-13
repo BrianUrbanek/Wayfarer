@@ -21,6 +21,7 @@ The current UI is a browser analyst console for inspecting sparse ratings, cohor
 - [Algorithm Implementation Spec](docs/algorithm-implementation-spec.md)
 - [Wayfarer Next-Generation Model Spec](docs/wayfarer-next-generation-model-spec.md)
 - [Experiment Harness](docs/experiment-harness.md)
+- Saved scenario JSON is local-only reproducibility data for export/import during development.
 
 ## Live demo
 
@@ -37,6 +38,7 @@ The current UI is a browser analyst console for inspecting sparse ratings, cohor
 - Keep changes narrow and issue-bounded unless the task explicitly asks for broader cleanup.
 - For docs work and Node-safe model checks, run `npm run test:node` and `.\node_modules\.bin\tsc.cmd -b`.
 - For characterization runs, use `npm run analyze:runs` and inspect the generated JSON/Markdown output under `artifacts/experiments/`.
+- For local scenario reproduction, use the export/import controls in the simulation setup and keep the saved JSON files outside product content.
 - For wider behavior changes, also run the broader local checks you actually touched, such as `npm run test`, `npm run build`, or `npm run dev`.
 - Do not report a command as passing unless you actually ran it in this workspace.
 
