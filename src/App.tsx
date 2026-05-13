@@ -302,12 +302,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [showDebug, setShowDebug] = useState(showDebugInitial);
   const [showAbout, setShowAbout] = useState(false);
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
-  const [guidanceOpen, setGuidanceOpen] = useState(true);
+  const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
   const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
-  const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(true);
+  const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
   const [controlsCollapsed, setControlsCollapsed] = useState(false);
   const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(initialGuidanceMode === 'novice');
   const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(initialGuidanceMode === 'novice');
@@ -347,9 +347,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
   useEffect(() => {
     if (guidanceMode === 'novice') {
-      setGuidanceOpen(false);
+      setGuidanceOpen(true);
       setDynamicSettingsCollapsed(true);
       setDrilldownTargetsCollapsed(true);
+      setPinnedTrayCollapsed(false);
       setShowDebug(false);
       return;
     }
@@ -357,6 +358,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setGuidanceOpen(false);
     setDynamicSettingsCollapsed(false);
     setDrilldownTargetsCollapsed(false);
+    setPinnedTrayCollapsed(true);
     setShowDebug(true);
   }, [guidanceMode]);
 
@@ -2290,8 +2292,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </button>
         </div>
         <p className="subtitle">
-          Browser-based analyst console for walking through synthetic cohort recovery, guided routing, and island-fit
-          evidence on a widescreen desktop canvas.
+          Browser-based analyst console for cohort recovery, guided routing, and island-fit evidence on a widescreen
+          desktop canvas.
         </p>
       </header>
 
@@ -2315,6 +2317,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               Expert
             </button>
           </div>
+          <p className="topbar__mode-note">
+            {isNoviceMode
+              ? 'Novice keeps the instructional rails open and the raw controls hidden.'
+              : 'Expert exposes the resolved controls so you can inspect and edit the preset directly.'}
+          </p>
           <label className="control control--inline">
             <span>Read path</span>
             <select value={dashboardOrdering} onChange={(event) => setDashboardOrdering(event.target.value as DashboardOrderingPreset)}>
@@ -2355,52 +2362,48 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           description="Named scenario presets and stable settings for the simulation world."
         >
           <div className="stack">
-            <div className="control-strip__fields control-strip__fields--preset">
-              <label className="control">
-                {labeledControl(
-                  'Scenario preset',
-                  'Curated scenario presets coordinate seed-data generation and turn policy into named experimental conditions.'
-                )}
-                <select
-                  value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
-                  onChange={(event) => {
-                    const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
-                    if (nextPresetId !== 'custom') {
-                      applyScenarioPresetSelection(nextPresetId);
-                    }
-                  }}
-                >
-                  <option value="custom" disabled>
-                    Custom / imported
-                  </option>
-                  {SCENARIO_PRESET_OPTIONS.map((preset) => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.label}
+            <div className="control-strip__preset">
+              <div className="control-strip__preset-main">
+                <label className="control control--preset">
+                  <span className="control__label-row">
+                    <span>Scenario preset</span>
+                  </span>
+                  <select
+                    value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
+                    onChange={(event) => {
+                      const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
+                      if (nextPresetId !== 'custom') {
+                        applyScenarioPresetSelection(nextPresetId);
+                      }
+                    }}
+                  >
+                    <option value="custom" disabled>
+                      Custom / imported
                     </option>
-                  ))}
-                </select>
-              </label>
-              <div className="control control--wide">
-                <span className="control__label-row">
-                  <span>What this is good for</span>
-                  <InfoTip
-                    label="What this is good for help"
-                    text="Use the preset description as the short story of why this scenario exists and what kind of inspection it is good for."
-                  />
-                </span>
-                <p>{scenarioPresetDisplay?.goodFor ?? 'Custom / imported scenario with no named preset match.'}</p>
-                <p className="muted">
-                  {scenarioPresetDisplay?.description ??
-                    'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
-                </p>
-                {scenarioPresetSourceNote ? <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
+                    {SCENARIO_PRESET_OPTIONS.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="control-strip__preset-frame">
+                  <div className="control-strip__preset-frame-header">
+                    <span className="control__label-row">
+                      <span>Preset details</span>
+                    </span>
+                  </div>
+                  <div className="control-strip__preset-copy">
+                    <p>{scenarioPresetDisplay?.goodFor ?? 'Custom / imported scenario with no named preset match.'}</p>
+                    <p className="muted">
+                      {scenarioPresetDisplay?.description ??
+                        'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
+                    </p>
+                    {scenarioPresetSourceNote ? <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
+                  </div>
+                </div>
               </div>
             </div>
-            <p className="muted">
-              {isNoviceMode
-                ? 'Novice mode keeps the preset and the setup summary visible while hiding the raw knobs.'
-                : 'Expert mode exposes the resolved controls so you can inspect and edit the preset directly.'}
-            </p>
             {!isNoviceMode ? (
               <>
                 <div className="control-strip__fields">
@@ -2510,21 +2513,36 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             ) : null}
           </div>
           <div className="control-strip__actions">
-            <button type="button" className="button button--ghost" onClick={randomizeSeed}>
-              Regenerate dataset
-            </button>
-            <button type="button" className="button button--quiet" onClick={resetSimulation}>
-              Reset Simulation
-            </button>
-            <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
-              {showDebug ? 'Hide debug' : 'Show debug'}
-            </button>
-            <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson}>
-              Export Current Simulation JSON
-            </button>
-            <button type="button" className="button button--ghost" onClick={openScenarioFilePicker}>
-              Import Scenario JSON
-            </button>
+            <div className="control-strip__subframe">
+              <div className="control-strip__subframe-heading">
+                <span className="control__label-row">
+                  <span className="eyebrow">Simulation JSON</span>
+                  <InfoTip
+                    label="Simulation JSON help"
+                    text="Save or reload the current resolved scenario and simulation state."
+                  />
+                </span>
+              </div>
+              <div className="control-strip__action-group control-strip__action-group--compact">
+                <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson}>
+                  Export
+                </button>
+                <button type="button" className="button button--ghost" onClick={openScenarioFilePicker}>
+                  Import
+                </button>
+              </div>
+            </div>
+            <div className="control-strip__action-group control-strip__action-group--secondary">
+              <button type="button" className="button button--ghost" onClick={randomizeSeed}>
+                Regenerate dataset
+              </button>
+              <button type="button" className="button button--quiet" onClick={resetSimulation}>
+                Reset Simulation
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
+                {showDebug ? 'Hide debug' : 'Show debug'}
+              </button>
+            </div>
           </div>
           <input
             ref={scenarioFileInputRef}
@@ -2831,7 +2849,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       {showInstructionTray ? (
         <Tray
           collapsed={!guidanceOpen}
-          title="Curator notes"
+          title={isNoviceMode ? 'Guided task journey' : 'Curator notes'}
           className="tray--instruction tray--left"
           style={{
             top: '140px',
@@ -2839,8 +2857,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             right: 'auto',
             height: 'calc(100vh - 158px)'
           }}
-          toggleCollapsedLabel="Open curator notes"
-          toggleExpandedLabel="Collapse curator notes"
+          toggleCollapsedLabel={isNoviceMode ? 'Open guided journey' : 'Open curator notes'}
+          toggleExpandedLabel={isNoviceMode ? 'Collapse guided journey' : 'Collapse curator notes'}
           onToggle={() => setGuidanceOpen((value) => !value)}
         >
           <div className="summary-header">

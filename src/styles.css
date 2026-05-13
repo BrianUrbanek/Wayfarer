@@ -223,6 +223,14 @@ select {
   justify-content: space-between;
 }
 
+.topbar__mode-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
 .topbar__mode {
   display: inline-flex;
   gap: 6px;
@@ -881,12 +889,26 @@ select {
   gap: 12px;
 }
 
+.collapsible-panel__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+}
+
 .collapsible-panel__header h2 {
   margin: 0;
   font-size: 0.92rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #f2f5ff;
+}
+
+.collapsible-panel__title-row p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .collapsible-panel__header p {
@@ -1048,11 +1070,104 @@ select {
   gap: 12px;
 }
 
+.control-strip__preset {
+  display: grid;
+  gap: 24px;
+}
+
+.control-strip__preset-main {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.control--preset {
+  gap: 8px;
+  max-width: 360px;
+}
+
+.control-strip__preset-frame {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(141, 164, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.control-strip__preset-frame-header {
+  display: grid;
+  gap: 4px;
+}
+
+.control-strip__preset-frame-header p {
+  margin: 0;
+}
+
+.control-strip__preset-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.control-strip__preset-copy p {
+  margin: 0;
+}
+
 .control-strip__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  gap: 18px 24px;
+  align-items: start;
+  margin-top: 14px;
+}
+
+.control-strip__action-group {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: flex-end;
+  align-items: center;
+}
+
+.control-strip__action-group--compact .button {
+  padding: 0.72rem 0.9rem;
+}
+
+.control-strip__action-group--secondary {
+  opacity: 0.94;
+  justify-self: stretch;
+  align-self: center;
+  width: 100%;
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: center;
+  gap: 10px 12px;
+}
+
+.control-strip__action-group--secondary .button {
+  width: 100%;
+}
+
+.control-strip__subframe {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 296px;
+  min-width: 268px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(141, 164, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  justify-self: center;
+}
+
+.control-strip__subframe-heading {
+  display: grid;
+}
+
+.control-strip__subframe .control-strip__action-group {
+  justify-content: center;
+  width: 100%;
 }
 
 .summary-grid {

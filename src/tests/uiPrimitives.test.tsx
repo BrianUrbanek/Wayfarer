@@ -66,8 +66,8 @@ describe('UI primitives', () => {
     expect(expanded).toContain('Panel content');
     expect(expanded).toContain('Collapse Simulation setup');
     expect(collapsed).toContain('Simulation setup');
+    expect(collapsed).toContain('Stable settings');
     expect(collapsed).toContain('Expand Simulation setup');
-    expect(collapsed).not.toContain('Stable settings');
     expect(collapsed).not.toContain('Panel content');
   });
 });

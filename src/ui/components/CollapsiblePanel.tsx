@@ -12,9 +12,9 @@ export function CollapsiblePanel({ title, collapsed, onToggle, className, descri
   return (
     <section className={`panel collapsible-panel${className ? ` ${className}` : ''}`}>
       <header className="collapsible-panel__header">
-        <div>
+        <div className="collapsible-panel__title-row">
           <h2>{title}</h2>
-          {!collapsed && description ? <p className="muted">{description}</p> : null}
+          {description ? <p className="muted">{description}</p> : null}
         </div>
         <button
           type="button"
