@@ -10,7 +10,8 @@
     "test": "vitest run --configLoader runner",
     "clean:node-tests": "node -e \"require('fs').rmSync('dist-node-tests',{recursive:true,force:true})\"",
     "build:node-tests": "tsc -p tsconfig.node-tests.json",
-    "test:node": "npm run clean:node-tests && npm run build:node-tests && node dist-node-tests/tests/node/index.node.test.js"
+    "test:node": "npm run clean:node-tests && npm run build:node-tests && node dist-node-tests/tests/node/index.node.test.js",
+    "analyze:runs": "npm run build:node-tests && node dist-node-tests/analysis/runExperiment.js"
   },
   "dependencies": {
     "react": "^18.3.1",

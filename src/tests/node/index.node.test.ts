@@ -11,3 +11,4 @@ import './reviewerArchetypes.node.test.js';
 import './dashboardGuidance.node.test.js';
 import './dice.node.test.js';
 import './turnPolicy.node.test.js';
+import './experimentHarness.node.test.js';

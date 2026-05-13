@@ -4,4 +4,5 @@ dist-node-tests
 coverage
 .vite
 .npm-cache
+artifacts
 *.tsbuildinfo
