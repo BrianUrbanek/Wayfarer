@@ -9,13 +9,48 @@ import {
 
 describe('dashboard guidance data', () => {
   it('exposes the expected story set', () => {
-    assert.ok(USE_CASE_STORIES.length >= 8);
+    assert.equal(USE_CASE_STORIES.length, 7);
     assert.equal(getUseCaseStory('first-time-walkthrough').title, 'First-time walkthrough');
     assert.equal(
-      getUseCaseStory('find-unexplained-high-signal-users').goal,
-      'Surface users whose behavior is predictive but not well explained by current cohorts.'
+      getUseCaseStory('inspect-cohort-local-signal').systemUseCase.title,
+      'Cohort-local rater signal'
     );
-    assert.equal(getUseCaseStory('compare-organic-vs-guided').title, 'Compare organic vs guided learning');
+    assert.equal(getUseCaseStory('compare-organic-guided-mixed').playerJourney.title, 'Three valid ways to discover content');
+  });
+
+  it('keeps paired narrative fields and avoids stale terminology', () => {
+    const allText = USE_CASE_STORIES.flatMap((story) => [
+      story.title,
+      story.systemUseCase.title,
+      story.systemUseCase.description,
+      story.systemUseCase.detail,
+      story.playerJourney.title,
+      story.playerJourney.description,
+      story.playerJourney.detail,
+      ...story.sharedSteps,
+      story.expectedSystemResult,
+      story.expectedPlayerResult,
+      ...story.failureSigns
+    ])
+      .join(' ')
+      .toLowerCase();
+
+    for (const story of USE_CASE_STORIES) {
+      assert.ok(story.systemUseCase.title);
+      assert.ok(story.systemUseCase.description);
+      assert.ok(story.systemUseCase.detail);
+      assert.ok(story.playerJourney.title);
+      assert.ok(story.playerJourney.description);
+      assert.ok(story.playerJourney.detail);
+      assert.ok(story.sharedSteps.length > 0);
+      assert.ok(story.expectedSystemResult);
+      assert.ok(story.expectedPlayerResult);
+      assert.ok(story.failureSigns.length > 0);
+    }
+
+    assert.ok(!allText.includes('passive'));
+    assert.ok(!allText.includes('active discovery'));
+    assert.ok(!allText.includes('tina-like detached predictor'));
   });
 
   it('keeps dashboard ordering explicit and user directed', () => {

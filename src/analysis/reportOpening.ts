@@ -1,5 +1,5 @@
 import { accessSync, constants, readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
 export type ExperimentReportTargetStatus = 'found' | 'missing';
@@ -49,6 +49,11 @@ function readDirectoryMtime(outputDirectory: string): number {
 }
 
 function compareCandidates(left: ExperimentReportCandidate, right: ExperimentReportCandidate): number {
+  const directoryComparison = basename(right.outputDirectory).localeCompare(basename(left.outputDirectory));
+  if (directoryComparison !== 0) {
+    return directoryComparison;
+  }
+
   if (right.mtimeMs !== left.mtimeMs) {
     return right.mtimeMs - left.mtimeMs;
   }

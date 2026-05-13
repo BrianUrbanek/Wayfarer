@@ -22,6 +22,7 @@ The current UI is a browser analyst console for inspecting sparse ratings, cohor
 - [Wayfarer Next-Generation Model Spec](docs/wayfarer-next-generation-model-spec.md)
 - [Experiment Harness](docs/experiment-harness.md)
 - Saved scenario JSON is local-only reproducibility data for export/import during development.
+- Demo narratives use a dual-frame structure: a system use case plus a player journey, tied to shared steps and inspectable results.
 
 ## Live demo
 

@@ -30,7 +30,11 @@ describe('App analyst console', () => {
     expect(html).toContain('Participating Users / Turn');
     expect(html).toContain('Organic Ratings / User');
     expect(html).toContain('Turns to Run');
-    expect(html).toContain('Goal');
+    expect(html).toContain('System use case');
+    expect(html).toContain('Player journey');
+    expect(html).toContain('Shared steps');
+    expect(html).toContain('Expected system result');
+    expect(html).toContain('Expected player result');
     expect(html).toContain('Open About');
     expect(html).toContain('Hidden generator archetype');
     expect(html).toContain('Take 1 Turn');
@@ -41,5 +45,7 @@ describe('App analyst console', () => {
     expect(html).not.toContain('Model Explanation');
     expect(html).not.toContain('Island Comparison');
     expect(html).not.toContain('Pseudo-Cohort Reports');
+    expect(html).not.toContain('Passive');
+    expect(html).not.toContain('Active Discovery Turns');
   });
 });

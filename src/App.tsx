@@ -2179,56 +2179,6 @@ export default function App() {
       </section>
 
       <section className="top-stack" aria-label="Controls and drilldown">
-        <section className="panel stage-panel" aria-label="Primary workflow">
-          <div className="stage-panel__lead">
-            <div>
-              <p className="eyebrow">Primary workflow</p>
-              <h2>Inspect the current state, then advance one turn.</h2>
-              <p className="muted">
-                Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a
-                time.
-              </p>
-            </div>
-            <div className="stage-panel__badges">
-              <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-              <Badge tone="neutral">{visibleTurnModeLabel}</Badge>
-              <Badge tone="neutral">{PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-            </div>
-          </div>
-          <div className="stage-panel__metrics">
-            <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
-            <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
-            <MetricCard
-              label="Top routed island"
-              value={routingSurfaceLabel}
-              helper="Highest available guided route for the current user."
-              tone="success"
-            />
-            <MetricCard
-              label="Participating users / turn"
-              value={participationDisplay}
-              helper="Turn policy cap or chance applied before stream filtering."
-            />
-          </div>
-          <div className="stage-panel__actions">
-            <div className="stage-panel__action-group">
-              <button type="button" className="button button--primary" onClick={takeSingleTurn}>
-                Take 1 Turn
-              </button>
-              <button type="button" className="button" onClick={takeBatchTurns}>
-                Take {turnsToRun} Turns
-              </button>
-            </div>
-            <div className="stage-panel__action-group">
-              {openSelectionButton('user', 'Choose user')}
-              {openSelectionButton('island', 'Choose island')}
-              <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)}>
-                Open About
-              </button>
-            </div>
-          </div>
-        </section>
-
         <CollapsiblePanel
           title="Simulation setup"
           collapsed={controlsCollapsed}
@@ -2339,6 +2289,56 @@ export default function App() {
             </div>
           )}
         </CollapsiblePanel>
+
+        <section className="panel stage-panel" aria-label="Primary workflow">
+          <div className="stage-panel__lead">
+            <div>
+              <p className="eyebrow">Primary workflow</p>
+              <h2>Inspect the current state, then advance one turn.</h2>
+              <p className="muted">
+                Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a
+                time.
+              </p>
+            </div>
+            <div className="stage-panel__badges">
+              <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+              <Badge tone="neutral">{visibleTurnModeLabel}</Badge>
+              <Badge tone="neutral">{PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+            </div>
+          </div>
+          <div className="stage-panel__metrics">
+            <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
+            <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
+            <MetricCard
+              label="Top routed island"
+              value={routingSurfaceLabel}
+              helper="Highest available guided route for the current user."
+              tone="success"
+            />
+            <MetricCard
+              label="Participating users / turn"
+              value={participationDisplay}
+              helper="Turn policy cap or chance applied before stream filtering."
+            />
+          </div>
+          <div className="stage-panel__actions">
+            <div className="stage-panel__action-group">
+              <button type="button" className="button button--primary" onClick={takeSingleTurn}>
+                Take 1 Turn
+              </button>
+              <button type="button" className="button" onClick={takeBatchTurns}>
+                Take {turnsToRun} Turns
+              </button>
+            </div>
+            <div className="stage-panel__action-group">
+              {openSelectionButton('user', 'Choose user')}
+              {openSelectionButton('island', 'Choose island')}
+              <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)}>
+                Open About
+              </button>
+            </div>
+          </div>
+        </section>
 
         <CollapsiblePanel
           title="Turn behavior / Dynamic settings"
@@ -2599,24 +2599,41 @@ export default function App() {
             </div>
             <div className="summary-header__actions">
               <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
+              {selectedStory.primaryPanels?.map((panelKey) => (
+                <Badge key={panelKey} tone="neutral">
+                  {panelKey}
+                </Badge>
+              ))}
             </div>
           </div>
           <div className="instruction-grid">
             <section className="detail-block">
-              <h4>Goal</h4>
-              <p>{selectedStory.goal}</p>
+              <h4>System use case</h4>
+              <p className="detail-block__title">{selectedStory.systemUseCase.title}</p>
+              <p>{selectedStory.systemUseCase.description}</p>
+              <p className="muted">{selectedStory.systemUseCase.detail}</p>
             </section>
             <section className="detail-block">
-              <h4>Suggested read path</h4>
+              <h4>Player journey</h4>
+              <p className="detail-block__title">{selectedStory.playerJourney.title}</p>
+              <p>{selectedStory.playerJourney.description}</p>
+              <p className="muted">{selectedStory.playerJourney.detail}</p>
+            </section>
+            <section className="detail-block">
+              <h4>Shared steps</h4>
               <ol className="instruction-list">
-                {selectedStory.steps.map((step) => (
+                {selectedStory.sharedSteps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}
               </ol>
             </section>
             <section className="detail-block">
-              <h4>Expected result</h4>
-              <p>{selectedStory.expectedResult}</p>
+              <h4>Expected system result</h4>
+              <p>{selectedStory.expectedSystemResult}</p>
+            </section>
+            <section className="detail-block">
+              <h4>Expected player result</h4>
+              <p>{selectedStory.expectedPlayerResult}</p>
             </section>
             <section className="detail-block">
               <h4>Failure signs</h4>
