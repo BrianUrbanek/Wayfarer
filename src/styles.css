@@ -206,9 +206,6 @@ select {
   border-radius: 22px;
   background: rgba(9, 14, 25, 0.72);
   backdrop-filter: blur(18px);
-  position: sticky;
-  top: 12px;
-  z-index: 30;
 }
 
 .topbar__header,
@@ -285,6 +282,20 @@ select {
   background:
     radial-gradient(circle at top right, rgba(103, 215, 199, 0.1), transparent 30%),
     linear-gradient(180deg, rgba(18, 31, 44, 0.96), rgba(12, 17, 30, 0.92));
+}
+
+.stage-panel__sticky {
+  position: sticky;
+  top: 12px;
+  z-index: 12;
+  display: grid;
+  gap: 18px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(103, 215, 199, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(18, 31, 44, 0.98), rgba(12, 17, 30, 0.96));
 }
 
 .stage-panel h2 {
@@ -1138,10 +1149,21 @@ select {
 
 .control-strip__actions {
   display: grid;
-  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px) minmax(0, 1fr);
   gap: 18px 24px;
   align-items: start;
   margin-top: 14px;
+}
+
+.control-strip__execute {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  align-content: start;
+}
+
+.control-strip__execute .progress-bar {
+  width: 100%;
 }
 
 .control-strip__action-group {
@@ -1161,14 +1183,14 @@ select {
   align-self: center;
   width: 100%;
   max-width: none;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  justify-items: center;
+  display: flex;
+  justify-content: flex-end;
   gap: 10px 12px;
+  flex-wrap: wrap;
 }
 
 .control-strip__action-group--secondary .button {
-  width: 100%;
+  width: auto;
 }
 
 .control-strip__subframe {
@@ -1248,6 +1270,7 @@ select {
   background: rgba(255, 255, 255, 0.03);
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .metric-card__label {
@@ -1255,18 +1278,26 @@ select {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
 .metric-card__value {
-  font-size: 1.9rem;
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
   font-weight: 800;
   letter-spacing: -0.03em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
 }
 
 .metric-card__helper {
   color: var(--muted);
   line-height: 1.5;
   font-size: 0.92rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .metric-card--success {
@@ -1373,6 +1404,7 @@ select {
 
 .report-table-wrap {
   overflow: auto;
+  max-height: 420px;
   border: 1px solid rgba(141, 164, 255, 0.14);
   border-radius: 18px;
   background: rgba(8, 12, 22, 0.44);
@@ -1381,6 +1413,7 @@ select {
 .report-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .report-table th,
@@ -1388,6 +1421,8 @@ select {
   padding: 12px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: middle;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .report-table th {

@@ -4,5 +4,7 @@ dist-node-tests
 coverage
 .vite
 .npm-cache
+.pw-browsers
+.tmp-wayfarer-*.png
 artifacts
 *.tsbuildinfo

@@ -39,7 +39,7 @@ describe('App analyst console', () => {
     expect(html).not.toContain('Turns to Run');
     expect(html).toContain('Open About');
     expect(html).toContain('Show debug');
-    expect(html).toContain('Randomize seed');
+    expect(html).toContain('Execute Scenario');
     expect(html).toContain('Take 1 Turn');
     expect(html).toContain('Export');
     expect(html).toContain('Import');
@@ -55,6 +55,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Shared steps');
     expect(html).toContain('Expected system result');
     expect(html).toContain('Expected player result');
+    expect(html).toContain('Open full recovery table');
     expect(html).not.toContain('Model Explanation');
     expect(html).not.toContain('Island Comparison');
     expect(html).not.toContain('Pseudo-Cohort Reports');
@@ -74,7 +75,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Turn Mode');
     expect(html).toContain('Participation Model');
     expect(html).toContain('Turns to Run');
-    expect(html).toContain('Randomize seed');
+    expect(html).toContain('Seed on execute');
+    expect(html).toContain('Execute Scenario');
     expect(html).toContain('Expert keeps the same run-context choices visible and exposes the resolved controls.');
   });
 });

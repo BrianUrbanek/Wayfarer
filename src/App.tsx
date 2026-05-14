@@ -80,11 +80,14 @@ type SelectionModalKind = 'user' | 'island' | 'cohort' | 'pseudo' | null;
 
 type PinnedDrilldownKind = 'user' | 'island' | 'cohort' | null;
 
+type ScenarioExecutionSeedMode = 'random' | 'fixed';
+
 type DrawerState =
   | { type: 'user'; id: string }
   | { type: 'island'; id: string }
   | { type: 'pseudo'; key: string }
   | { type: 'reviewer'; userId: string }
+  | { type: 'reviewer-recovery' }
   | { type: 'recommendation'; userId: string; islandId: string }
   | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
@@ -106,6 +109,26 @@ function buildDataset(config: {
     tagAlignmentDistribution: config.tagAlignmentDistribution,
     ratingAlignmentDistribution: config.ratingAlignmentDistribution,
     islandClassWeights: config.islandClassWeights
+  });
+}
+
+function buildSimulationStateFromControls(controls: ScenarioPresetControls) {
+  const latentDataset = buildDataset({
+    seed: controls.seed,
+    numUsers: controls.numUsers,
+    numIslands: controls.numIslands,
+    tagAlignmentDistribution: controls.tagAlignmentDistribution,
+    ratingAlignmentDistribution: controls.ratingAlignmentDistribution,
+    islandClassWeights: controls.islandClassWeights
+  });
+
+  return createInitialSimulationState({
+    seed: controls.seed,
+    allTags: latentDataset.allTags,
+    latentUsers: latentDataset.users,
+    cohorts: latentDataset.cohorts,
+    islands: latentDataset.islands,
+    initialRatingsPerUser: controls.bootstrapRatingsPerUser
   });
 }
 
@@ -295,6 +318,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [customExplorationWeight, setCustomExplorationWeight] = useState(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
   const [customMinimumPredictedFit, setCustomMinimumPredictedFit] = useState(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
   const [turnsToRun, setTurnsToRun] = useState(5);
+  const [executionSeedMode, setExecutionSeedMode] = useState<ScenarioExecutionSeedMode>('random');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
@@ -315,7 +339,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [importedScenario, setImportedScenario] = useState<SavedWayfarerScenarioV1 | null>(null);
   const [scenarioMessage, setScenarioMessage] = useState<string>('');
   const [scenarioError, setScenarioError] = useState<string>('');
+  const [executionProgress, setExecutionProgress] = useState<number>(0);
+  const [executionStatus, setExecutionStatus] = useState<string>('');
+  const [isExecutingScenario, setIsExecutingScenario] = useState(false);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
+  const scenarioExecutionTokenRef = useRef(0);
   const isNoviceMode = guidanceMode === 'novice';
 
   const latentDataset = useMemo(
@@ -908,7 +936,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     ? reviewerReportRows.find((report) => report.userId === selectedUser.id) ?? null
     : null;
 
-  const reviewerArchetypeSummary = (
+  const reviewerArchetypeRecoveryDetail = (
     <div className="stack">
       <div className="summary-header">
         <div>
@@ -1036,6 +1064,97 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <ReportTable
             columns={reviewerReportColumns}
             rows={reviewerArchetypeAnalysis.falseNegatives}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No false negatives"
+            emptyDescription="The current synthetic sample has not produced any misses worth flagging."
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const reviewerArchetypeSummary = (
+    <div className="stack">
+      <div className="summary-header">
+        <div>
+          <p className="eyebrow">Reviewer archetype recovery</p>
+          <h3>Hidden generator checksums vs inferred behavior</h3>
+        </div>
+        <div className="summary-header__actions">
+          <button type="button" className="button button--ghost" onClick={() => setDrawerState({ type: 'reviewer-recovery' })}>
+            Open full recovery table
+          </button>
+        </div>
+      </div>
+
+      <div className="metric-grid metric-grid--compact">
+        <MetricCard label="Generated archetypes" value={reviewerArchetypeAnalysis.recoverySummary.totalUsers} tone="accent" />
+        <MetricCard label="Matches" value={reviewerArchetypeAnalysis.recoverySummary.matchCount} tone="success" />
+        <MetricCard label="Partial" value={reviewerArchetypeAnalysis.recoverySummary.partialCount} tone="accent" />
+        <MetricCard label="Misses" value={reviewerArchetypeAnalysis.recoverySummary.missCount} tone="danger" />
+        <MetricCard label="Uncertain" value={reviewerArchetypeAnalysis.recoverySummary.uncertainCount} tone="warning" />
+        <MetricCard label="Candidate review" value={reviewerArchetypeAnalysis.recoverySummary.candidateSeedCount} tone="accent" />
+        <MetricCard label="False positives" value={reviewerArchetypeAnalysis.recoverySummary.falsePositiveCount} tone="danger" />
+        <MetricCard label="False negatives" value={reviewerArchetypeAnalysis.recoverySummary.falseNegativeCount} tone="warning" />
+      </div>
+
+      <div className="report-section">
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>Candidate New Seed Users</h3>
+            <p>Top unexplained high-signal users that deserve closer review.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.candidateSeedUsers.slice(0, 3)}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No analyst candidates"
+            emptyDescription="This preview fills when the system finds strong signal but weak known-cohort fit."
+          />
+        </div>
+
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>Early Scouts</h3>
+            <p>Top users whose guided routing bias lands early in the turn history.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.earlyScouts.slice(0, 3)}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No early scouts"
+            emptyDescription="Guided turn timing has not yet produced any early-scout patterns."
+          />
+        </div>
+      </div>
+
+      <div className="report-section">
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>False Positives Preview</h3>
+            <p>Visible noise the model may be reading as meaningful signal.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.falsePositives.slice(0, 3)}
+            getRowKey={(row) => row.userId}
+            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
+            emptyTitle="No false positives"
+            emptyDescription="The current synthetic sample has not produced any over-classified noisy users yet."
+          />
+        </div>
+
+        <div className="report-section__column">
+          <div className="section-heading">
+            <h3>False Negatives Preview</h3>
+            <p>Visible misses the model has not recovered yet.</p>
+          </div>
+          <ReportTable
+            columns={reviewerReportColumns}
+            rows={reviewerArchetypeAnalysis.falseNegatives.slice(0, 3)}
             getRowKey={(row) => row.userId}
             onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
             emptyTitle="No false negatives"
@@ -1735,8 +1854,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const pseudoConsistentRows = dataset.pseudoCohortAnalysis.topConsistentPseudoCohorts;
   const pseudoInconsistentRows = dataset.pseudoCohortAnalysis.topInconsistentPseudoCohorts;
 
-  const openSelectionButton = (kind: Exclude<SelectionModalKind, null>, label: string, className = 'button button--ghost') => (
-    <button type="button" className={className} onClick={() => setModalKind(kind)}>
+  const openSelectionButton = (
+    kind: Exclude<SelectionModalKind, null>,
+    label: string,
+    className = 'button button--ghost',
+    disabled = isExecutingScenario
+  ) => (
+    <button type="button" className={className} onClick={() => setModalKind(kind)} disabled={disabled}>
       {label}
     </button>
   );
@@ -1755,6 +1879,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setImportedScenario(null);
     setScenarioError('');
     setScenarioMessage('');
+    setExecutionStatus('');
+    setExecutionProgress(0);
+    setIsExecutingScenario(false);
     setScenarioPresetSource(getScenarioPresetMetadata(preset.id));
     setSeed(controls.seed);
     setNumUsers(controls.numUsers);
@@ -1776,13 +1903,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setCustomExplorationWeight(controls.turnPolicy.customExplorationWeight);
     setCustomMinimumPredictedFit(controls.turnPolicy.customMinimumPredictedFit);
     setTurnsToRun(controls.turnsToRun);
-  };
-
-  const randomizeSeed = () => {
-    setImportedScenario(null);
-    setScenarioMessage('');
-    setScenarioError('');
-    setSeed(Math.floor(Math.random() * 1_000_000_000));
   };
 
   const exportCurrentSimulationJson = () => {
@@ -1838,6 +1958,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       turnsToRun: scenario.turnsToRun
     });
     setImportedScenario(scenario);
+    setExecutionStatus('');
+    setExecutionProgress(0);
+    setIsExecutingScenario(false);
     setScenarioPresetSource(scenario.scenarioPreset ?? (importedPresetMatch ? scenarioPresetMetadataFromPreset(importedPresetMatch) : null));
     setSeed(scenario.generatorConfig.seed);
     setNumUsers(scenario.generatorConfig.numUsers);
@@ -1883,6 +2006,68 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     scenarioFileInputRef.current?.click();
   };
 
+  const executeScenario = async () => {
+    if (isExecutingScenario) {
+      return;
+    }
+
+    const nextSeed = executionSeedMode === 'random' ? Math.floor(Math.random() * 1_000_000_000) : seed;
+    const selectedScenarioPresetSource = scenarioPresetSource ?? activeScenarioPresetMetadata ?? null;
+    const resolvedControls: ScenarioPresetControls = {
+      ...currentScenarioControls,
+      seed: nextSeed
+    };
+    const executionLabel = selectedScenarioPresetSource?.label ?? 'Custom / imported';
+    const executionToken = scenarioExecutionTokenRef.current + 1;
+    scenarioExecutionTokenRef.current = executionToken;
+
+    setImportedScenario(null);
+    setScenarioError('');
+    setScenarioMessage('');
+    setExecutionStatus('Generating fresh scenario from the selected setup.');
+    setExecutionProgress(0.08);
+    setIsExecutingScenario(true);
+
+    setSeed(nextSeed);
+    setScenarioPresetSource(selectedScenarioPresetSource);
+
+    try {
+      setExecutionStatus('Building the dataset and bootstrap state.');
+
+      const initialState = buildSimulationStateFromControls(resolvedControls);
+      setSimulationState(initialState);
+      setExecutionProgress(0.25);
+      await new Promise((resolve) => setTimeout(resolve, 32));
+
+      let nextState = initialState;
+
+      for (let index = 0; index < turnsToRun; index += 1) {
+        if (scenarioExecutionTokenRef.current !== executionToken) {
+          return;
+        }
+
+        setExecutionStatus(`Advancing turn ${index + 1} of ${turnsToRun}.`);
+        nextState = advanceCurrentTurn(nextState);
+        setSimulationState(nextState);
+        setExecutionProgress(0.25 + ((index + 1) / Math.max(turnsToRun, 1)) * 0.7);
+        await new Promise((resolve) => setTimeout(resolve, 32));
+      }
+
+      if (scenarioExecutionTokenRef.current !== executionToken) {
+        return;
+      }
+
+      setSimulationState(nextState);
+      setScenarioMessage(`Executed ${executionLabel} with seed ${nextSeed} for ${turnsToRun} turns.`);
+      setExecutionStatus('Scenario execution complete.');
+      setExecutionProgress(1);
+    } finally {
+      if (scenarioExecutionTokenRef.current === executionToken) {
+        setIsExecutingScenario(false);
+      }
+    }
+  };
+
   const takeSingleTurn = () => {
     setSimulationState((state) => advanceCurrentTurn(state));
   };
@@ -1903,6 +2088,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setImportedScenario(null);
     setScenarioMessage('');
     setScenarioError('');
+    setExecutionStatus('');
+    setExecutionProgress(0);
+    setIsExecutingScenario(false);
     resetControlPolicy();
     const defaultBootstrap = buildDataset({
       seed: INITIAL_SCENARIO_PRESET.generatorConfig.seed,
@@ -2267,10 +2455,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ? `Pinned user: ${selectedUser?.label ?? 'none'}`
       : pinnedDrilldownKind === 'island'
         ? `Pinned island: ${selectedIsland?.label ?? 'none'}`
-        : pinnedDrilldownKind === 'cohort'
-          ? `Pinned cohort: ${selectedComparisonLabel}`
-          : 'Pinned reference';
+      : pinnedDrilldownKind === 'cohort'
+        ? `Pinned cohort: ${selectedComparisonLabel}`
+        : 'Pinned reference';
 
+  const railTop = '140px';
+  const railHeight = 'calc(100vh - 158px)';
   const pinnedTraySpace = pinnedTrayCollapsed ? 92 : 456;
   const instructionTraySpace = showInstructionTray ? (guidanceOpen ? 456 : 92) : 0;
 
@@ -2500,11 +2690,41 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                       step={1}
                     />
                   </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Seed on execute',
+                      'Choose whether Execute Scenario uses a fresh random seed or the current seed value.'
+                    )}
+                    <select
+                      value={executionSeedMode}
+                      onChange={(event) => setExecutionSeedMode(event.target.value as ScenarioExecutionSeedMode)}
+                    >
+                      <option value="random">Fresh random seed</option>
+                      <option value="fixed">Current seed</option>
+                    </select>
+                  </label>
                 </div>
               </>
             ) : null}
           </div>
-            <div className="control-strip__actions">
+          <div className="control-strip__actions">
+            <div className="control-strip__execute">
+              <button
+                type="button"
+                className="button button--primary"
+                onClick={executeScenario}
+                disabled={isExecutingScenario}
+              >
+                Execute Scenario
+              </button>
+              <p className="muted">
+                Generate a fresh dataset from the selected setup, then run {turnsToRun} turns to the next inspection
+                state.
+              </p>
+              {isExecutingScenario ? (
+                <ProgressBar value={executionProgress} label={executionStatus || 'Executing scenario'} tone="accent" />
+              ) : null}
+            </div>
             <div className="control-strip__subframe">
               <div className="control-strip__subframe-heading">
                 <span className="control__label-row">
@@ -2516,22 +2736,19 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 </span>
               </div>
               <div className="control-strip__action-group control-strip__action-group--compact">
-                <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson}>
+                <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson} disabled={isExecutingScenario}>
                   Export
                 </button>
-                <button type="button" className="button button--ghost" onClick={openScenarioFilePicker}>
+                <button type="button" className="button button--ghost" onClick={openScenarioFilePicker} disabled={isExecutingScenario}>
                   Import
                 </button>
               </div>
             </div>
             <div className="control-strip__action-group control-strip__action-group--secondary">
-              <button type="button" className="button button--ghost" onClick={randomizeSeed}>
-                Randomize seed
-              </button>
-              <button type="button" className="button button--quiet" onClick={resetSimulation}>
+              <button type="button" className="button button--quiet" onClick={resetSimulation} disabled={isExecutingScenario}>
                 Reset Simulation
               </button>
-              <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)}>
+              <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)} disabled={isExecutingScenario}>
                 {showDebug ? 'Hide debug' : 'Show debug'}
               </button>
             </div>
@@ -2552,22 +2769,41 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </CollapsiblePanel>
 
         <section className="panel stage-panel" aria-label="Primary workflow">
-          <div className="stage-panel__lead">
-            <div>
-              <p className="eyebrow">Primary workflow</p>
-              <h2>Inspect the current state, then advance one turn.</h2>
-              <p className="muted">
-                Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a
-                time.
-              </p>
+          <div className="stage-panel__sticky">
+            <div className="stage-panel__lead">
+              <div>
+                <p className="eyebrow">Primary workflow</p>
+                <h2>Inspect the current state, then advance one turn.</h2>
+                <p className="muted">
+                  Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a
+                  time.
+                </p>
+              </div>
+              <div className="stage-panel__badges">
+                <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+                <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
+                <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+                <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+                <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+                <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+              </div>
             </div>
-            <div className="stage-panel__badges">
-              <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-              <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
-              <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-              <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-              <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-              <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+            <div className="stage-panel__actions">
+              <div className="stage-panel__action-group">
+                <button type="button" className="button button--primary" onClick={takeSingleTurn} disabled={isExecutingScenario}>
+                  Take 1 Turn
+                </button>
+                <button type="button" className="button" onClick={takeBatchTurns} disabled={isExecutingScenario}>
+                  Take {turnsToRun} Turns
+                </button>
+              </div>
+              <div className="stage-panel__action-group">
+                {openSelectionButton('user', 'Choose user', 'button button--ghost', isExecutingScenario)}
+                {openSelectionButton('island', 'Choose island', 'button button--ghost', isExecutingScenario)}
+                <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)} disabled={isExecutingScenario}>
+                  Open About
+                </button>
+              </div>
             </div>
           </div>
           <div className="stage-panel__metrics">
@@ -2584,23 +2820,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               value={participationDisplay}
               helper="Turn policy cap or chance applied before stream filtering."
             />
-          </div>
-          <div className="stage-panel__actions">
-            <div className="stage-panel__action-group">
-              <button type="button" className="button button--primary" onClick={takeSingleTurn}>
-                Take 1 Turn
-              </button>
-              <button type="button" className="button" onClick={takeBatchTurns}>
-                Take {turnsToRun} Turns
-              </button>
-            </div>
-            <div className="stage-panel__action-group">
-              {openSelectionButton('user', 'Choose user')}
-              {openSelectionButton('island', 'Choose island')}
-              <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)}>
-                Open About
-              </button>
-            </div>
           </div>
         </section>
 
@@ -2855,10 +3074,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           title={isNoviceMode ? 'Guided task journey' : 'Curator notes'}
           className="tray--instruction tray--left"
           style={{
-            top: '140px',
+            top: railTop,
             left: '18px',
             right: 'auto',
-            height: 'calc(100vh - 158px)'
+            height: railHeight
           }}
           toggleCollapsedLabel={isNoviceMode ? 'Open guided journey' : 'Open curator notes'}
           toggleExpandedLabel={isNoviceMode ? 'Collapse guided journey' : 'Collapse curator notes'}
@@ -2931,6 +3150,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         collapsed={pinnedTrayCollapsed}
         title={pinnedDrilldownTitle}
         className="tray--pinned"
+        style={{
+          top: railTop,
+          right: '18px',
+          left: 'auto',
+          height: railHeight
+        }}
         toggleCollapsedLabel="Open pinned drilldown"
         toggleExpandedLabel="Collapse pinned drilldown"
         onToggle={() => setPinnedTrayCollapsed((value) => !value)}
@@ -3096,6 +3321,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         onClose={() => setDrawerState(null)}
       >
         {reviewerDrawerContent}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'reviewer-recovery'}
+        title="Reviewer archetype recovery"
+        onClose={() => setDrawerState(null)}
+      >
+        {reviewerArchetypeRecoveryDetail}
       </Drawer>
     </main>
   );
