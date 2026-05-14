@@ -575,7 +575,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const selectedStory = useMemo(() => getUseCaseStory(useCaseId), [useCaseId]);
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
-  const appStatus = `Turn ${dataset.currentTurn} · ${visibleTurnModeLabel} · ${dataset.users.length} users · ${dataset.islands.length} islands`;
+  const runContextNote = isNoviceMode
+    ? 'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
+    : 'Expert keeps the same run-context choices visible and exposes the resolved controls. Current run badges live in Primary Workflow.';
 
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
@@ -2041,6 +2043,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     scenarioPresetSource && (!activeScenarioPresetMetadata || scenarioPresetSource.id !== activeScenarioPresetMetadata.id)
       ? scenarioPresetSource
       : null;
+  const currentScenarioLabel = scenarioPresetDisplay?.label ?? scenarioPresetSource?.label ?? 'Custom / imported';
 
   const advanceCurrentTurn = (state: SimulationState) => {
     return advancePolicyTurn(state, currentTurnPolicy);
@@ -2283,7 +2286,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <div className="hero__eyebrow-row">
           <p className="eyebrow">Wayfarer analyst console</p>
           <span className="hero__pill">Columbus debug engine</span>
-          <span className="hero__pill hero__pill--status">{appStatus}</span>
         </div>
         <div className="hero__title-row">
           <h1>Wayfarer</h1>
@@ -2297,8 +2299,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </p>
       </header>
 
-      <section className="topbar" aria-label="Dashboard guidance">
-        <div className="topbar__left">
+      <section className="topbar" aria-label="Run context">
+        <div className="topbar__header">
+          <p className="eyebrow">Run Context</p>
+          <p className="topbar__mode-note">{runContextNote}</p>
+        </div>
+        <div className="topbar__controls">
           <div className="topbar__mode" role="group" aria-label="Guidance mode">
             <button
               type="button"
@@ -2317,11 +2323,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               Expert
             </button>
           </div>
-          <p className="topbar__mode-note">
-            {isNoviceMode
-              ? 'Novice keeps the instructional rails open and the raw controls hidden.'
-              : 'Expert exposes the resolved controls so you can inspect and edit the preset directly.'}
-          </p>
           <label className="control control--inline">
             <span>Read path</span>
             <select value={dashboardOrdering} onChange={(event) => setDashboardOrdering(event.target.value as DashboardOrderingPreset)}>
@@ -2343,20 +2344,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </select>
           </label>
         </div>
-        <div className="topbar__right">
-          <Badge tone="accent">Narrative: {selectedStory.title}</Badge>
-          <Badge tone="neutral">Mode: {guidanceMode}</Badge>
-          <Badge tone="neutral">Ordering: {DASHBOARD_ORDERING_LABELS[dashboardOrdering]}</Badge>
-          <Badge tone="neutral">Turn mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-          <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-          <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-          <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
-        </div>
       </section>
 
       <section className="top-stack" aria-label="Controls and drilldown">
         <CollapsiblePanel
-          title="Simulation setup"
+          title="Scenario setup"
           collapsed={controlsCollapsed}
           onToggle={() => setControlsCollapsed((value) => !value)}
           description="Named scenario presets and stable settings for the simulation world."
@@ -2512,7 +2504,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </>
             ) : null}
           </div>
-          <div className="control-strip__actions">
+            <div className="control-strip__actions">
             <div className="control-strip__subframe">
               <div className="control-strip__subframe-heading">
                 <span className="control__label-row">
@@ -2534,7 +2526,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </div>
             <div className="control-strip__action-group control-strip__action-group--secondary">
               <button type="button" className="button button--ghost" onClick={randomizeSeed}>
-                Regenerate dataset
+                Randomize seed
               </button>
               <button type="button" className="button button--quiet" onClick={resetSimulation}>
                 Reset Simulation
@@ -2571,8 +2563,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </div>
             <div className="stage-panel__badges">
               <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-              <Badge tone="neutral">{visibleTurnModeLabel}</Badge>
-              <Badge tone="neutral">{PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+              <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
+              <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+              <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+              <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+              <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
             </div>
           </div>
           <div className="stage-panel__metrics">
@@ -2818,32 +2813,40 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </CollapsiblePanel>
       </section>
 
-      <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
-        {visibleDashboardSections.map((sectionKey) => {
-          if (sectionKey === 'debug' && !showDebug) {
-            return null;
-          }
+      <section className="inspection-shell" aria-label="Inspection / dashboard panels">
+        <div className="section-heading inspection-shell__heading">
+          <p className="eyebrow">Inspection / dashboard panels</p>
+          <p className="muted">
+            Summary panels, recovery checks, routing detail, and debug views live here once setup and the current turn are clear.
+          </p>
+        </div>
+        <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
+          {visibleDashboardSections.map((sectionKey) => {
+            if (sectionKey === 'debug' && !showDebug) {
+              return null;
+            }
 
-          const section = dashboardSections[sectionKey];
+            const section = dashboardSections[sectionKey];
 
-          return (
-            <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
-              <div className="section-heading dashboard-section__heading">
-                <p className="eyebrow">{section.title}</p>
-                <p className="muted">
-                  {sectionKey === 'overview'
-                    ? 'Summary and current state'
-                    : sectionKey === 'recovery'
-                      ? 'Checks on seeded anchors, signal, and recovery'
-                      : sectionKey === 'routing'
-                        ? 'Recommendations, island comparison, and pseudo-cohorts'
-                        : 'Checksums, hidden metadata, and debug-only fields'}
-                </p>
-              </div>
-              <div className="dashboard-section__panels">{section.panels}</div>
-            </section>
-          );
-        })}
+            return (
+              <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
+                <div className="section-heading dashboard-section__heading">
+                  <p className="eyebrow">{section.title}</p>
+                  <p className="muted">
+                    {sectionKey === 'overview'
+                      ? 'Summary and current state'
+                      : sectionKey === 'recovery'
+                        ? 'Checks on seeded anchors, signal, and recovery'
+                        : sectionKey === 'routing'
+                          ? 'Recommendations, island comparison, and pseudo-cohorts'
+                          : 'Checksums, hidden metadata, and debug-only fields'}
+                  </p>
+                </div>
+                <div className="dashboard-section__panels">{section.panels}</div>
+              </section>
+            );
+          })}
+        </section>
       </section>
 
       {showInstructionTray ? (
@@ -2888,30 +2891,38 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               <p>{selectedStory.playerJourney.description}</p>
               <p className="muted">{selectedStory.playerJourney.detail}</p>
             </section>
-            <section className="detail-block">
-              <h4>Shared steps</h4>
-              <ol className="instruction-list">
-                {selectedStory.sharedSteps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
-            </section>
-            <section className="detail-block">
-              <h4>Expected system result</h4>
-              <p>{selectedStory.expectedSystemResult}</p>
-            </section>
-            <section className="detail-block">
-              <h4>Expected player result</h4>
-              <p>{selectedStory.expectedPlayerResult}</p>
-            </section>
-            <section className="detail-block">
-              <h4>Failure signs</h4>
-              <ul className="diagnosis-list">
-                {selectedStory.failureSigns.map((failureSign) => (
-                  <li key={failureSign}>{failureSign}</li>
-                ))}
-              </ul>
-            </section>
+            <details className="detail-block detail-block--foldout" open={!isNoviceMode}>
+              <summary className="detail-block__summary">
+                <span>Proof points</span>
+                <span className="muted">Shared steps, expected results, and failure signs.</span>
+              </summary>
+              <div className="detail-block__foldout-grid">
+                <section className="detail-block detail-block--foldout-section">
+                  <h4>Shared steps</h4>
+                  <ol className="instruction-list">
+                    {selectedStory.sharedSteps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                </section>
+                <section className="detail-block detail-block--foldout-section">
+                  <h4>Expected system result</h4>
+                  <p>{selectedStory.expectedSystemResult}</p>
+                </section>
+                <section className="detail-block detail-block--foldout-section">
+                  <h4>Expected player result</h4>
+                  <p>{selectedStory.expectedPlayerResult}</p>
+                </section>
+                <section className="detail-block detail-block--foldout-section">
+                  <h4>Failure signs</h4>
+                  <ul className="diagnosis-list">
+                    {selectedStory.failureSigns.map((failureSign) => (
+                      <li key={failureSign}>{failureSign}</li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            </details>
           </div>
         </Tray>
       ) : null}
@@ -2934,7 +2945,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         ) : (
           <EmptyState
             title="Nothing pinned yet"
-            description="Use Drilldown targets to pin a user, island, or cohort here for quick reference."
+            description="Pin a user, island, or cohort from Drilldown targets to anchor this space."
           />
         )}
       </Tray>
