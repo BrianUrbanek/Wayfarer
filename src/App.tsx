@@ -1105,14 +1105,40 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <h3>Candidate New Seed Users</h3>
             <p>Top unexplained high-signal users that deserve closer review.</p>
           </div>
-          <ReportTable
-            columns={reviewerReportColumns}
-            rows={reviewerArchetypeAnalysis.candidateSeedUsers.slice(0, 3)}
-            getRowKey={(row) => row.userId}
-            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-            emptyTitle="No analyst candidates"
-            emptyDescription="This preview fills when the system finds strong signal but weak known-cohort fit."
-          />
+          <div className="recovery-preview-list">
+            {reviewerArchetypeAnalysis.candidateSeedUsers.slice(0, 3).map((row) => (
+              <button
+                key={row.userId}
+                type="button"
+                className="recovery-preview-row"
+                onClick={() => setDrawerState({ type: 'reviewer', userId: row.userId })}
+              >
+                <div className="recovery-preview-row__main">
+                  <div className="recovery-preview-row__title">
+                    <strong>{row.label}</strong>
+                    <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
+                  </div>
+                  <span className="muted">
+                    {archetypeLabel(row.hiddenReviewerArchetype)} · {row.inferredDiagnosisType}
+                  </span>
+                </div>
+                <div className="recovery-preview-row__meta">
+                  <span className="muted">
+                    Cohort: {row.inferredCohortId ? labelForCohort(row.inferredCohortId) : 'none'}
+                  </span>
+                  <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
+                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
+                  <span className="recovery-preview-row__action">Open detail</span>
+                </div>
+              </button>
+            ))}
+            {reviewerArchetypeAnalysis.candidateSeedUsers.length === 0 ? (
+              <EmptyState
+                title="No analyst candidates"
+                description="This preview fills when the system finds strong signal but weak known-cohort fit."
+              />
+            ) : null}
+          </div>
         </div>
 
         <div className="report-section__column">
@@ -1120,46 +1146,37 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <h3>Early Scouts</h3>
             <p>Top users whose guided routing bias lands early in the turn history.</p>
           </div>
-          <ReportTable
-            columns={reviewerReportColumns}
-            rows={reviewerArchetypeAnalysis.earlyScouts.slice(0, 3)}
-            getRowKey={(row) => row.userId}
-            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-            emptyTitle="No early scouts"
-            emptyDescription="Guided turn timing has not yet produced any early-scout patterns."
-          />
-        </div>
-      </div>
-
-      <div className="report-section">
-        <div className="report-section__column">
-          <div className="section-heading">
-            <h3>False Positives Preview</h3>
-            <p>Visible noise the model may be reading as meaningful signal.</p>
+          <div className="recovery-preview-list">
+            {reviewerArchetypeAnalysis.earlyScouts.slice(0, 3).map((row) => (
+              <button
+                key={row.userId}
+                type="button"
+                className="recovery-preview-row"
+                onClick={() => setDrawerState({ type: 'reviewer', userId: row.userId })}
+              >
+                <div className="recovery-preview-row__main">
+                  <div className="recovery-preview-row__title">
+                    <strong>{row.label}</strong>
+                    <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
+                  </div>
+                  <span className="muted">
+                    {archetypeLabel(row.hiddenReviewerArchetype)} · guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
+                  </span>
+                </div>
+                <div className="recovery-preview-row__meta">
+                  <span className="muted">
+                    Cohort: {row.inferredCohortId ? labelForCohort(row.inferredCohortId) : 'none'}
+                  </span>
+                  <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
+                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
+                  <span className="recovery-preview-row__action">Open detail</span>
+                </div>
+              </button>
+            ))}
+            {reviewerArchetypeAnalysis.earlyScouts.length === 0 ? (
+              <EmptyState title="No early scouts" description="Guided turn timing has not yet produced any early-scout patterns." />
+            ) : null}
           </div>
-          <ReportTable
-            columns={reviewerReportColumns}
-            rows={reviewerArchetypeAnalysis.falsePositives.slice(0, 3)}
-            getRowKey={(row) => row.userId}
-            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-            emptyTitle="No false positives"
-            emptyDescription="The current synthetic sample has not produced any over-classified noisy users yet."
-          />
-        </div>
-
-        <div className="report-section__column">
-          <div className="section-heading">
-            <h3>False Negatives Preview</h3>
-            <p>Visible misses the model has not recovered yet.</p>
-          </div>
-          <ReportTable
-            columns={reviewerReportColumns}
-            rows={reviewerArchetypeAnalysis.falseNegatives.slice(0, 3)}
-            getRowKey={(row) => row.userId}
-            onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-            emptyTitle="No false negatives"
-            emptyDescription="The current synthetic sample has not produced any misses worth flagging."
-          />
         </div>
       </div>
     </div>
@@ -1225,12 +1242,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </div>
 
       <div className="summary-top-cohorts">
-        {selectedUserTopCohorts.map(({ label, match }) => (
+        {selectedUserTopCohorts.map(({ label, match }, index) => (
           <MetricCard
             key={label}
-            label={`${label} top cohort`}
-            value={labelForCohort(match.cohortId)}
+            label="Top cohort"
+            labelTitle={`${label} top cohort`}
+            value={`#${index + 1}`}
+            valueTitle={labelForCohort(match.cohortId)}
             helper={`${formatPercent(match.score)} match`}
+            helperTitle={`${label} top cohort: ${labelForCohort(match.cohortId)}`}
             tone="neutral"
           />
         ))}
@@ -2768,61 +2788,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           )}
         </CollapsiblePanel>
 
-        <section className="panel stage-panel" aria-label="Primary workflow">
-          <div className="stage-panel__sticky">
-            <div className="stage-panel__lead">
-              <div>
-                <p className="eyebrow">Primary workflow</p>
-                <h2>Inspect the current state, then advance one turn.</h2>
-                <p className="muted">
-                  Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a
-                  time.
-                </p>
-              </div>
-              <div className="stage-panel__badges">
-                <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-                <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
-                <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-                <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-                <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-                <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
-              </div>
-            </div>
-            <div className="stage-panel__actions">
-              <div className="stage-panel__action-group">
-                <button type="button" className="button button--primary" onClick={takeSingleTurn} disabled={isExecutingScenario}>
-                  Take 1 Turn
-                </button>
-                <button type="button" className="button" onClick={takeBatchTurns} disabled={isExecutingScenario}>
-                  Take {turnsToRun} Turns
-                </button>
-              </div>
-              <div className="stage-panel__action-group">
-                {openSelectionButton('user', 'Choose user', 'button button--ghost', isExecutingScenario)}
-                {openSelectionButton('island', 'Choose island', 'button button--ghost', isExecutingScenario)}
-                <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)} disabled={isExecutingScenario}>
-                  Open About
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="stage-panel__metrics">
-            <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
-            <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
-            <MetricCard
-              label="Top routed island"
-              value={routingSurfaceLabel}
-              helper="Highest available guided route for the current user."
-              tone="success"
-            />
-            <MetricCard
-              label="Participating users / turn"
-              value={participationDisplay}
-              helper="Turn policy cap or chance applied before stream filtering."
-            />
-          </div>
-        </section>
-
         <CollapsiblePanel
           title="Turn behavior / Dynamic settings"
           collapsed={dynamicSettingsCollapsed}
@@ -3030,6 +2995,59 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </div>
           </div>
         </CollapsiblePanel>
+      </section>
+
+      <section className="panel stage-panel stage-panel__sticky" aria-label="Primary workflow">
+        <div className="stage-panel__lead">
+          <div>
+            <p className="eyebrow">Primary workflow</p>
+            <h2>Inspect the current state, then advance one turn.</h2>
+            <p className="muted">Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.</p>
+          </div>
+          <div className="stage-panel__badges">
+            <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+            <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
+            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+            <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+          </div>
+        </div>
+        <div className="stage-panel__actions">
+          <div className="stage-panel__action-group">
+            <button type="button" className="button button--primary" onClick={takeSingleTurn} disabled={isExecutingScenario}>
+              Take 1 Turn
+            </button>
+            <button type="button" className="button" onClick={takeBatchTurns} disabled={isExecutingScenario}>
+              Take {turnsToRun} Turns
+            </button>
+          </div>
+          <div className="stage-panel__action-group">
+            {openSelectionButton('user', 'Choose user', 'button button--ghost', isExecutingScenario)}
+            {openSelectionButton('island', 'Choose island', 'button button--ghost', isExecutingScenario)}
+            <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)} disabled={isExecutingScenario}>
+              Open About
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
+        <div className="stage-panel__metrics">
+          <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
+          <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
+          <MetricCard
+            label="Top routed island"
+            value={routingSurfaceLabel}
+            helper="Highest available guided route for the current user."
+            tone="success"
+          />
+          <MetricCard
+            label="Participating users / turn"
+            value={participationDisplay}
+            helper="Turn policy cap or chance applied before stream filtering."
+          />
+        </div>
       </section>
 
       <section className="inspection-shell" aria-label="Inspection / dashboard panels">

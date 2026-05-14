@@ -43,6 +43,10 @@ describe('App analyst console', () => {
     expect(html).toContain('Take 1 Turn');
     expect(html).toContain('Export');
     expect(html).toContain('Import');
+    expect(html).toContain('Selected user');
+    expect(html).toContain('Focus island');
+    expect(html).toContain('Top routed island');
+    expect(html).toContain('Participating users / turn');
     expect(html).toContain('Turn <!-- -->0');
     expect(html).toContain('Scenario:');
     expect(html).toContain('Mode:');
@@ -56,12 +60,17 @@ describe('App analyst console', () => {
     expect(html).toContain('Expected system result');
     expect(html).toContain('Expected player result');
     expect(html).toContain('Open full recovery table');
+    expect(html).toContain('Candidate New Seed Users');
+    expect(html).toContain('Early Scouts');
+    expect(html).toContain('Open detail');
     expect(html).not.toContain('Model Explanation');
     expect(html).not.toContain('Island Comparison');
     expect(html).not.toContain('Pseudo-Cohort Reports');
     expect(html).not.toContain('Debug Data');
     expect(html).not.toContain('Passive');
     expect(html).not.toContain('Active Discovery Turns');
+    expect(html).not.toContain('False Positives Preview');
+    expect(html).not.toContain('False Negatives Preview');
   });
 
   it('renders expert preset controls', () => {

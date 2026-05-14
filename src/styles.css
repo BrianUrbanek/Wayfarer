@@ -1281,6 +1281,10 @@ select {
   min-width: 0;
   overflow-wrap: anywhere;
   line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .metric-card__value {
@@ -1290,6 +1294,16 @@ select {
   min-width: 0;
   overflow-wrap: anywhere;
   line-height: 1.1;
+}
+
+.metric-card__value--text {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .metric-card__helper {
@@ -1446,6 +1460,68 @@ select {
 
 .report-table__cell--right {
   text-align: right;
+}
+
+.recovery-preview-list {
+  display: grid;
+  gap: 10px;
+}
+
+.recovery-preview-row {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(141, 164, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-align: left;
+  box-shadow: none;
+  min-width: 0;
+}
+
+.recovery-preview-row:hover {
+  border-color: rgba(141, 164, 255, 0.24);
+  background: rgba(141, 164, 255, 0.06);
+}
+
+.recovery-preview-row__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.recovery-preview-row__main strong,
+.recovery-preview-row__meta {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recovery-preview-row__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.recovery-preview-row__title strong {
+  font-size: 0.98rem;
+}
+
+.recovery-preview-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.recovery-preview-row__action {
+  margin-left: auto;
+  color: var(--accent-2);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .empty-state {
