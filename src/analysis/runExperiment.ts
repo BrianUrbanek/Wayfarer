@@ -63,10 +63,10 @@ function printHelp(): void {
     'Wayfarer experiment harness',
     '',
     'Usage:',
-    '  npm run analyze:runs -- [--scenario baseline|low-alignment|all|slug1,slug2] [--output <dir>] [--seeds 1,2,3]',
+    '  npm run analyze:runs -- [--scenario golden-demo|controlled-comparison|low-alignment-stress|small-smoke-test|all|slug1,slug2] [--output <dir>] [--seeds 1,2,3]',
     '',
     'Flags:',
-    '  --scenario   Comma-separated scenario slugs, or "all". Default: baseline',
+    '  --scenario   Comma-separated scenario slugs, or "all". Default: golden-demo',
     '  --output     Output directory for experiment-suite.json and experiment-suite.md',
     '  --seeds      Comma-separated numeric seeds to override the scenario defaults',
     '',
@@ -85,8 +85,8 @@ export function runExperimentCli(argv: string[]): number {
 
   const selectedScenarioSlugs = (() => {
     const requested = parseCsv(args.scenario);
-    if (!requested || requested.length === 0 || requested[0] === 'baseline') {
-      return ['baseline'];
+    if (!requested || requested.length === 0 || requested[0] === 'golden-demo') {
+      return ['golden-demo'];
     }
 
     if (requested.length === 1 && requested[0] === 'all') {

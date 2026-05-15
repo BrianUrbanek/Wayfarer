@@ -1,5 +1,12 @@
 import { DEFAULT_TURN_POLICY } from '../model/turnPolicy.js';
-import type { ExperimentScenarioCatalog, ExperimentScenarioDefinition } from './experimentTypes.js';
+import { getScenarioPreset, type ScenarioPresetId } from '../model/scenarioPresets.js';
+import {
+  EXPERIMENT_POLICY_DESCRIPTIONS,
+  EXPERIMENT_POLICY_LABELS,
+  type ExperimentPolicyCase,
+  type ExperimentScenarioCatalog,
+  type ExperimentScenarioDefinition
+} from './experimentTypes.js';
 
 function buildTurnPolicyTemplate() {
   const { turnMode: _turnMode, turnBatchCount: _turnBatchCount, ...template } = DEFAULT_TURN_POLICY;
@@ -8,96 +15,79 @@ function buildTurnPolicyTemplate() {
 
 const SHARED_POLICY_TEMPLATE = buildTurnPolicyTemplate();
 const SHARED_SEEDS = [1201, 1202, 1203];
-
-export const EXPERIMENT_SCENARIOS: ExperimentScenarioCatalog = {
-  baseline: {
-    slug: 'baseline',
-    label: 'Baseline',
-    description: 'A high-alignment starting point that shows the discovery loop under clean signal conditions.',
-    seedList: SHARED_SEEDS,
-    userCount: 10,
-    islandCount: 12,
-    bootstrapRatingsPerUser: 3,
-    turnCount: 5,
-    generatorConfig: {
-      tagAlignmentDistribution: { kind: 'fixed', value: 10 },
-      ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
-    },
-    turnPolicyTemplate: {
-      ...SHARED_POLICY_TEMPLATE,
-      participatingUsersPerTurn: 4,
-      participationChance: 0.5,
-      organicRatingsPerUser: 2,
-      guidedRecommendationsPerUser: 2,
-      routingRiskProfile: 'balanced',
-      customExplorationWeight: 0.55,
-      customMinimumPredictedFit: 0.25
-    },
-    policyCases: [
-      {
-        slug: 'organic',
-        label: 'Organic Exploration',
-        description: 'Organic-only exploration for the same seeded world.'
-      },
-      {
-        slug: 'guided',
-        label: 'Guided Discovery',
-        description: 'Guided-only discovery for the same seeded world.'
-      },
-      {
-        slug: 'mixed',
-        label: 'Mixed',
-        description: 'Shared participants can emit organic and guided ratings in the same turn.'
-      }
-    ]
+const SHARED_POLICY_CASES: readonly ExperimentPolicyCase[] = [
+  {
+    slug: 'organic',
+    label: EXPERIMENT_POLICY_LABELS.organic,
+    description: EXPERIMENT_POLICY_DESCRIPTIONS.organic
   },
-  'low-alignment': {
-    slug: 'low-alignment',
-    label: 'Low Alignment',
-    description: 'A noisier starting point that uses the same turn policy but weaker user alignment.',
+  {
+    slug: 'guided',
+    label: EXPERIMENT_POLICY_LABELS.guided,
+    description: EXPERIMENT_POLICY_DESCRIPTIONS.guided
+  },
+  {
+    slug: 'mixed',
+    label: EXPERIMENT_POLICY_LABELS.mixed,
+    description: EXPERIMENT_POLICY_DESCRIPTIONS.mixed
+  }
+];
+
+function fromPreset(slug: ScenarioPresetId): ExperimentScenarioDefinition {
+  const preset = getScenarioPreset(slug);
+  return {
+    slug: preset.id,
+    label: preset.label,
+    description: preset.description,
     seedList: SHARED_SEEDS,
-    userCount: 10,
-    islandCount: 12,
-    bootstrapRatingsPerUser: 3,
-    turnCount: 5,
+    userCount: preset.generatorConfig.numUsers,
+    islandCount: preset.generatorConfig.numIslands,
+    bootstrapRatingsPerUser: preset.generatorConfig.bootstrapRatingsPerUser,
+    turnCount: preset.turnsToRun,
     generatorConfig: {
-      tagAlignmentDistribution: { kind: 'uniform', min: 0, max: 4 },
-      ratingAlignmentDistribution: { kind: 'uniform', min: 0, max: 4 }
+      tagAlignmentDistribution: preset.generatorConfig.tagAlignmentDistribution,
+      ratingAlignmentDistribution: preset.generatorConfig.ratingAlignmentDistribution,
+      islandClassWeights: preset.generatorConfig.islandClassWeights
     },
     turnPolicyTemplate: {
       ...SHARED_POLICY_TEMPLATE,
-      participatingUsersPerTurn: 4,
-      participationChance: 0.5,
-      organicRatingsPerUser: 2,
-      guidedRecommendationsPerUser: 2,
-      routingRiskProfile: 'balanced',
-      customExplorationWeight: 0.55,
-      customMinimumPredictedFit: 0.25
+      participationModel: preset.turnPolicy.participationModel,
+      participatingUsersPerTurn: preset.turnPolicy.participatingUsersPerTurn,
+      participationChance: preset.turnPolicy.participationChance,
+      organicRatingCountModel: preset.turnPolicy.organicRatingCountModel,
+      organicRatingsPerUser: preset.turnPolicy.organicRatingsPerUser,
+      organicRatingDice: preset.turnPolicy.organicRatingDice,
+      guidedRatingCountModel: preset.turnPolicy.guidedRatingCountModel,
+      guidedRecommendationsPerUser: preset.turnPolicy.guidedRecommendationsPerUser,
+      guidedRecommendationDice: preset.turnPolicy.guidedRecommendationDice,
+      routingRiskProfile: preset.turnPolicy.routingRiskProfile,
+      customExplorationWeight: preset.turnPolicy.customExplorationWeight,
+      customMinimumPredictedFit: preset.turnPolicy.customMinimumPredictedFit
     },
-    policyCases: [
-      {
-        slug: 'organic',
-        label: 'Organic Exploration',
-        description: 'Organic-only exploration for the same seeded world.'
-      },
-      {
-        slug: 'guided',
-        label: 'Guided Discovery',
-        description: 'Guided-only discovery for the same seeded world.'
-      },
-      {
-        slug: 'mixed',
-        label: 'Mixed',
-        description: 'Shared participants can emit organic and guided ratings in the same turn.'
-      }
-    ]
-  }
+    policyCases: SHARED_POLICY_CASES,
+    presetAligned: true
+  };
+}
+
+const PRESET_SCENARIOS: ExperimentScenarioCatalog = {
+  'golden-demo': fromPreset('golden-demo'),
+  'controlled-comparison': fromPreset('controlled-comparison'),
+  'low-alignment-stress': fromPreset('low-alignment-stress'),
+  'small-smoke-test': fromPreset('small-smoke-test')
 };
+
+const LEGACY_ALIAS_TO_PRESET: Readonly<Record<string, ScenarioPresetId>> = {
+  baseline: 'golden-demo',
+  'low-alignment': 'low-alignment-stress'
+};
+
+export const EXPERIMENT_SCENARIOS: ExperimentScenarioCatalog = PRESET_SCENARIOS;
 
 export function listExperimentScenarioDefinitions(): ExperimentScenarioDefinition[] {
   return Object.values(EXPERIMENT_SCENARIOS);
 }
 
 export function resolveExperimentScenarioDefinition(slug: string): ExperimentScenarioDefinition | null {
-  return EXPERIMENT_SCENARIOS[slug] ?? null;
+  const normalized = LEGACY_ALIAS_TO_PRESET[slug] ?? slug;
+  return EXPERIMENT_SCENARIOS[normalized] ?? null;
 }
