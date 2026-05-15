@@ -15,3 +15,4 @@ import './experimentHarness.node.test.js';
 import './experimentOpen.node.test.js';
 import './scenarioPresets.node.test.js';
 import './scenarioPersistence.node.test.js';
+import './recentActionSummary.node.test.js';

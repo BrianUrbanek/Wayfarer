@@ -12,6 +12,7 @@ import { SelectionModal, type SelectionOption } from './ui/components/SelectionM
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
+import { aggregateBatchTotals, type RecentActionState } from './ui/recentActionSummary';
 import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
@@ -342,6 +343,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [executionProgress, setExecutionProgress] = useState<number>(0);
   const [executionStatus, setExecutionStatus] = useState<string>('');
   const [isExecutingScenario, setIsExecutingScenario] = useState(false);
+  const [recentAction, setRecentAction] = useState<RecentActionState | null>(null);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const scenarioExecutionTokenRef = useRef(0);
   const isNoviceMode = guidanceMode === 'novice';
@@ -1954,6 +1956,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     URL.revokeObjectURL(objectUrl);
     setScenarioError('');
     setScenarioMessage(`Exported ${fileName}`);
+    setRecentAction({
+      kind: 'scenario-exported',
+      scenarioLabel: currentScenarioLabel,
+      turnModeLabel: TURN_MODE_LABELS[turnMode],
+      previousTurn: simulationState.currentTurn,
+      currentTurn: simulationState.currentTurn,
+      latestTurnSummary: simulationState.turnHistory[simulationState.turnHistory.length - 1] ?? null,
+      exportFileName: fileName
+    });
   };
 
   const importScenarioFromFile = async (file: File) => {
@@ -2009,6 +2020,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         ? `Imported ${scenario.label} from ${scenario.scenarioPreset.label}`
         : `Imported ${scenario.label}`
     );
+    setRecentAction({
+      kind: 'scenario-imported',
+      scenarioLabel: scenario.scenarioPreset?.label ?? importedPresetMatch?.label ?? 'Custom / imported',
+      turnModeLabel: TURN_MODE_LABELS[scenario.turnPolicy.turnMode],
+      previousTurn: restoredState.currentTurn,
+      currentTurn: restoredState.currentTurn,
+      latestTurnSummary: restoredState.turnHistory[restoredState.turnHistory.length - 1] ?? null
+    });
   };
 
   const handleScenarioFileChange = async (event: { target: HTMLInputElement; currentTarget: HTMLInputElement }) => {
@@ -2081,6 +2100,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       setScenarioMessage(`Executed ${executionLabel} with seed ${nextSeed} for ${turnsToRun} turns.`);
       setExecutionStatus('Scenario execution complete.');
       setExecutionProgress(1);
+      setRecentAction({
+        kind: 'scenario-executed',
+        scenarioLabel: executionLabel,
+        turnModeLabel: TURN_MODE_LABELS[resolvedControls.turnPolicy.turnMode],
+        previousTurn: 0,
+        currentTurn: nextState.currentTurn,
+        latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1] ?? null,
+        batchSize: turnsToRun
+      });
     } finally {
       if (scenarioExecutionTokenRef.current === executionToken) {
         setIsExecutingScenario(false);
@@ -2089,7 +2117,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   };
 
   const takeSingleTurn = () => {
-    setSimulationState((state) => advanceCurrentTurn(state));
+    setSimulationState((state) => {
+      const nextState = advanceCurrentTurn(state);
+      setRecentAction({
+        kind: 'turn-advanced',
+        scenarioLabel: currentScenarioLabel,
+        turnModeLabel: TURN_MODE_LABELS[turnMode],
+        previousTurn: state.currentTurn,
+        currentTurn: nextState.currentTurn,
+        latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1] ?? null
+      });
+      return nextState;
+    });
   };
 
   const takeBatchTurns = () => {
@@ -2099,6 +2138,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       for (let index = 0; index < turnsToRun; index += 1) {
         next = advanceCurrentTurn(next);
       }
+
+      setRecentAction({
+        kind: 'batch-turns-advanced',
+        scenarioLabel: currentScenarioLabel,
+        turnModeLabel: TURN_MODE_LABELS[turnMode],
+        previousTurn: state.currentTurn,
+        currentTurn: next.currentTurn,
+        latestTurnSummary: next.turnHistory[next.turnHistory.length - 1] ?? null,
+        batchSize: turnsToRun
+      });
 
       return next;
     });
@@ -2129,6 +2178,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         initialRatingsPerUser: INITIAL_SCENARIO_PRESET.generatorConfig.bootstrapRatingsPerUser
       })
     );
+    setRecentAction({
+      kind: 'simulation-reset',
+      scenarioLabel: INITIAL_SCENARIO_PRESET.label,
+      turnModeLabel: TURN_MODE_LABELS[INITIAL_SCENARIO_PRESET.turnPolicy.turnMode],
+      previousTurn: simulationState.currentTurn,
+      currentTurn: 0,
+      latestTurnSummary: null
+    });
   };
 
   const resetControlPolicy = () => {
@@ -3051,6 +3108,68 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             value={participationDisplay}
             helper="Turn policy cap or chance applied before stream filtering."
           />
+        </div>
+        <div className="recent-action">
+          <div className="section-heading">
+            <h3>Recent action summary</h3>
+            <p className="muted">What changed after the latest workflow action.</p>
+          </div>
+          {recentAction ? (
+            (() => {
+              const latest = recentAction.latestTurnSummary;
+              const batchTurns =
+                recentAction.kind === 'batch-turns-advanced' && recentAction.batchSize
+                  ? dataset.turnHistory.slice(-recentAction.batchSize)
+                  : [];
+              const batchTotals = batchTurns.length > 0 ? aggregateBatchTotals(batchTurns) : null;
+              const noEvents = latest ? latest.ratingsCreated === 0 : true;
+              return (
+                <div className="recent-action__content">
+                  <p className="recent-action__title">
+                    {recentAction.kind === 'scenario-executed'
+                      ? 'Scenario executed'
+                      : recentAction.kind === 'turn-advanced'
+                        ? 'One turn advanced'
+                        : recentAction.kind === 'batch-turns-advanced'
+                          ? `Batch advanced (${recentAction.batchSize ?? 0} turns)`
+                          : recentAction.kind === 'simulation-reset'
+                            ? 'Simulation reset'
+                            : recentAction.kind === 'scenario-imported'
+                              ? 'Scenario imported'
+                              : 'Scenario exported'}
+                  </p>
+                  <p className="muted">
+                    Turn {recentAction.previousTurn} to {recentAction.currentTurn} • Scenario: {recentAction.scenarioLabel} • Mode: {recentAction.turnModeLabel}
+                  </p>
+                  {batchTotals ? (
+                    <div className="recent-action__metrics">
+                      <MetricCard label="Batch ratings" value={batchTotals.ratingsCreated} />
+                      <MetricCard label="Batch organic" value={batchTotals.organicRatingsCreated} />
+                      <MetricCard label="Batch guided" value={batchTotals.guidedRatingsCreated} />
+                      <MetricCard label="Batch participants" value={batchTotals.participatingUsers} />
+                    </div>
+                  ) : null}
+                  {latest ? (
+                    <div className="recent-action__metrics">
+                      <MetricCard label={batchTotals ? 'Latest-turn ratings' : 'Ratings created'} value={latest.ratingsCreated} />
+                      <MetricCard label="Organic / guided" value={`${latest.organicRatingsCreated}/${latest.guidedRatingsCreated}`} />
+                      <MetricCard label="Newly rated islands" value={latest.newlyRatedIslandIds.length} />
+                      <MetricCard label="Routed safe / probe" value={`${latest.recommendationKinds.SAFE_FIT}/${latest.recommendationKinds.DISCOVERY_PROBE}`} />
+                    </div>
+                  ) : null}
+                  {recentAction.exportFileName ? <p className="muted">Exported file: {recentAction.exportFileName}</p> : null}
+                  {noEvents ? (
+                    <div className="notice notice--warning">
+                      <strong>No rating events were created.</strong>
+                      <p>Inspect turn controls and recommendation thresholds if this was unexpected.</p>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })()
+          ) : (
+            <EmptyState title="No recent action yet" description="Execute a scenario or advance turns to view compact deltas." />
+          )}
         </div>
       </section>
 

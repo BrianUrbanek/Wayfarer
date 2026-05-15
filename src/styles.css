@@ -333,6 +333,30 @@ select {
   margin-top: 18px;
 }
 
+.recent-action {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.recent-action__content {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-action__title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.recent-action__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .stage-panel__actions {
   display: flex;
   justify-content: space-between;
