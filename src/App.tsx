@@ -159,6 +159,22 @@ function formatSignedDecimal(value: number, digits = 3): string {
   return `${prefix}${value.toFixed(digits)}`;
 }
 
+function buildLinePath(values: number[], width: number, height: number, padding: number): string {
+  const innerWidth = width - (padding * 2);
+  const innerHeight = height - (padding * 2);
+  if (values.length === 0) {
+    return '';
+  }
+  const stepX = values.length > 1 ? innerWidth / (values.length - 1) : 0;
+  return values
+    .map((value, index) => {
+      const x = padding + (index * stepX);
+      const y = padding + (innerHeight - (Math.max(0, Math.min(1, value)) * innerHeight));
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(' ');
+}
+
 function formatRating(value: string | number | null): string {
   if (value === null || value === undefined) {
     return 'Unrated';
@@ -345,6 +361,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [executionStatus, setExecutionStatus] = useState<string>('');
   const [isExecutingScenario, setIsExecutingScenario] = useState(false);
   const [recentAction, setRecentAction] = useState<RecentActionState | null>(null);
+  const [showConfidenceSeries, setShowConfidenceSeries] = useState({
+    player: true,
+    island: true,
+    cohort: false,
+    tag: false
+  });
+  const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
+  const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
+  const [overviewCollapsed, setOverviewCollapsed] = useState(false);
+  const [recoveryCollapsed, setRecoveryCollapsed] = useState(false);
+  const [routingCollapsed, setRoutingCollapsed] = useState(false);
+  const [debugCollapsed, setDebugCollapsed] = useState(false);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const scenarioExecutionTokenRef = useRef(0);
   const isNoviceMode = guidanceMode === 'novice';
@@ -2389,37 +2417,68 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </div>
         </Panel>,
         <Panel key="system-confidence" title="System Confidence" className="panel--full">
-          <div className="summary-header">
-            <div>
-              <h3>{formatPercent(systemConfidenceSummary.systemConfidence)}</h3>
-              <p className="muted">
-                {formatSignedDecimal(systemConfidenceSummary.runDelta * 100, 1)} pts over this run. Confidence proxy for overall system structure, not prediction accuracy.
-              </p>
+          <div className="system-confidence-header">
+            <div className="system-confidence-header__headline">
+              <p className="eyebrow">System confidence</p>
+              <h3 className="system-confidence-header__value">{formatPercent(systemConfidenceSummary.systemConfidence)}</h3>
+              <p className="muted">{formatSignedDecimal(systemConfidenceSummary.runDelta * 100, 1)} pts over this run.</p>
             </div>
+            <aside className="system-confidence-header__howto" aria-label="How to read system confidence">
+              <p className="muted">
+                This is not accuracy. It is a structure/evidence proxy across players, islands, cohorts, and tags. In a stable run, it should generally rise as the system learns. In live service, dips may indicate churn or stale assumptions.
+              </p>
+            </aside>
           </div>
-          <div className="metric-grid metric-grid--compact">
-            <MetricCard label="Player Base Confidence" value={formatPercent(systemConfidenceSummary.playerBaseConfidence)} />
-            <MetricCard label="Island Options Confidence" value={formatPercent(systemConfidenceSummary.islandOptionsConfidence)} />
-            <MetricCard label="Cohort Options Confidence" value={formatPercent(systemConfidenceSummary.cohortOptionsConfidence)} />
-            <MetricCard
-              label="Tag Options Confidence"
-              value={formatPercent(systemConfidenceSummary.tagOptionsConfidence)}
-              helper="Approximate proxy from declared-tag density and rating coverage."
-            />
+          <div className="system-confidence-cards">
+            <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.player ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.player} onClick={() => setShowConfidenceSeries((current) => ({ ...current, player: !current.player }))}>
+              <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.player ? '◉' : '○'}</div>
+              <div className="metric-card__label">Player Base Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.playerBaseConfidence)}</div>
+              <div className="metric-card__helper">Toggle player confidence series.</div>
+            </button>
+            <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.island ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.island} onClick={() => setShowConfidenceSeries((current) => ({ ...current, island: !current.island }))}>
+              <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.island ? '◉' : '○'}</div>
+              <div className="metric-card__label">Island Options Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.islandOptionsConfidence)}</div>
+              <div className="metric-card__helper">Toggle island confidence series.</div>
+            </button>
+            <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.cohort ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.cohort} onClick={() => setShowConfidenceSeries((current) => ({ ...current, cohort: !current.cohort }))}>
+              <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.cohort ? '◉' : '○'}</div>
+              <div className="metric-card__label">Cohort Options Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.cohortOptionsConfidence)}</div>
+              <div className="metric-card__helper">Toggle cohort confidence series.</div>
+            </button>
+            <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.tag ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.tag} onClick={() => setShowConfidenceSeries((current) => ({ ...current, tag: !current.tag }))}>
+              <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.tag ? '◉' : '○'}</div>
+              <div className="metric-card__label">Tag Options Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.tagOptionsConfidence)}</div>
+              <div className="metric-card__helper">Approximate proxy. Toggle tag confidence series.</div>
+            </button>
           </div>
-          <div className="summary-inline">
-            <ProgressBar value={systemConfidenceSummary.systemConfidence} label="System confidence" tone="accent" />
-            <ProgressBar value={systemConfidenceSummary.playerBaseConfidence} label="Player" tone="success" />
-            <ProgressBar value={systemConfidenceSummary.islandOptionsConfidence} label="Island" tone="success" />
-            <ProgressBar value={systemConfidenceSummary.cohortOptionsConfidence} label="Cohort" tone="warning" />
-            <ProgressBar value={systemConfidenceSummary.tagOptionsConfidence} label="Tag (proxy)" tone="warning" />
-          </div>
-          <div className="summary-inline">
-            {systemConfidenceSummary.trend.slice(-12).map((point) => (
-              <Badge key={point.turn} tone="neutral">
-                T{point.turn}: {Math.round(point.systemConfidence * 100)}%
-              </Badge>
-            ))}
+          <div className="system-confidence-trend">
+            <div className="system-confidence-trend__legend">
+              <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--system">System Confidence (always shown)</span>
+              <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--player">Player</span>
+              <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--island">Island</span>
+              <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--cohort">Cohort</span>
+              <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--tag">Tag</span>
+            </div>
+            <svg viewBox="0 0 760 220" role="img" aria-label="System confidence over time">
+              <rect x="0" y="0" width="760" height="220" className="system-confidence-trend__bg" />
+              {[0, 0.5, 1].map((tick) => (
+                <g key={tick}>
+                  <line x1="48" y1={16 + (1 - tick) * 176} x2="744" y2={16 + (1 - tick) * 176} className="system-confidence-trend__grid" />
+                  <text x="8" y={20 + (1 - tick) * 176} className="system-confidence-trend__axis">{Math.round(tick * 100)}%</text>
+                </g>
+              ))}
+              <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.systemConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--system" />
+              {showConfidenceSeries.player ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.playerBaseConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--player" /> : null}
+              {showConfidenceSeries.island ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.islandOptionsConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--island" /> : null}
+              {showConfidenceSeries.cohort ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.cohortOptionsConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--cohort" /> : null}
+              {showConfidenceSeries.tag ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.tagOptionsConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--tag" /> : null}
+              <text x="48" y="214" className="system-confidence-trend__axis">Turn {systemConfidenceSummary.trend[0]?.turn ?? 0}</text>
+              <text x="680" y="214" className="system-confidence-trend__axis">Turn {systemConfidenceSummary.trend.at(-1)?.turn ?? 0}</text>
+            </svg>
           </div>
           <p className="muted">Declared-cohort signal remains available in drilldown surfaces, not as the top-level platform metric.</p>
         </Panel>
@@ -3095,35 +3154,64 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <h2>Inspect the current state, then advance one turn.</h2>
             <p className="muted">Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.</p>
           </div>
-          <div className="stage-panel__badges">
-            <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-            <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
-            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-            <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
-          </div>
+          <button
+            type="button"
+            className="icon-button collapsible-panel__toggle"
+            onClick={() => setPrimaryWorkflowCollapsed((value) => !value)}
+            aria-label={primaryWorkflowCollapsed ? 'Expand Primary workflow' : 'Collapse Primary workflow'}
+          >
+            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+              {primaryWorkflowCollapsed ? 'v' : '^'}
+            </span>
+          </button>
         </div>
-        <div className="stage-panel__actions">
-          <div className="stage-panel__action-group">
-            <button type="button" className="button button--primary" onClick={takeSingleTurn} disabled={isExecutingScenario}>
-              Take 1 Turn
-            </button>
-            <button type="button" className="button" onClick={takeBatchTurns} disabled={isExecutingScenario}>
-              Take {turnsToRun} Turns
-            </button>
-          </div>
-          <div className="stage-panel__action-group">
-            {openSelectionButton('user', 'Choose user', 'button button--ghost', isExecutingScenario)}
-            {openSelectionButton('island', 'Choose island', 'button button--ghost', isExecutingScenario)}
-            <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)} disabled={isExecutingScenario}>
-              Open About
-            </button>
-          </div>
-        </div>
+        {!primaryWorkflowCollapsed ? (
+          <>
+            <div className="stage-panel__badges">
+              <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+              <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
+              <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+              <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+              <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+              <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+            </div>
+            <div className="stage-panel__actions">
+              <div className="stage-panel__action-group">
+                <button type="button" className="button button--primary" onClick={takeSingleTurn} disabled={isExecutingScenario}>
+                  Take 1 Turn
+                </button>
+                <button type="button" className="button" onClick={takeBatchTurns} disabled={isExecutingScenario}>
+                  Take {turnsToRun} Turns
+                </button>
+              </div>
+              <div className="stage-panel__action-group">
+                {openSelectionButton('user', 'Choose user', 'button button--ghost', isExecutingScenario)}
+                {openSelectionButton('island', 'Choose island', 'button button--ghost', isExecutingScenario)}
+                <button type="button" className="button button--ghost" onClick={() => setShowAbout(true)} disabled={isExecutingScenario}>
+                  Open About
+                </button>
+              </div>
+            </div>
+          </>
+        ) : null}
       </section>
 
       <section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
+        <div className="section-heading section-heading--collapse-row">
+          <h3>Primary workflow details</h3>
+          <button
+            type="button"
+            className="icon-button collapsible-panel__toggle"
+            onClick={() => setPrimaryDetailsCollapsed((value) => !value)}
+            aria-label={primaryDetailsCollapsed ? 'Expand Primary workflow details' : 'Collapse Primary workflow details'}
+          >
+            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+              {primaryDetailsCollapsed ? 'v' : '^'}
+            </span>
+          </button>
+        </div>
+        {!primaryDetailsCollapsed ? (
+          <>
         <div className="stage-panel__metrics">
           <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
           <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
@@ -3201,6 +3289,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <EmptyState title="No recent action yet" description="Execute a scenario or advance turns to view compact deltas." />
           )}
         </div>
+        </>
+        ) : null}
       </section>
 
       <section className="inspection-shell" aria-label="Inspection / dashboard panels">
@@ -3222,6 +3312,33 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
                 <div className="section-heading dashboard-section__heading">
                   <p className="eyebrow">{section.title}</p>
+                  <button
+                    type="button"
+                    className="icon-button collapsible-panel__toggle"
+                    onClick={() => {
+                      if (sectionKey === 'overview') setOverviewCollapsed((value) => !value);
+                      if (sectionKey === 'recovery') setRecoveryCollapsed((value) => !value);
+                      if (sectionKey === 'routing') setRoutingCollapsed((value) => !value);
+                      if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
+                    }}
+                    aria-label={
+                      (sectionKey === 'overview' && overviewCollapsed) ||
+                      (sectionKey === 'recovery' && recoveryCollapsed) ||
+                      (sectionKey === 'routing' && routingCollapsed) ||
+                      (sectionKey === 'debug' && debugCollapsed)
+                        ? `Expand ${section.title}`
+                        : `Collapse ${section.title}`
+                    }
+                  >
+                    <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                      {(sectionKey === 'overview' && overviewCollapsed) ||
+                      (sectionKey === 'recovery' && recoveryCollapsed) ||
+                      (sectionKey === 'routing' && routingCollapsed) ||
+                      (sectionKey === 'debug' && debugCollapsed)
+                        ? 'v'
+                        : '^'}
+                    </span>
+                  </button>
                   <p className="muted">
                     {sectionKey === 'overview'
                       ? 'Summary and current state'
@@ -3232,7 +3349,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                           : 'Checksums, hidden metadata, and debug-only fields'}
                   </p>
                 </div>
-                <div className="dashboard-section__panels">{section.panels}</div>
+                {!((sectionKey === 'overview' && overviewCollapsed) || (sectionKey === 'recovery' && recoveryCollapsed) || (sectionKey === 'routing' && routingCollapsed) || (sectionKey === 'debug' && debugCollapsed)) ? (
+                  <div className="dashboard-section__panels">{section.panels}</div>
+                ) : null}
               </section>
             );
           })}

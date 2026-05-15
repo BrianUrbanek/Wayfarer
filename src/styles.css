@@ -357,6 +357,166 @@ select {
   gap: 10px;
 }
 
+.system-confidence-trend {
+  display: grid;
+  gap: 8px;
+}
+
+.system-confidence-trend svg {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(141, 164, 255, 0.16);
+}
+
+.system-confidence-header {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+}
+
+.system-confidence-header__headline {
+  display: grid;
+  gap: 4px;
+}
+
+.system-confidence-header__value {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.system-confidence-header__howto {
+  grid-column: 2;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(141, 164, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.system-confidence-header__howto p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  opacity: 0.88;
+}
+
+.system-confidence-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.system-confidence-card {
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+}
+
+.system-confidence-card[aria-pressed='false'] {
+  opacity: 0.68;
+  filter: saturate(0.78);
+}
+
+.system-confidence-card--active {
+  border-color: rgba(103, 215, 199, 0.42);
+  background: rgba(103, 215, 199, 0.1);
+  box-shadow: 0 0 0 1px rgba(103, 215, 199, 0.24) inset;
+}
+
+.system-confidence-card__state-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.system-confidence-card--active .system-confidence-card__state-dot {
+  color: #bff7eb;
+}
+
+.system-confidence-trend__legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.system-confidence-trend__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.system-confidence-trend__legend-item::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  display: inline-block;
+}
+
+.system-confidence-trend__legend-item--system {
+  color: #67d7c7;
+  font-weight: 700;
+}
+.system-confidence-trend__legend-item--player { color: #8da4ff; }
+.system-confidence-trend__legend-item--island { color: #ffb36b; }
+.system-confidence-trend__legend-item--cohort { color: #7fd35a; }
+.system-confidence-trend__legend-item--tag { color: #b0bfff; }
+
+.system-confidence-trend__bg {
+  fill: rgba(255, 255, 255, 0.02);
+}
+
+.system-confidence-trend__grid {
+  stroke: rgba(141, 164, 255, 0.16);
+  stroke-width: 1;
+}
+
+.system-confidence-trend__axis {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+.system-confidence-trend__line {
+  fill: none;
+  stroke-width: 2.25;
+}
+
+.system-confidence-trend__line--system {
+  stroke: #67d7c7;
+  stroke-width: 3;
+}
+
+.system-confidence-trend__line--player {
+  stroke: #8da4ff;
+  opacity: 0.9;
+}
+
+.system-confidence-trend__line--island {
+  stroke: #ffb36b;
+  opacity: 0.85;
+}
+
+.system-confidence-trend__line--cohort {
+  stroke: #7fd35a;
+  opacity: 0.85;
+}
+
+.system-confidence-trend__line--tag {
+  stroke: #b0bfff;
+  opacity: 0.8;
+  stroke-dasharray: 6 4;
+}
+
 .stage-panel__actions {
   display: flex;
   justify-content: space-between;
@@ -519,6 +679,11 @@ select {
   gap: 14px;
 }
 
+.dashboard-section--overview {
+  border-top: 1px solid rgba(141, 164, 255, 0.16);
+  padding-top: 8px;
+}
+
 .dashboard-section {
   display: grid;
   gap: 12px;
@@ -627,6 +792,13 @@ select {
   margin: 6px 0 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.section-heading--collapse-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
 }
 
 .card-list {
@@ -1867,6 +2039,18 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .system-confidence-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .system-confidence-header {
+    grid-template-columns: 1fr;
+  }
+
+  .system-confidence-header__howto {
+    grid-column: 1;
+  }
+
   .panel--full,
   .panel--wide {
     grid-column: auto;
@@ -1887,6 +2071,10 @@ select {
   }
 
   .control-strip__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .system-confidence-cards {
     grid-template-columns: 1fr;
   }
 

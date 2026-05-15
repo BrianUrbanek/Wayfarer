@@ -39,6 +39,21 @@ function buildState() {
     customExplorationWeight: 0.55,
     customMinimumPredictedFit: -0.1
   });
+  state = advancePolicyTurn(state, {
+    turnMode: 'mixed',
+    participationModel: 'fixed-count',
+    participatingUsersPerTurn: 3,
+    participationChance: 0.5,
+    organicRatingCountModel: 'fixed-count',
+    organicRatingsPerUser: 2,
+    organicRatingDice: '1d2',
+    guidedRatingCountModel: 'fixed-count',
+    guidedRecommendationsPerUser: 2,
+    guidedRecommendationDice: '1d2',
+    routingRiskProfile: 'balanced',
+    customExplorationWeight: 0.55,
+    customMinimumPredictedFit: -0.1
+  });
   return state;
 }
 
@@ -58,5 +73,17 @@ describe('system confidence helper', () => {
       assert.equal(summary.trend[i - 1].turn <= summary.trend[i].turn, true);
     }
     assert.equal(summary.trend.every((point) => point.systemConfidence >= 0 && point.systemConfidence <= 1), true);
+  });
+
+  it('uses comparable cumulative trend values for run delta', () => {
+    const summary = buildSystemConfidenceSummary(buildState());
+    const first = summary.trend[0]?.systemConfidence ?? summary.systemConfidence;
+    assert.equal(summary.runDelta, summary.systemConfidence - first);
+  });
+
+  it('keeps stable-run trend and delta plausible', () => {
+    const summary = buildSystemConfidenceSummary(buildState());
+    const first = summary.trend[0]?.systemConfidence ?? summary.systemConfidence;
+    assert.equal(summary.systemConfidence >= first, true);
   });
 });
