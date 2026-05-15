@@ -13,6 +13,7 @@ import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
 import { aggregateBatchTotals, type RecentActionState } from './ui/recentActionSummary';
+import { buildSystemConfidenceSummary } from './ui/systemConfidence';
 import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
@@ -474,6 +475,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ),
     [dataset.users.length, inferenceTypes, dataset.pseudoCohortAnalysis.allReports.length]
   );
+  const systemConfidenceSummary = useMemo(() => buildSystemConfidenceSummary(dataset), [dataset]);
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
   const effectiveRoutingValues = useMemo(
@@ -2379,19 +2381,47 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <MetricCard label="Islands" value={dataset.islands.length} />
             <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
             <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
-            <MetricCard label="High signal users" value={populationSummary.highSignal} tone="success" />
+            <MetricCard label="High signal users" value={populationSummary.highSignal} />
             <MetricCard label="Retag candidates" value={populationSummary.retagCandidates} tone="warning" />
             <MetricCard label="Inverse profiles" value={populationSummary.inverseProfiles} tone="danger" />
             <MetricCard label="Unknown / noisy" value={populationSummary.noisyUsers} />
             <MetricCard label="Pseudo-cohort reports" value={populationSummary.pseudoReports} />
           </div>
-          <div className="summary-inline">
-            <ProgressBar
-              value={populationSummary.totalUsers ? populationSummary.highSignal / populationSummary.totalUsers : 0}
-              label="High-signal share"
-              tone="success"
+        </Panel>,
+        <Panel key="system-confidence" title="System Confidence" className="panel--full">
+          <div className="summary-header">
+            <div>
+              <h3>{formatPercent(systemConfidenceSummary.systemConfidence)}</h3>
+              <p className="muted">
+                {formatSignedDecimal(systemConfidenceSummary.runDelta * 100, 1)} pts over this run. Confidence proxy for overall system structure, not prediction accuracy.
+              </p>
+            </div>
+          </div>
+          <div className="metric-grid metric-grid--compact">
+            <MetricCard label="Player Base Confidence" value={formatPercent(systemConfidenceSummary.playerBaseConfidence)} />
+            <MetricCard label="Island Options Confidence" value={formatPercent(systemConfidenceSummary.islandOptionsConfidence)} />
+            <MetricCard label="Cohort Options Confidence" value={formatPercent(systemConfidenceSummary.cohortOptionsConfidence)} />
+            <MetricCard
+              label="Tag Options Confidence"
+              value={formatPercent(systemConfidenceSummary.tagOptionsConfidence)}
+              helper="Approximate proxy from declared-tag density and rating coverage."
             />
           </div>
+          <div className="summary-inline">
+            <ProgressBar value={systemConfidenceSummary.systemConfidence} label="System confidence" tone="accent" />
+            <ProgressBar value={systemConfidenceSummary.playerBaseConfidence} label="Player" tone="success" />
+            <ProgressBar value={systemConfidenceSummary.islandOptionsConfidence} label="Island" tone="success" />
+            <ProgressBar value={systemConfidenceSummary.cohortOptionsConfidence} label="Cohort" tone="warning" />
+            <ProgressBar value={systemConfidenceSummary.tagOptionsConfidence} label="Tag (proxy)" tone="warning" />
+          </div>
+          <div className="summary-inline">
+            {systemConfidenceSummary.trend.slice(-12).map((point) => (
+              <Badge key={point.turn} tone="neutral">
+                T{point.turn}: {Math.round(point.systemConfidence * 100)}%
+              </Badge>
+            ))}
+          </div>
+          <p className="muted">Declared-cohort signal remains available in drilldown surfaces, not as the top-level platform metric.</p>
         </Panel>
       ]
     },
