@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "demoPresets": [
+    {
+      "id": "golden-demo",
+      "label": "Golden Demo",
+      "description": "Legible portfolio demo conditions with clean signal and enough volume to show the loop quickly.",
+      "goodFor": "Best for walkthroughs, stakeholder demos, and quick inspection of the full discovery loop.",
+      "generatorConfig": {
+        "seed": 73021,
+        "numUsers": 45,
+        "numIslands": 36,
+        "bootstrapRatingsPerUser": 6,
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 6, "max": 10 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 6, "max": 10 }
+      },
+      "turnPolicy": {
+        "turnMode": "mixed",
+        "participationModel": "fixed-count",
+        "participatingUsersPerTurn": 12,
+        "participationChance": 0.35,
+        "organicRatingCountModel": "fixed-count",
+        "organicRatingsPerUser": 2,
+        "organicRatingDice": "1d3",
+        "guidedRatingCountModel": "fixed-count",
+        "guidedRecommendationsPerUser": 2,
+        "guidedRecommendationDice": "1d2",
+        "routingRiskProfile": "balanced",
+        "customExplorationWeight": 0.55,
+        "customMinimumPredictedFit": 0.25
+      },
+      "turnsToRun": 18
+    },
+    {
+      "id": "controlled-comparison",
+      "label": "Controlled Comparison",
+      "description": "A tighter comparison world for Organic, Guided, and Mixed under the same generated dataset.",
+      "goodFor": "Best for comparing turn modes without extra noise or huge sample volume.",
+      "generatorConfig": {
+        "seed": 82461,
+        "numUsers": 90,
+        "numIslands": 36,
+        "bootstrapRatingsPerUser": 6,
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 8, "max": 10 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 8, "max": 10 }
+      },
+      "turnPolicy": {
+        "turnMode": "mixed",
+        "participationModel": "fixed-count",
+        "participatingUsersPerTurn": 12,
+        "participationChance": 0.35,
+        "organicRatingCountModel": "fixed-count",
+        "organicRatingsPerUser": 4,
+        "organicRatingDice": "1d3",
+        "guidedRatingCountModel": "fixed-count",
+        "guidedRecommendationsPerUser": 3,
+        "guidedRecommendationDice": "1d2",
+        "routingRiskProfile": "balanced",
+        "customExplorationWeight": 0.55,
+        "customMinimumPredictedFit": 0.25
+      },
+      "turnsToRun": 5
+    },
+    {
+      "id": "low-alignment-stress",
+      "label": "Low-Alignment Stress",
+      "description": "Noisier worlds that should stay cautious instead of looking overconfident.",
+      "goodFor": "Best for checking how the model behaves when the synthetic population is less aligned.",
+      "generatorConfig": {
+        "seed": 90573,
+        "numUsers": 90,
+        "numIslands": 36,
+        "bootstrapRatingsPerUser": 6,
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 0, "max": 5 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 0, "max": 5 }
+      },
+      "turnPolicy": {
+        "turnMode": "mixed",
+        "participationModel": "fixed-count",
+        "participatingUsersPerTurn": 12,
+        "participationChance": 0.35,
+        "organicRatingCountModel": "fixed-count",
+        "organicRatingsPerUser": 4,
+        "organicRatingDice": "1d3",
+        "guidedRatingCountModel": "fixed-count",
+        "guidedRecommendationsPerUser": 3,
+        "guidedRecommendationDice": "1d2",
+        "routingRiskProfile": "conservative",
+        "customExplorationWeight": 0.25,
+        "customMinimumPredictedFit": 0.45
+      },
+      "turnsToRun": 5
+    },
+    {
+      "id": "small-smoke-test",
+      "label": "Small Smoke Test",
+      "description": "A lightweight browser-check scenario that stays close to the app's current default feel.",
+      "goodFor": "Best for quick manual checks, UI sanity passes, and short turn-by-turn inspection.",
+      "generatorConfig": {
+        "seed": 48291,
+        "numUsers": 48,
+        "numIslands": 18,
+        "bootstrapRatingsPerUser": 4,
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 2, "max": 10 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 2, "max": 10 }
+      },
+      "turnPolicy": {
+        "turnMode": "organic",
+        "participationModel": "fixed-count",
+        "participatingUsersPerTurn": 6,
+        "participationChance": 0.35,
+        "organicRatingCountModel": "fixed-count",
+        "organicRatingsPerUser": 3,
+        "organicRatingDice": "1d3",
+        "guidedRatingCountModel": "fixed-count",
+        "guidedRecommendationsPerUser": 2,
+        "guidedRecommendationDice": "1d2",
+        "routingRiskProfile": "balanced",
+        "customExplorationWeight": 0.55,
+        "customMinimumPredictedFit": 0.25
+      },
+      "turnsToRun": 5
+    }
+  ],
+  "harnessCharacterization": {
+    "label": "Harness characterization",
+    "description": "Repeat seeded runs across Organic, Guided, and Mixed policies under clean, mixed, and low-alignment families.",
+    "baseScenario": {
+      "numUsers": 90,
+      "numIslands": 36,
+      "bootstrapRatingsPerUser": [5, 6],
+      "turnsToRun": 20
+    },
+    "seedPlan": {
+      "starterSeeds": [11023, 21023, 31023, 41023, 51023],
+      "recommendedSeeds": 20
+    },
+    "policyCases": [
+      {
+        "id": "organic",
+        "label": "Organic",
+        "description": "Organic Exploration only.",
+        "turnPolicy": {
+          "turnMode": "organic",
+          "participationModel": "fixed-count",
+          "participatingUsersPerTurn": 12,
+          "participationChance": 0.35,
+          "organicRatingCountModel": "fixed-count",
+          "organicRatingsPerUser": 2,
+          "organicRatingDice": "1d3",
+          "guidedRatingCountModel": "fixed-count",
+          "guidedRecommendationsPerUser": 2,
+          "guidedRecommendationDice": "1d2",
+          "routingRiskProfile": "balanced",
+          "customExplorationWeight": 0.55,
+          "customMinimumPredictedFit": 0.25
+        }
+      },
+      {
+        "id": "guided",
+        "label": "Guided",
+        "description": "Guided Discovery only.",
+        "turnPolicy": {
+          "turnMode": "guided",
+          "participationModel": "fixed-count",
+          "participatingUsersPerTurn": 12,
+          "participationChance": 0.35,
+          "organicRatingCountModel": "fixed-count",
+          "organicRatingsPerUser": 2,
+          "organicRatingDice": "1d3",
+          "guidedRatingCountModel": "fixed-count",
+          "guidedRecommendationsPerUser": 2,
+          "guidedRecommendationDice": "1d2",
+          "routingRiskProfile": "balanced",
+          "customExplorationWeight": 0.55,
+          "customMinimumPredictedFit": 0.25
+        }
+      },
+      {
+        "id": "mixed-volume-matched",
+        "label": "Mixed volume-matched",
+        "description": "Mixed mode with the same total turn volume as the single-stream policies.",
+        "turnPolicy": {
+          "turnMode": "mixed",
+          "participationModel": "fixed-count",
+          "participatingUsersPerTurn": 12,
+          "participationChance": 0.35,
+          "organicRatingCountModel": "fixed-count",
+          "organicRatingsPerUser": 2,
+          "organicRatingDice": "1d3",
+          "guidedRatingCountModel": "fixed-count",
+          "guidedRecommendationsPerUser": 2,
+          "guidedRecommendationDice": "1d2",
+          "routingRiskProfile": "balanced",
+          "customExplorationWeight": 0.55,
+          "customMinimumPredictedFit": 0.25
+        }
+      },
+      {
+        "id": "mixed-product-like",
+        "label": "Mixed product-like",
+        "description": "Mixed mode tuned to resemble the more demo-facing product experience.",
+        "turnPolicy": {
+          "turnMode": "mixed",
+          "participationModel": "fixed-count",
+          "participatingUsersPerTurn": 12,
+          "participationChance": 0.35,
+          "organicRatingCountModel": "fixed-count",
+          "organicRatingsPerUser": 2,
+          "organicRatingDice": "1d3",
+          "guidedRatingCountModel": "fixed-count",
+          "guidedRecommendationsPerUser": 2,
+          "guidedRecommendationDice": "1d2",
+          "routingRiskProfile": "balanced",
+          "customExplorationWeight": 0.55,
+          "customMinimumPredictedFit": 0.25
+        }
+      }
+    ],
+    "alignmentFamilies": [
+      {
+        "id": "clean",
+        "label": "Clean",
+        "description": "High-alignment populations with clear visible signal.",
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 8, "max": 10 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 8, "max": 10 }
+      },
+      {
+        "id": "mixed",
+        "label": "Mixed",
+        "description": "Moderately mixed populations with some clean and some muddy signal.",
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 5, "max": 10 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 5, "max": 10 }
+      },
+      {
+        "id": "low",
+        "label": "Low",
+        "description": "Low-alignment populations that should remain cautious and noisy.",
+        "tagAlignmentDistribution": { "kind": "uniform", "min": 0, "max": 5 },
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 0, "max": 5 }
+      }
+    ]
+  }
+}

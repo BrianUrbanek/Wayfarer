@@ -6,6 +6,7 @@ import {
   listScenarioPresets,
   resolveScenarioPresetFromControls
 } from '../../model/scenarioPresets.js';
+import { SCENARIO_CATALOG } from '../../model/scenarioCatalog.js';
 
 describe('scenario presets', () => {
   it('exposes the curated preset set', () => {
@@ -28,10 +29,10 @@ describe('scenario presets', () => {
     assert.equal(preset.turnPolicy.participationModel, 'fixed-count');
     assert.equal(preset.turnPolicy.participatingUsersPerTurn, 12);
     assert.equal(preset.turnPolicy.organicRatingCountModel, 'fixed-count');
-    assert.equal(preset.turnPolicy.organicRatingsPerUser, 4);
+    assert.equal(preset.turnPolicy.organicRatingsPerUser, 2);
     assert.equal(preset.turnPolicy.guidedRatingCountModel, 'fixed-count');
-    assert.equal(preset.turnPolicy.guidedRecommendationsPerUser, 3);
-    assert.equal(preset.turnsToRun, 5);
+    assert.equal(preset.turnPolicy.guidedRecommendationsPerUser, 2);
+    assert.equal(preset.turnsToRun, 18);
   });
 
   it('round-trips preset controls back to the same preset', () => {
@@ -39,5 +40,21 @@ describe('scenario presets', () => {
     const controls = applyScenarioPreset(preset);
 
     assert.equal(resolveScenarioPresetFromControls(controls)?.id, preset.id);
+  });
+
+  it('loads editable demo and harness blocks from the scenario catalog', () => {
+    assert.equal(SCENARIO_CATALOG.version, 1);
+    assert.equal(SCENARIO_CATALOG.demoPresets.length, 4);
+    assert.equal(SCENARIO_CATALOG.harnessCharacterization.baseScenario.numUsers, 90);
+    assert.equal(SCENARIO_CATALOG.harnessCharacterization.baseScenario.numIslands, 36);
+    assert.equal(SCENARIO_CATALOG.harnessCharacterization.baseScenario.turnsToRun, 20);
+    assert.deepEqual(
+      SCENARIO_CATALOG.harnessCharacterization.alignmentFamilies.map((family) => family.id),
+      ['clean', 'mixed', 'low']
+    );
+    assert.deepEqual(
+      SCENARIO_CATALOG.harnessCharacterization.policyCases.map((caseItem) => caseItem.id),
+      ['organic', 'guided', 'mixed-volume-matched', 'mixed-product-like']
+    );
   });
 });

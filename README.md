@@ -22,7 +22,7 @@ The current UI is a browser analyst console for inspecting sparse ratings, cohor
 - [Wayfarer Next-Generation Model Spec](docs/wayfarer-next-generation-model-spec.md)
 - [Experiment Harness](docs/experiment-harness.md)
 - Saved scenario JSON is local-only reproducibility data for export/import during development.
-- Scenario presets are named experimental conditions. Novice mode shows the preset selector and short rationale; Expert mode exposes the resolved controls for editing.
+- Scenario presets are named experimental conditions and are defined in [`src/data/scenario-catalog.json`](src/data/scenario-catalog.json). Novice mode shows the preset selector and short rationale; Expert mode exposes the resolved controls for editing.
 - Demo narratives use a dual-frame structure: a system use case plus a player journey, tied to shared steps and inspectable results.
 - Fixed preset counts are intentional. Durable user activity profiles are future work, and the current turn model still uses per-turn selection rather than stable Pareto-like activity shapes.
 

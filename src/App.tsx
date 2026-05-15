@@ -2569,6 +2569,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 <label className="control control--preset">
                   <span className="control__label-row">
                     <span>Scenario preset</span>
+                    <InfoTip
+                      label="Scenario preset help"
+                      text="These scenarios are defined in src/data/scenario-catalog.json. Edit that JSON to change the named presets."
+                    />
                   </span>
                   <select
                     value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}

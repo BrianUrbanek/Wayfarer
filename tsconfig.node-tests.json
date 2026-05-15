@@ -7,7 +7,7 @@
     "moduleResolution": "NodeNext",
     "skipLibCheck": true,
     "allowImportingTsExtensions": false,
-    "resolveJsonModule": false,
+    "resolveJsonModule": true,
     "isolatedModules": false,
     "noEmit": false,
     "outDir": "dist-node-tests",

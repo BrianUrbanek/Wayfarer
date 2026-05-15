@@ -20,14 +20,34 @@ npm run analyze:open
 
 Default behavior:
 
-- scenario: `baseline`
+- scenario: `golden-demo`
 - seeds: scenario defaults
 - output: timestamped folder under `artifacts/experiments/`
+
+## Preset-aligned scenarios
+
+The harness uses preset-aligned scenario slugs that mirror the browser scenario presets. Use these canonical slugs:
+
+- `golden-demo`
+- `controlled-comparison`
+- `low-alignment-stress`
+- `small-smoke-test`
+
+Legacy aliases are still accepted for compatibility:
+
+- `baseline` -> `golden-demo`
+- `low-alignment` -> `low-alignment-stress`
 
 You can override the selected scenarios, seeds, or output path:
 
 ```powershell
-npm run analyze:runs -- --scenario baseline,low-alignment --seeds 1201,1202,1203 --output artifacts\experiments\manual-check
+npm run analyze:runs -- --scenario golden-demo,low-alignment-stress --seeds 1201,1202,1203 --output artifacts\experiments\manual-check
+```
+
+Legacy-alias example (compatibility only):
+
+```powershell
+npm run analyze:runs -- --scenario baseline,low-alignment
 ```
 
 ## Output
