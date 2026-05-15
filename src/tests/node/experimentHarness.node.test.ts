@@ -22,7 +22,7 @@ describe('experiment harness', () => {
   it('produces deterministic JSON summaries for the same scenario and seed set', () => {
     const outputDirectory = mkdtempSync(join(tmpdir(), 'wayfarer-experiment-'));
     const options = {
-      scenarioDefinitions: [EXPERIMENT_SCENARIOS.baseline, EXPERIMENT_SCENARIOS['low-alignment']],
+      scenarioDefinitions: [EXPERIMENT_SCENARIOS['golden-demo'], EXPERIMENT_SCENARIOS['low-alignment-stress']],
       outputDirectory,
       generatedAt: '2026-05-12T18:00:00.000Z',
       now: createDeterministicClock(7)
@@ -39,10 +39,10 @@ describe('experiment harness', () => {
     assert.equal(first.scenarios.every((scenario) => scenario.policyResults.length === 3), true);
   });
 
-  it('writes JSON and Markdown reports with stable headings and low-alignment coverage', () => {
+  it('writes JSON and Markdown reports with stable headings and preset-aligned coverage', () => {
     const outputDirectory = mkdtempSync(join(tmpdir(), 'wayfarer-experiment-'));
     const suite = runExperimentSuite({
-      scenarioDefinitions: [EXPERIMENT_SCENARIOS.baseline, EXPERIMENT_SCENARIOS['low-alignment']],
+      scenarioDefinitions: [EXPERIMENT_SCENARIOS['golden-demo'], EXPERIMENT_SCENARIOS['low-alignment-stress']],
       outputDirectory,
       generatedAt: '2026-05-12T18:00:00.000Z',
       now: createDeterministicClock(11)
@@ -53,10 +53,12 @@ describe('experiment harness', () => {
 
     assert.equal(json.generatedAt, '2026-05-12T18:00:00.000Z');
     assert.equal(json.scenarios.length, 2);
-    assert.ok(json.scenarios.some((scenario) => scenario.definition.slug === 'low-alignment'));
+    assert.ok(json.scenarios.some((scenario) => scenario.definition.slug === 'low-alignment-stress'));
     assert.ok(markdown.includes('# Experiment Harness Report'));
-    assert.ok(markdown.includes('## baseline'));
-    assert.ok(markdown.includes('## low-alignment'));
+    assert.ok(markdown.includes('## golden-demo'));
+    assert.ok(markdown.includes('## low-alignment-stress'));
+    assert.ok(markdown.includes('Scenario label: Golden Demo'));
+    assert.ok(markdown.includes('Preset-aligned: yes'));
     assert.ok(markdown.includes('### Organic Exploration'));
     assert.ok(markdown.includes('### Guided Discovery'));
     assert.ok(markdown.includes('### Mixed'));
@@ -66,7 +68,7 @@ describe('experiment harness', () => {
 
   it('renders a markdown summary from an in-memory suite result', () => {
     const suite = runExperimentSuite({
-      scenarioDefinitions: [EXPERIMENT_SCENARIOS.baseline],
+      scenarioDefinitions: [EXPERIMENT_SCENARIOS['golden-demo']],
       outputDirectory: mkdtempSync(join(tmpdir(), 'wayfarer-experiment-')),
       generatedAt: '2026-05-12T18:00:00.000Z',
       now: createDeterministicClock(13)
@@ -76,5 +78,36 @@ describe('experiment harness', () => {
     assert.ok(markdown.includes('Policy comparison summary'));
     assert.ok(markdown.includes('Warnings and limitations'));
     assert.ok(markdown.includes('Observed failure signs'));
+  });
+
+  it('maps harness scenarios to curated preset values and supports legacy aliases', async () => {
+    const { resolveExperimentScenarioDefinition, listExperimentScenarioDefinitions } = await import('../../analysis/scenarios.js');
+    const golden = resolveExperimentScenarioDefinition('golden-demo');
+    assert.ok(golden);
+    assert.equal(golden.userCount, 45);
+    assert.equal(golden.islandCount, 36);
+    assert.equal(golden.bootstrapRatingsPerUser, 6);
+    assert.equal(golden.turnCount, 5);
+    assert.equal(golden.turnPolicyTemplate.participatingUsersPerTurn, 12);
+    assert.equal(golden.turnPolicyTemplate.organicRatingsPerUser, 4);
+    assert.equal(golden.turnPolicyTemplate.guidedRecommendationsPerUser, 3);
+    assert.equal(golden.turnPolicyTemplate.routingRiskProfile, 'balanced');
+
+    const lowAlignment = resolveExperimentScenarioDefinition('low-alignment-stress');
+    assert.ok(lowAlignment);
+    const tagAlignment = lowAlignment.generatorConfig.tagAlignmentDistribution;
+    const ratingAlignment = lowAlignment.generatorConfig.ratingAlignmentDistribution;
+    assert.equal(typeof tagAlignment === 'object' ? tagAlignment.kind : null, 'uniform');
+    assert.equal(typeof ratingAlignment === 'object' ? ratingAlignment.kind : null, 'uniform');
+    assert.equal(lowAlignment.turnPolicyTemplate.routingRiskProfile, 'conservative');
+
+    assert.equal(resolveExperimentScenarioDefinition('baseline')?.slug, 'golden-demo');
+    assert.equal(resolveExperimentScenarioDefinition('low-alignment')?.slug, 'low-alignment-stress');
+    assert.deepEqual(listExperimentScenarioDefinitions().map((entry) => entry.slug), [
+      'golden-demo',
+      'controlled-comparison',
+      'low-alignment-stress',
+      'small-smoke-test'
+    ]);
   });
 });

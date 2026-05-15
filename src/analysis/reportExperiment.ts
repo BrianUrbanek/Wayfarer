@@ -205,6 +205,8 @@ export function renderExperimentSuiteMarkdown(suite: ExperimentSuiteResult): str
 
   for (const scenario of suite.scenarios) {
     lines.push(`## ${scenario.definition.slug}`);
+    lines.push(`Scenario label: ${scenario.definition.label}`);
+    lines.push(`Preset-aligned: ${scenario.definition.presetAligned ? 'yes' : 'no'}`);
     lines.push(scenario.definition.description);
     lines.push('');
 

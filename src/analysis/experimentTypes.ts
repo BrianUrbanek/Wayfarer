@@ -22,6 +22,7 @@ export interface ExperimentScenarioDefinition {
   readonly slug: string;
   readonly label: string;
   readonly description: string;
+  readonly presetAligned: boolean;
   readonly seedList: readonly number[];
   readonly userCount: number;
   readonly islandCount: number;
