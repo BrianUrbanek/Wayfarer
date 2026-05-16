@@ -39,6 +39,7 @@ The current UI is a browser analyst console for inspecting sparse ratings, cohor
 ## Project Hygiene
 
 - Keep changes narrow and issue-bounded unless the task explicitly asks for broader cleanup.
+- In Codex PowerShell sessions, prefer `npm.cmd run ...` when `npm` resolves to `npm.ps1` and triggers execution-policy blocks.
 - For docs work and Node-safe model checks, run `npm run test:node` and `.\node_modules\.bin\tsc.cmd -b`.
 - For characterization runs, use `npm run analyze:runs` and inspect the generated JSON/Markdown output under `artifacts/experiments/`.
 - For local scenario reproduction, use the export/import controls in the simulation setup and keep the saved JSON files outside product content.

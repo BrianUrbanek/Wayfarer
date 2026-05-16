@@ -16,6 +16,14 @@ interface SystemHealthPanelProps {
   onToggleSeries: (key: keyof ConfidenceSeriesState) => void;
 }
 
+type PopoverKey =
+  | 'systemCoverage'
+  | 'systemConfidence'
+  | 'playerConfidence'
+  | 'islandConfidence'
+  | 'cohortConfidence'
+  | 'tagConfidence';
+
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
@@ -43,7 +51,7 @@ function buildLinePath(values: number[], width: number, height: number, padding:
 }
 
 export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSeries }: SystemHealthPanelProps) {
-  const [showFormulaAudit, setShowFormulaAudit] = useState(false);
+  const [openPopover, setOpenPopover] = useState<PopoverKey | null>(null);
 
   const trendLines = useMemo(
     () => ({
@@ -60,12 +68,72 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
     <Panel title="System Health" className="panel--full">
       <div className="system-confidence-header">
         <div className="system-confidence-header__headline">
-          <p className="eyebrow">System coverage</p>
+          <div className="system-health-inline-heading">
+            <p className="eyebrow">System coverage</p>
+            <button
+              type="button"
+              className="system-health-affordance"
+              onClick={() => setOpenPopover((current) => (current === 'systemCoverage' ? null : 'systemCoverage'))}
+              aria-label="Open System Coverage explanation and formula"
+              aria-expanded={openPopover === 'systemCoverage'}
+            >
+              ?ƒ
+            </button>
+            {openPopover === 'systemCoverage' ? (
+              <div className="system-health-popover" role="dialog" aria-label="System Coverage details">
+                <section className="system-health-popover__section">
+                  <h5>What this means</h5>
+                  <p>Coverage tracks evidence distribution and discovery operability across players, islands, cohorts, and tags, not correctness.</p>
+                </section>
+                <section className="system-health-popover__section">
+                  <h5>Formula</h5>
+                  <p>Composite weights sum to {(sumFormulaWeights(SYSTEM_HEALTH_FORMULA_AUDIT.coverageComposite) * 100).toFixed(0)}%.</p>
+                  <ul>
+                    {SYSTEM_HEALTH_FORMULA_AUDIT.coverageComposite.map((item) => (
+                      <li key={item.key}>
+                        {item.label}: {(item.weight * 100).toFixed(0)}%
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            ) : null}
+          </div>
           <h3 className="system-confidence-header__value">{formatPercent(summary.systemCoverage)}</h3>
           <p className="muted">{formatSigned(summary.coverageDelta * 100)} pts over this run.</p>
-          <p className="muted">
-            System confidence: {formatPercent(summary.systemConfidence)} ({formatSigned(summary.confidenceDelta * 100)} pts)
-          </p>
+          <div className="system-health-inline-heading">
+            <p className="muted">
+              System confidence: {formatPercent(summary.systemConfidence)} ({formatSigned(summary.confidenceDelta * 100)} pts)
+            </p>
+            <button
+              type="button"
+              className="system-health-affordance"
+              onClick={() => setOpenPopover((current) => (current === 'systemConfidence' ? null : 'systemConfidence'))}
+              aria-label="Open System Confidence explanation and formula"
+              aria-expanded={openPopover === 'systemConfidence'}
+            >
+              ?ƒ
+            </button>
+            {openPopover === 'systemConfidence' ? (
+              <div className="system-health-popover" role="dialog" aria-label="System Confidence details">
+                <section className="system-health-popover__section">
+                  <h5>What this means</h5>
+                  <p>Confidence tracks evidence-weighted coherence and trustworthiness of current structure, not ground-truth accuracy.</p>
+                </section>
+                <section className="system-health-popover__section">
+                  <h5>Formula</h5>
+                  <p>Composite weights sum to {(sumFormulaWeights(SYSTEM_HEALTH_FORMULA_AUDIT.confidenceComposite) * 100).toFixed(0)}%.</p>
+                  <ul>
+                    {SYSTEM_HEALTH_FORMULA_AUDIT.confidenceComposite.map((item) => (
+                      <li key={item.key}>
+                        {item.label}: {(item.weight * 100).toFixed(0)}%
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            ) : null}
+          </div>
         </div>
         <aside className="system-confidence-header__howto" aria-label="How to read system health">
           <p className="muted">
@@ -82,8 +150,45 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.player}
           onClick={() => onToggleSeries('player')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.player ? '?' : '?'}</div>
-          <div className="metric-card__label">Player Confidence</div>
+          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.player ? 'Shown' : 'Hidden'}</div>
+          <div className="metric-card__label system-health-card-label-row">
+            <span>Player Confidence</span>
+            <button
+              type="button"
+              className="system-health-affordance"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenPopover((current) => (current === 'playerConfidence' ? null : 'playerConfidence'));
+              }}
+              aria-label="Open Player Confidence explanation and formula"
+              aria-expanded={openPopover === 'playerConfidence'}
+            >
+              ?ƒ
+            </button>
+          </div>
+          {openPopover === 'playerConfidence' ? (
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Player Confidence details">
+              <section className="system-health-popover__section">
+                <h5>What this means</h5>
+                <p>High-confidence mismatch and inverse patterns can still raise Player Confidence when rating evidence is strong.</p>
+              </section>
+              <section className="system-health-popover__section">
+                <h5>Formula</h5>
+                <p>Gate: `{SYSTEM_HEALTH_FORMULA_AUDIT.playerEvidenceGate}` &gt; 0.</p>
+                <p>
+                  Blend: behavior score {SYSTEM_HEALTH_FORMULA_SPEC.confidence.player.behaviorScoreWeight.toFixed(2)} + diagnosis weight{' '}
+                  {SYSTEM_HEALTH_FORMULA_SPEC.confidence.player.diagnosisWeight.toFixed(2)}.
+                </p>
+                <ul>
+                  {Object.entries(SYSTEM_HEALTH_FORMULA_AUDIT.playerDiagnosisWeights).map(([diagnosis, weight]) => (
+                    <li key={diagnosis}>
+                      {diagnosis}: {weight.toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.playerConfidence)}</div>
           <div className="metric-card__helper">Mismatch/inverse profiles can still be high-confidence.</div>
         </button>
@@ -93,8 +198,37 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.island}
           onClick={() => onToggleSeries('island')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.island ? '?' : '?'}</div>
-          <div className="metric-card__label">Island Confidence</div>
+          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.island ? 'Shown' : 'Hidden'}</div>
+          <div className="metric-card__label system-health-card-label-row">
+            <span>Island Confidence</span>
+            <button
+              type="button"
+              className="system-health-affordance"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenPopover((current) => (current === 'islandConfidence' ? null : 'islandConfidence'));
+              }}
+              aria-label="Open Island Confidence explanation and formula"
+              aria-expanded={openPopover === 'islandConfidence'}
+            >
+              ?ƒ
+            </button>
+          </div>
+          {openPopover === 'islandConfidence' ? (
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Island Confidence details">
+              <section className="system-health-popover__section">
+                <h5>What this means</h5>
+                <p>Island Confidence reflects affinity interpretability weighted by observed evidence volume.</p>
+              </section>
+              <section className="system-health-popover__section">
+                <h5>Formula</h5>
+                <p>
+                  Affinity confidence weight: {SYSTEM_HEALTH_FORMULA_SPEC.confidence.island.affinityConfidenceWeight.toFixed(2)}; evidence weight:{' '}
+                  {SYSTEM_HEALTH_FORMULA_SPEC.confidence.island.affinityEvidenceWeight.toFixed(2)}.
+                </p>
+              </section>
+            </div>
+          ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.islandConfidence)}</div>
           <div className="metric-card__helper">Island affinity confidence with evidence weighting.</div>
         </button>
@@ -104,8 +238,38 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.cohort}
           onClick={() => onToggleSeries('cohort')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.cohort ? '?' : '?'}</div>
-          <div className="metric-card__label">Cohort Confidence</div>
+          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.cohort ? 'Shown' : 'Hidden'}</div>
+          <div className="metric-card__label system-health-card-label-row">
+            <span>Cohort Confidence</span>
+            <button
+              type="button"
+              className="system-health-affordance"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenPopover((current) => (current === 'cohortConfidence' ? null : 'cohortConfidence'));
+              }}
+              aria-label="Open Cohort Confidence explanation and formula"
+              aria-expanded={openPopover === 'cohortConfidence'}
+            >
+              ?ƒ
+            </button>
+          </div>
+          {openPopover === 'cohortConfidence' ? (
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Cohort Confidence details">
+              <section className="system-health-popover__section">
+                <h5>What this means</h5>
+                <p>Cohort Confidence tracks whether cohorts remain useful explanatory structures in observed behavior.</p>
+              </section>
+              <section className="system-health-popover__section">
+                <h5>Formula</h5>
+                <p>
+                  Known-top weight: {SYSTEM_HEALTH_FORMULA_SPEC.confidence.cohort.knownTopWeight.toFixed(2)}; specificity:{' '}
+                  {SYSTEM_HEALTH_FORMULA_SPEC.confidence.cohort.specificityWeight.toFixed(2)}; evidence:{' '}
+                  {SYSTEM_HEALTH_FORMULA_SPEC.confidence.cohort.evidenceWeight.toFixed(2)}.
+                </p>
+              </section>
+            </div>
+          ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.cohortConfidence)}</div>
           <div className="metric-card__helper">Cohort usefulness as explanatory structure.</div>
         </button>
@@ -115,8 +279,38 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.tag}
           onClick={() => onToggleSeries('tag')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.tag ? '?' : '?'}</div>
-          <div className="metric-card__label">Tag Confidence</div>
+          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.tag ? 'Shown' : 'Hidden'}</div>
+          <div className="metric-card__label system-health-card-label-row">
+            <span>Tag Confidence</span>
+            <button
+              type="button"
+              className="system-health-affordance"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenPopover((current) => (current === 'tagConfidence' ? null : 'tagConfidence'));
+              }}
+              aria-label="Open Tag Confidence explanation and formula"
+              aria-expanded={openPopover === 'tagConfidence'}
+            >
+              ?ƒ
+            </button>
+          </div>
+          {openPopover === 'tagConfidence' ? (
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Tag Confidence details">
+              <section className="system-health-popover__section">
+                <h5>What this means</h5>
+                <p>Tag Confidence is experimental and proxy-based. It should not be treated as a strong standalone truth metric.</p>
+              </section>
+              <section className="system-health-popover__section">
+                <h5>Formula</h5>
+                <p>
+                  Tag coherence: {SYSTEM_HEALTH_FORMULA_SPEC.confidence.tag.tagCoherenceWeight.toFixed(2)}; tag density:{' '}
+                  {SYSTEM_HEALTH_FORMULA_SPEC.confidence.tag.tagDensityWeight.toFixed(2)}; player confidence:{' '}
+                  {SYSTEM_HEALTH_FORMULA_SPEC.confidence.tag.playerConfidenceWeight.toFixed(2)}.
+                </p>
+              </section>
+            </div>
+          ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.tagConfidence)}</div>
           <div className="metric-card__helper">Approximate proxy. Toggle tag confidence series.</div>
         </button>
@@ -154,58 +348,6 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
             Turn {summary.trend.at(-1)?.turn ?? 0}
           </text>
         </svg>
-      </div>
-
-      <div className="system-health-audit">
-        <button type="button" className="button button--ghost" onClick={() => setShowFormulaAudit((value) => !value)}>
-          {showFormulaAudit ? 'Hide formula details' : 'Formula details'}
-        </button>
-        {showFormulaAudit ? (
-          <div className="system-health-audit__content">
-            <p className="muted">{SYSTEM_HEALTH_FORMULA_SPEC.caveats.overview}</p>
-
-            <section className="system-health-audit__section">
-              <h4>System Coverage composite</h4>
-              <p className="muted">Weights sum to {(sumFormulaWeights(SYSTEM_HEALTH_FORMULA_AUDIT.coverageComposite) * 100).toFixed(0)}%.</p>
-              <ul className="diagnosis-list">
-                {SYSTEM_HEALTH_FORMULA_AUDIT.coverageComposite.map((item) => (
-                  <li key={item.key}>
-                    {item.label}: {(item.weight * 100).toFixed(0)}%
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="system-health-audit__section">
-              <h4>System Confidence composite</h4>
-              <p className="muted">Weights sum to {(sumFormulaWeights(SYSTEM_HEALTH_FORMULA_AUDIT.confidenceComposite) * 100).toFixed(0)}%.</p>
-              <ul className="diagnosis-list">
-                {SYSTEM_HEALTH_FORMULA_AUDIT.confidenceComposite.map((item) => (
-                  <li key={item.key}>
-                    {item.label}: {(item.weight * 100).toFixed(0)}%
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="system-health-audit__section">
-              <h4>Player Confidence gate and diagnosis lookup</h4>
-              <p className="muted">Evidence gate: `{SYSTEM_HEALTH_FORMULA_AUDIT.playerEvidenceGate}` must be {'>'} 0 before player confidence contributes.</p>
-              <ul className="diagnosis-list">
-                {Object.entries(SYSTEM_HEALTH_FORMULA_AUDIT.playerDiagnosisWeights).map(([diagnosis, weight]) => (
-                  <li key={diagnosis}>
-                    {diagnosis}: {weight.toFixed(2)}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="system-health-audit__section">
-              <h4>Proxy caveats</h4>
-              <p className="muted">{SYSTEM_HEALTH_FORMULA_SPEC.caveats.tagConfidence}</p>
-            </section>
-          </div>
-        ) : null}
       </div>
 
       <p className="muted">Declared-cohort signal remains available in drilldown surfaces, not as the top-level platform metric.</p>
