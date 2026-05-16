@@ -516,23 +516,16 @@ select {
   margin-top: 10px;
 }
 
-.system-health-inline-heading {
-  display: inline-flex;
+.system-health-metric-header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   position: relative;
 }
 
-.system-health-inline-heading .muted,
-.system-health-inline-heading .eyebrow {
+.system-health-metric-header-row .eyebrow {
   margin: 0;
-}
-
-.system-health-card-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 .system-health-affordance {
@@ -576,7 +569,14 @@ select {
 }
 
 .system-health-popover--card {
-  top: 30px;
+  top: 34px;
+}
+
+.system-health-card-affordance {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
 }
 
 .system-health-popover__section {

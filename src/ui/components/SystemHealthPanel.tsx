@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Panel } from './Panel';
 import type { SystemHealthSummary } from '../systemHealth';
 import { SYSTEM_HEALTH_FORMULA_AUDIT, SYSTEM_HEALTH_FORMULA_SPEC, sumFormulaWeights } from '../systemHealthFormulas';
@@ -68,7 +68,7 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
     <Panel title="System Health" className="panel--full">
       <div className="system-confidence-header">
         <div className="system-confidence-header__headline">
-          <div className="system-health-inline-heading">
+          <div className="system-health-metric-header-row">
             <p className="eyebrow">System coverage</p>
             <button
               type="button"
@@ -101,10 +101,9 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           </div>
           <h3 className="system-confidence-header__value">{formatPercent(summary.systemCoverage)}</h3>
           <p className="muted">{formatSigned(summary.coverageDelta * 100)} pts over this run.</p>
-          <div className="system-health-inline-heading">
-            <p className="muted">
-              System confidence: {formatPercent(summary.systemConfidence)} ({formatSigned(summary.confidenceDelta * 100)} pts)
-            </p>
+
+          <div className="system-health-metric-header-row">
+            <p className="eyebrow">System confidence</p>
             <button
               type="button"
               className="system-health-affordance"
@@ -134,6 +133,7 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
               </div>
             ) : null}
           </div>
+          <p className="muted">{formatPercent(summary.systemConfidence)} ({formatSigned(summary.confidenceDelta * 100)} pts)</p>
         </div>
         <aside className="system-confidence-header__howto" aria-label="How to read system health">
           <p className="muted">
@@ -150,21 +150,19 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.player}
           onClick={() => onToggleSeries('player')}
         >
-          <div className="metric-card__label system-health-card-label-row">
-            <span>Player Confidence</span>
-            <button
-              type="button"
-              className="system-health-affordance"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpenPopover((current) => (current === 'playerConfidence' ? null : 'playerConfidence'));
-              }}
-              aria-label="Open Player Confidence explanation and formula"
-              aria-expanded={openPopover === 'playerConfidence'}
-            >
-              ?ƒ
-            </button>
-          </div>
+          <button
+            type="button"
+            className="system-health-affordance system-health-card-affordance"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenPopover((current) => (current === 'playerConfidence' ? null : 'playerConfidence'));
+            }}
+            aria-label="Open Player Confidence explanation and formula"
+            aria-expanded={openPopover === 'playerConfidence'}
+          >
+            ?ƒ
+          </button>
+          <div className="metric-card__label">Player Confidence</div>
           {openPopover === 'playerConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Player Confidence details">
               <section className="system-health-popover__section">
@@ -191,27 +189,26 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.playerConfidence)}</div>
           <div className="metric-card__helper">Mismatch/inverse profiles can still be high-confidence.</div>
         </button>
+
         <button
           type="button"
           className={`metric-card system-confidence-card${showConfidenceSeries.island ? ' system-confidence-card--active' : ''}`}
           aria-pressed={showConfidenceSeries.island}
           onClick={() => onToggleSeries('island')}
         >
-          <div className="metric-card__label system-health-card-label-row">
-            <span>Island Confidence</span>
-            <button
-              type="button"
-              className="system-health-affordance"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpenPopover((current) => (current === 'islandConfidence' ? null : 'islandConfidence'));
-              }}
-              aria-label="Open Island Confidence explanation and formula"
-              aria-expanded={openPopover === 'islandConfidence'}
-            >
-              ?ƒ
-            </button>
-          </div>
+          <button
+            type="button"
+            className="system-health-affordance system-health-card-affordance"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenPopover((current) => (current === 'islandConfidence' ? null : 'islandConfidence'));
+            }}
+            aria-label="Open Island Confidence explanation and formula"
+            aria-expanded={openPopover === 'islandConfidence'}
+          >
+            ?ƒ
+          </button>
+          <div className="metric-card__label">Island Confidence</div>
           {openPopover === 'islandConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Island Confidence details">
               <section className="system-health-popover__section">
@@ -230,27 +227,26 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.islandConfidence)}</div>
           <div className="metric-card__helper">Island affinity confidence with evidence weighting.</div>
         </button>
+
         <button
           type="button"
           className={`metric-card system-confidence-card${showConfidenceSeries.cohort ? ' system-confidence-card--active' : ''}`}
           aria-pressed={showConfidenceSeries.cohort}
           onClick={() => onToggleSeries('cohort')}
         >
-          <div className="metric-card__label system-health-card-label-row">
-            <span>Cohort Confidence</span>
-            <button
-              type="button"
-              className="system-health-affordance"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpenPopover((current) => (current === 'cohortConfidence' ? null : 'cohortConfidence'));
-              }}
-              aria-label="Open Cohort Confidence explanation and formula"
-              aria-expanded={openPopover === 'cohortConfidence'}
-            >
-              ?ƒ
-            </button>
-          </div>
+          <button
+            type="button"
+            className="system-health-affordance system-health-card-affordance"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenPopover((current) => (current === 'cohortConfidence' ? null : 'cohortConfidence'));
+            }}
+            aria-label="Open Cohort Confidence explanation and formula"
+            aria-expanded={openPopover === 'cohortConfidence'}
+          >
+            ?ƒ
+          </button>
+          <div className="metric-card__label">Cohort Confidence</div>
           {openPopover === 'cohortConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Cohort Confidence details">
               <section className="system-health-popover__section">
@@ -270,27 +266,26 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.cohortConfidence)}</div>
           <div className="metric-card__helper">Cohort usefulness as explanatory structure.</div>
         </button>
+
         <button
           type="button"
           className={`metric-card system-confidence-card${showConfidenceSeries.tag ? ' system-confidence-card--active' : ''}`}
           aria-pressed={showConfidenceSeries.tag}
           onClick={() => onToggleSeries('tag')}
         >
-          <div className="metric-card__label system-health-card-label-row">
-            <span>Tag Confidence</span>
-            <button
-              type="button"
-              className="system-health-affordance"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpenPopover((current) => (current === 'tagConfidence' ? null : 'tagConfidence'));
-              }}
-              aria-label="Open Tag Confidence explanation and formula"
-              aria-expanded={openPopover === 'tagConfidence'}
-            >
-              ?ƒ
-            </button>
-          </div>
+          <button
+            type="button"
+            className="system-health-affordance system-health-card-affordance"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenPopover((current) => (current === 'tagConfidence' ? null : 'tagConfidence'));
+            }}
+            aria-label="Open Tag Confidence explanation and formula"
+            aria-expanded={openPopover === 'tagConfidence'}
+          >
+            ?ƒ
+          </button>
+          <div className="metric-card__label">Tag Confidence</div>
           {openPopover === 'tagConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Tag Confidence details">
               <section className="system-health-popover__section">
