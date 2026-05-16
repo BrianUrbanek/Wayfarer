@@ -775,7 +775,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       label: 'Cohort',
       render: (row) => (
         <div className="table-cell-stack">
-          <strong>{row.cohort.label}</strong>
+          <strong>{cohortLabels.full(row.cohort.id)}</strong>
           <span className="muted">{row.cohort.tags.join(' | ')}</span>
         </div>
       )
@@ -814,7 +814,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       label: 'Cohort',
       render: (row) => (
         <div className="table-cell-stack">
-          <strong>{row.cohort.label}</strong>
+          <strong>{cohortLabels.full(row.cohort.id)}</strong>
           <span className="muted">{row.cohort.tags.join(' | ')}</span>
         </div>
       )
