@@ -81,7 +81,11 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
             : diagnosisType === 'LOW_SIGNAL'
               ? 0.4
               : 0.15;
-        return clamp01((inf.signalEvidence * 0.45) + (Math.max(0, inf.behaviorTop.score) * 0.35) + (diagnosisWeight * 0.2));
+        const evidenceGate = inf.ratingEvidence;
+        if (evidenceGate <= 0) {
+          return 0;
+        }
+        return clamp01(evidenceGate * ((Math.max(0, inf.behaviorTop.score) * 0.55) + (diagnosisWeight * 0.45)));
       })
     )
   );

@@ -129,6 +129,7 @@ describe('system health helper', () => {
     const summary = buildSystemHealthSummary(buildNoEvidenceState());
     assert.equal(summary.systemCoverage < 0.2, true);
     assert.equal(summary.systemConfidence < 0.2, true);
+    assert.equal(summary.playerConfidence < 0.1, true);
   });
 
   it('bootstrap can produce nonzero coverage without high confidence', () => {
