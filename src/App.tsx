@@ -137,14 +137,37 @@ function buildSimulationStateFromControls(controls: ScenarioPresetControls) {
 
 function labelForCohortFactory(cohorts: CohortAnchor[]) {
   const labels = new Map(cohorts.map((cohort) => [cohort.id, cohort.label]));
+  const analystLabels = new Map(cohorts.map((cohort) => [cohort.id, cohort.analystName ?? cohort.label]));
 
   return (cohortId: string | null) => {
     if (cohortId === null) {
       return 'none';
     }
 
-    return labels.get(cohortId) ?? cohortId;
+    return analystLabels.get(cohortId) ?? labels.get(cohortId) ?? cohortId;
   };
+}
+
+function buildDeclaredObservedRelationshipText(inference: {
+  declaredTop: { cohortId: string | null };
+  behaviorTop: { cohortId: string | null };
+}) {
+  const declaredId = inference.declaredTop.cohortId;
+  const behaviorId = inference.behaviorTop.cohortId;
+
+  if (declaredId && behaviorId && declaredId === behaviorId) {
+    return 'Declared tags and observed behavior currently point to the same top cohort.';
+  }
+  if (declaredId && behaviorId && declaredId !== behaviorId) {
+    return 'Declared tags and observed behavior currently point to different top cohorts.';
+  }
+  if (!declaredId && behaviorId) {
+    return 'Observed behavior has a top cohort fit, but declared tags do not establish a clear top cohort yet.';
+  }
+  if (declaredId && !behaviorId) {
+    return 'Declared tags suggest a top cohort, but observed behavior is still too sparse for a clear top cohort.';
+  }
+  return 'Declared and observed cohort fits are both ambiguous; gather more ratings before over-interpreting this profile.';
 }
 
 function formatPercent(value: number): string {
@@ -1234,9 +1257,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <div className="metric-grid">
         <MetricCard
-          label="Identity/Behavior Fit"
+          label="Declared vs observed fit"
           value={selectedInference.signalFit.toFixed(3)}
-          helper="Do this player's declared tags and observed ratings point toward the same cohort pattern?"
+          helper="How closely declared tags and observed ratings align at the cohort level."
           tone="accent"
         />
         <MetricCard
@@ -1246,12 +1269,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           tone="neutral"
         />
         <MetricCard
-          label="Usable Signal"
+          label="Recommendation signal weight"
           value={selectedInference.effectiveSignal.toFixed(3)}
-          helper="How much weight the system should currently give this player's ratings."
+          helper="How strongly this player's ratings should influence routing decisions right now."
           tone="success"
         />
       </div>
+
+      <p className="muted">{buildDeclaredObservedRelationshipText(selectedInference)}</p>
 
       <div className="metric-grid metric-grid--compact">
         <MetricCard
@@ -1267,12 +1292,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </div>
 
       <div className="summary-top-cohorts">
-        {selectedUserTopCohorts.map(({ label, match }, index) => (
+        {selectedUserTopCohorts.map(({ label, match }) => (
           <MetricCard
             key={label}
             label="Top cohort"
             labelTitle={`${label} top cohort`}
-            value={`#${index + 1}`}
+            value={labelForCohort(match.cohortId)}
             valueTitle={labelForCohort(match.cohortId)}
             helper={`${formatPercent(match.score)} match`}
             helperTitle={`${label} top cohort: ${labelForCohort(match.cohortId)}`}
@@ -1288,7 +1313,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </div>
         <div className="metric-grid metric-grid--compact">
           <MetricCard
-            label="Overall signal"
+            label="Top behavioral signal"
             value={formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)}
             helper="Strongest cohort-local signal score."
             tone="accent"
@@ -1418,7 +1443,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <MetricCard
           label="Comparison cohort"
           value={selectedComparisonLabel}
-          helper="The cohort used for island comparison."
+          helper="Analyst-facing cohort identity used for this side-by-side island comparison."
         />
         <MetricCard
           label="Cohort rating"
@@ -1450,27 +1475,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <MetricCard
             label="Top positive affinity"
             value={selectedIslandAffinityReport?.topPositive ? labelForCohort(selectedIslandAffinityReport.topPositive.cohortId) : 'none'}
-            helper={
-              selectedIslandAffinityReport?.topPositive
-                ? `${formatSignedDecimal(selectedIslandPositiveAffinity)} affinity`
+          helper={
+            selectedIslandAffinityReport?.topPositive
+                ? `${formatSignedDecimal(selectedIslandPositiveAffinity)} affinity. Indicates strongest positive audience fit, not guaranteed recommendation quality.`
                 : 'No positive cohort estimate yet.'
-            }
+          }
             tone="success"
           />
           <MetricCard
             label="Top negative affinity"
             value={selectedIslandAffinityReport?.topNegative ? labelForCohort(selectedIslandAffinityReport.topNegative.cohortId) : 'none'}
-            helper={
-              selectedIslandAffinityReport?.topNegative
-                ? `${formatSignedDecimal(selectedIslandNegativeAffinity)} affinity`
+          helper={
+            selectedIslandAffinityReport?.topNegative
+                ? `${formatSignedDecimal(selectedIslandNegativeAffinity)} affinity. Indicates strongest negative audience fit, not a moderation verdict.`
                 : 'No negative cohort estimate yet.'
-            }
+          }
             tone="danger"
           />
           <MetricCard
             label="Affinity evidence"
             value={formatDecimal(selectedIslandEffectiveWeight)}
-            helper="Effective rater signal contributing to the island's top estimate."
+            helper="Effective rater signal backing this estimate. Low evidence means treat affinity direction as tentative."
           />
           <MetricCard
             label="Weighted ratings"

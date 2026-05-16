@@ -41,6 +41,38 @@ If a region has no clear job, it is probably noise, duplication, or decoration.
 
 ## Core Rules
 
+### Card And Affordance Taxonomy
+
+Use visible card copy first. A well-formed summary card should usually explain itself through:
+
+- `label`: what the value is;
+- `value`: the current state or magnitude;
+- `helper`: how to read the value and common boundaries/misreadings.
+
+Use typed affordances only when they do a distinct job that visible helper text cannot do compactly:
+
+- `?` contextual interpretation (`what does this mean here?`);
+- `ƒ` formula/audit trail (`how is this calculated?`);
+- `?ƒ` both interpretation and formula are worth separate inspection.
+
+Decision rule:
+
+- no icon when visible helper text already explains the card clearly;
+- `?` when contextual interpretation is needed;
+- `ƒ` when calculation/audit transparency matters;
+- `?ƒ` only when both are genuinely useful and non-redundant.
+
+Cards vs compact controls:
+
+- summary cards usually have enough space for label/value/helper and should prefer visible explanation;
+- compact controls (icon buttons, tiny toggles) often need tooltips/popovers because they lack room for helper text.
+
+Avoid overuse:
+
+- a tooltip is not free;
+- every added affordance increases scan cost and interaction overhead;
+- do not apply `?`/`ƒ`/`?ƒ` mechanically across all cards.
+
 ### Start With Jobs
 
 Ask what each region does before changing spacing or styling.
@@ -141,4 +173,3 @@ If the answer is no, move it, collapse it, shorten it, or remove it.
 - Repeated explanations in adjacent places.
 - Layouts that read as stitched together from unrelated blocks.
 - Beginner screens that ask users to parse every system concept at once.
-

@@ -34,6 +34,7 @@ export interface Island {
 export interface CohortAnchor {
   id: CohortId;
   label: string;
+  analystName?: string;
   tags: TagId[];
   ratings: Record<IslandId, MaybeRating>;
   source: 'meta_moderator' | 'analyst_defined';
