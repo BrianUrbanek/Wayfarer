@@ -2,6 +2,7 @@ import type { SimulationState } from '../model/simulation.js';
 import { computeInference } from '../model/inference.js';
 import { buildRaterSignalProfiles } from '../model/raterSignal.js';
 import { buildIslandAffinityReports } from '../model/affinity.js';
+import { getPlayerDiagnosisWeight, SYSTEM_HEALTH_FORMULA_SPEC } from './systemHealthFormulas.js';
 
 export interface SystemHealthPoint {
   turn: number;
@@ -47,14 +48,28 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
   const progress = clamp01(turnLimit / Math.max(1, state.currentTurn + 6));
 
   const ratingsPerUserCoverage = clamp01((ratedPairs / users) / islands);
-  const playerCoverage = clamp01((ratingsPerUserCoverage * 0.75) + (progress * 0.25));
-  const islandCoverage = clamp01((ratedIslands / islands) * 0.7 + (routedIslands / islands) * 0.3);
+  const playerCoverage = clamp01(
+    (ratingsPerUserCoverage * SYSTEM_HEALTH_FORMULA_SPEC.coverage.player.ratingsPerUserWeight) +
+      (progress * SYSTEM_HEALTH_FORMULA_SPEC.coverage.player.progressWeight)
+  );
+  const islandCoverage = clamp01(
+    ((ratedIslands / islands) * SYSTEM_HEALTH_FORMULA_SPEC.coverage.island.ratedIslandsWeight) +
+      ((routedIslands / islands) * SYSTEM_HEALTH_FORMULA_SPEC.coverage.island.routedIslandsWeight)
+  );
   const cohortCoverage = state.cohorts.length
     ? mean(state.cohorts.map((c) => clamp01(events.filter((e) => (e.raterSignalWeights[c.id] ?? 0) > 0).length / Math.max(1, events.length))))
     : 0;
   const tagDensity = clamp01(mean(state.users.map((u) => u.declaredTags.length)) / tags);
-  const tagCoverage = clamp01((tagDensity * 0.5) + (ratingsPerUserCoverage * 0.5));
-  const systemCoverage = clamp01((playerCoverage * 0.35) + (islandCoverage * 0.3) + (cohortCoverage * 0.2) + (tagCoverage * 0.15));
+  const tagCoverage = clamp01(
+    (tagDensity * SYSTEM_HEALTH_FORMULA_SPEC.coverage.tag.tagDensityWeight) +
+      (ratingsPerUserCoverage * SYSTEM_HEALTH_FORMULA_SPEC.coverage.tag.ratingsCoverageWeight)
+  );
+  const systemCoverage = clamp01(
+    (playerCoverage * SYSTEM_HEALTH_FORMULA_SPEC.coverage.composite[0].weight) +
+      (islandCoverage * SYSTEM_HEALTH_FORMULA_SPEC.coverage.composite[1].weight) +
+      (cohortCoverage * SYSTEM_HEALTH_FORMULA_SPEC.coverage.composite[2].weight) +
+      (tagCoverage * SYSTEM_HEALTH_FORMULA_SPEC.coverage.composite[3].weight)
+  );
 
   const ratingsByUser = new Map<string, Record<string, -1 | 0 | 1 | null>>(
     state.users.map((user) => [user.id, Object.fromEntries(state.islands.map((island) => [island.id, null])) as Record<string, -1 | 0 | 1 | null>])
@@ -74,18 +89,16 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
   const playerConfidence = clamp01(
     mean(
       inferenceValues.map((inf) => {
-        const diagnosisType = inf.diagnosis.type;
-        const diagnosisWeight =
-          diagnosisType === 'HIGH_SIGNAL' || diagnosisType === 'MISMATCH_RETAG' || diagnosisType === 'INVERSE_PROFILE'
-            ? 1
-            : diagnosisType === 'LOW_SIGNAL'
-              ? 0.4
-              : 0.15;
+        const diagnosisWeight = getPlayerDiagnosisWeight(inf.diagnosis.type);
         const evidenceGate = inf.ratingEvidence;
         if (evidenceGate <= 0) {
           return 0;
         }
-        return clamp01(evidenceGate * ((Math.max(0, inf.behaviorTop.score) * 0.55) + (diagnosisWeight * 0.45)));
+        return clamp01(
+          evidenceGate *
+            ((Math.max(0, inf.behaviorTop.score) * SYSTEM_HEALTH_FORMULA_SPEC.confidence.player.behaviorScoreWeight) +
+              (diagnosisWeight * SYSTEM_HEALTH_FORMULA_SPEC.confidence.player.diagnosisWeight))
+        );
       })
     )
   );
@@ -93,7 +106,10 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
   const affinityReports = Array.from(affinity.byIslandId.values());
   const islandConfMean = mean(affinityReports.map((r) => mean(r.estimates.map((e) => e.confidence))));
   const islandEvidence = clamp01(mean(affinityReports.map((r) => Math.min(1, r.estimates.reduce((s, e) => s + e.rawCount, 0) / Math.max(1, users)))));
-  const islandConfidence = clamp01((islandConfMean * 0.7) + (islandEvidence * 0.3));
+  const islandConfidence = clamp01(
+    (islandConfMean * SYSTEM_HEALTH_FORMULA_SPEC.confidence.island.affinityConfidenceWeight) +
+      (islandEvidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.island.affinityEvidenceWeight)
+  );
 
   const cohortConfidence = clamp01(
     mean(
@@ -101,15 +117,28 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
         const knownTop = inf.behaviorTop.cohortId !== null ? inf.behaviorTop.score : 0;
         const specificity = inf.behaviorSpecificity;
         const evidence = inf.ratingEvidence;
-        return clamp01((knownTop * 0.45) + (specificity * 0.35) + (evidence * 0.2));
+        return clamp01(
+          (knownTop * SYSTEM_HEALTH_FORMULA_SPEC.confidence.cohort.knownTopWeight) +
+            (specificity * SYSTEM_HEALTH_FORMULA_SPEC.confidence.cohort.specificityWeight) +
+            (evidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.cohort.evidenceWeight)
+        );
       })
     )
   );
 
   // Weak proxy: tag confidence reflects interpretability of declared tags against observed evidence, not raw tag volume.
   const tagCoherence = clamp01(mean(inferenceValues.map((inf) => Math.max(0, inf.signalFit))));
-  const tagConfidence = clamp01((tagCoherence * 0.6) + (tagDensity * 0.15) + (playerConfidence * 0.25));
-  const systemConfidence = clamp01((playerConfidence * 0.4) + (islandConfidence * 0.35) + (cohortConfidence * 0.2) + (tagConfidence * 0.05));
+  const tagConfidence = clamp01(
+    (tagCoherence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.tag.tagCoherenceWeight) +
+      (tagDensity * SYSTEM_HEALTH_FORMULA_SPEC.confidence.tag.tagDensityWeight) +
+      (playerConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.tag.playerConfidenceWeight)
+  );
+  const systemConfidence = clamp01(
+    (playerConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.composite[0].weight) +
+      (islandConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.composite[1].weight) +
+      (cohortConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.composite[2].weight) +
+      (tagConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.composite[3].weight)
+  );
 
   return {
     systemCoverage,

@@ -517,6 +517,31 @@ select {
   stroke-dasharray: 6 4;
 }
 
+.system-health-audit {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.system-health-audit__content {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(141, 164, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.system-health-audit__section {
+  display: grid;
+  gap: 4px;
+}
+
+.system-health-audit__section h4 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
 .stage-panel__actions {
   display: flex;
   justify-content: space-between;
