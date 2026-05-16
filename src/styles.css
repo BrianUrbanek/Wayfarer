@@ -362,6 +362,11 @@ select {
   gap: 8px;
 }
 
+.system-confidence-trend__hint {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
 .system-confidence-trend svg {
   width: 100%;
   max-width: 100%;
@@ -426,19 +431,6 @@ select {
   border-color: rgba(103, 215, 199, 0.42);
   background: rgba(103, 215, 199, 0.1);
   box-shadow: 0 0 0 1px rgba(103, 215, 199, 0.24) inset;
-}
-
-.system-confidence-card__state-dot {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.system-confidence-card--active .system-confidence-card__state-dot {
-  color: #bff7eb;
 }
 
 .system-confidence-trend__legend {

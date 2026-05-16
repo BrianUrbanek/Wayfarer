@@ -150,7 +150,6 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.player}
           onClick={() => onToggleSeries('player')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.player ? 'Shown' : 'Hidden'}</div>
           <div className="metric-card__label system-health-card-label-row">
             <span>Player Confidence</span>
             <button
@@ -198,7 +197,6 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.island}
           onClick={() => onToggleSeries('island')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.island ? 'Shown' : 'Hidden'}</div>
           <div className="metric-card__label system-health-card-label-row">
             <span>Island Confidence</span>
             <button
@@ -238,7 +236,6 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.cohort}
           onClick={() => onToggleSeries('cohort')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.cohort ? 'Shown' : 'Hidden'}</div>
           <div className="metric-card__label system-health-card-label-row">
             <span>Cohort Confidence</span>
             <button
@@ -279,7 +276,6 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           aria-pressed={showConfidenceSeries.tag}
           onClick={() => onToggleSeries('tag')}
         >
-          <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.tag ? 'Shown' : 'Hidden'}</div>
           <div className="metric-card__label system-health-card-label-row">
             <span>Tag Confidence</span>
             <button
@@ -317,15 +313,7 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
       </div>
 
       <div className="system-confidence-trend">
-        <div className="system-confidence-trend__legend">
-          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--system">
-            System Confidence (always shown)
-          </span>
-          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--player">Player</span>
-          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--island">Island</span>
-          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--cohort">Cohort</span>
-          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--tag">Tag</span>
-        </div>
+        <p className="muted system-confidence-trend__hint">Click a confidence card to toggle its chart line.</p>
         <svg viewBox="0 0 760 220" role="img" aria-label="System confidence over time">
           <rect x="0" y="0" width="760" height="220" className="system-confidence-trend__bg" />
           {[0, 0.5, 1].map((tick) => (
@@ -348,9 +336,16 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
             Turn {summary.trend.at(-1)?.turn ?? 0}
           </text>
         </svg>
+        <div className="system-confidence-trend__legend">
+          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--system">
+            System Confidence (always shown)
+          </span>
+          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--player">Player</span>
+          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--island">Island</span>
+          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--cohort">Cohort</span>
+          <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--tag">Tag</span>
+        </div>
       </div>
-
-      <p className="muted">Declared-cohort signal remains available in drilldown surfaces, not as the top-level platform metric.</p>
     </Panel>
   );
 }
