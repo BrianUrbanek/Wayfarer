@@ -139,12 +139,27 @@ function labelForCohortFactory(cohorts: CohortAnchor[]) {
   const labels = new Map(cohorts.map((cohort) => [cohort.id, cohort.label]));
   const analystLabels = new Map(cohorts.map((cohort) => [cohort.id, cohort.analystName ?? cohort.label]));
 
-  return (cohortId: string | null) => {
-    if (cohortId === null) {
-      return 'none';
+  return {
+    analyst: (cohortId: string | null) => {
+      if (cohortId === null) {
+        return 'none';
+      }
+      return analystLabels.get(cohortId) ?? labels.get(cohortId) ?? cohortId;
+    },
+    technical: (cohortId: string | null) => {
+      if (cohortId === null) {
+        return 'none';
+      }
+      return labels.get(cohortId) ?? cohortId;
+    },
+    full: (cohortId: string | null) => {
+      if (cohortId === null) {
+        return 'none';
+      }
+      const analyst = analystLabels.get(cohortId) ?? cohortId;
+      const technical = labels.get(cohortId) ?? cohortId;
+      return analyst === technical ? technical : `${analyst} — ${technical}`;
     }
-
-    return analystLabels.get(cohortId) ?? labels.get(cohortId) ?? cohortId;
   };
 }
 
@@ -436,7 +451,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   }, [pinnedDrilldownKind]);
 
   const dataset = simulationState;
-  const labelForCohort = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
+  const cohortLabels = useMemo(() => labelForCohortFactory(dataset.cohorts), [dataset.cohorts]);
 
   useEffect(() => {
     if (!dataset.users.length) {
@@ -483,7 +498,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     );
   }, [comparisonCohortId, dataset.cohorts, selectedInference]);
 
-  const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, labelForCohort);
+  const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, cohortLabels.full);
   const selectedRaterSignalProfile = selectedUser ? dataset.raterSignalProfiles.get(selectedUser.id) ?? null : null;
   const selectedIslandAffinityReport = selectedIsland ? dataset.islandAffinityReports.get(selectedIsland.id) ?? null : null;
   const selectedIslandRatingCount = selectedIslandAffinityReport?.estimates[0]?.rawCount ?? 0;
@@ -856,7 +871,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       render: (row) => (
         <div className="table-cell-stack">
           <Badge tone={diagnosisTone(row.inferredDiagnosisType)}>{row.inferredDiagnosisType}</Badge>
-          <span className="muted">{row.inferredCohortId ? labelForCohort(row.inferredCohortId) : 'none'}</span>
+          <span className="muted">{row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}</span>
         </div>
       )
     },
@@ -1164,7 +1179,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 </div>
                 <div className="recovery-preview-row__meta">
                   <span className="muted">
-                    Cohort: {row.inferredCohortId ? labelForCohort(row.inferredCohortId) : 'none'}
+                    Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
                   {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
@@ -1205,7 +1220,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 </div>
                 <div className="recovery-preview-row__meta">
                   <span className="muted">
-                    Cohort: {row.inferredCohortId ? labelForCohort(row.inferredCohortId) : 'none'}
+                    Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
                   {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
@@ -1295,12 +1310,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         {selectedUserTopCohorts.map(({ label, match }) => (
           <MetricCard
             key={label}
-            label="Top cohort"
+            label={`${label} top cohort`}
             labelTitle={`${label} top cohort`}
-            value={labelForCohort(match.cohortId)}
-            valueTitle={labelForCohort(match.cohortId)}
+            value={cohortLabels.full(match.cohortId)}
+            valueTitle={cohortLabels.full(match.cohortId)}
             helper={`${formatPercent(match.score)} match`}
-            helperTitle={`${label} top cohort: ${labelForCohort(match.cohortId)}`}
+            helperTitle={`${label} top cohort: ${cohortLabels.full(match.cohortId)}`}
             tone="neutral"
           />
         ))}
@@ -1325,7 +1340,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           />
           <MetricCard
             label="Top cohort"
-            value={labelForCohort(selectedRaterSignalProfile?.topCohortId ?? null)}
+            value={cohortLabels.full(selectedRaterSignalProfile?.topCohortId ?? null)}
             helper="The cohort with the strongest visible behavioral signal."
             tone="success"
           />
@@ -1474,7 +1489,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <div className="metric-grid metric-grid--compact">
           <MetricCard
             label="Top positive affinity"
-            value={selectedIslandAffinityReport?.topPositive ? labelForCohort(selectedIslandAffinityReport.topPositive.cohortId) : 'none'}
+            value={selectedIslandAffinityReport?.topPositive ? cohortLabels.full(selectedIslandAffinityReport.topPositive.cohortId) : 'none'}
           helper={
             selectedIslandAffinityReport?.topPositive
                 ? `${formatSignedDecimal(selectedIslandPositiveAffinity)} affinity. Indicates strongest positive audience fit, not guaranteed recommendation quality.`
@@ -1484,7 +1499,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           />
           <MetricCard
             label="Top negative affinity"
-            value={selectedIslandAffinityReport?.topNegative ? labelForCohort(selectedIslandAffinityReport.topNegative.cohortId) : 'none'}
+            value={selectedIslandAffinityReport?.topNegative ? cohortLabels.full(selectedIslandAffinityReport.topNegative.cohortId) : 'none'}
           helper={
             selectedIslandAffinityReport?.topNegative
                 ? `${formatSignedDecimal(selectedIslandNegativeAffinity)} affinity. Indicates strongest negative audience fit, not a moderation verdict.`
@@ -1538,7 +1553,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} · Evidence:{' '}
           {formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
         </p>
-        <p className="muted">Top cohort: {labelForCohort(selectedRaterSignalProfile?.topCohortId ?? null)}</p>
+        <p className="muted">Top cohort: {cohortLabels.full(selectedRaterSignalProfile?.topCohortId ?? null)}</p>
       </section>
       <section className="detail-block">
         <h4>Diagnosis</h4>
@@ -1568,7 +1583,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
       <section className="detail-block">
         <h4>Debug</h4>
-        <p>Hidden seed: {selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}</p>
+        <p>Hidden seed: {selectedUser.hiddenSeedCohortId ? cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}</p>
         <p>Tag alignment: {selectedUser.hiddenTagAlignment ?? 'n/a'}</p>
         <p>Rating alignment: {selectedUser.hiddenRatingAlignment ?? 'n/a'}</p>
       </section>
@@ -1662,7 +1677,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <div className="detail-mini-table">
           {selectedRecommendation.topCohorts.map((entry) => (
             <div key={entry.cohortId} className="detail-mini-table__row">
-              <span>{labelForCohort(entry.cohortId)}</span>
+              <span>{cohortLabels.full(entry.cohortId)}</span>
               <span className="muted">
                 {formatSignedDecimal(entry.affinity)} · confidence {formatPercent(entry.confidence)} · evidence {formatDecimal(entry.effectiveWeight)}
               </span>
@@ -1768,7 +1783,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Inferred behavior</h4>
         <p>Diagnosis: <Badge tone={diagnosisTone(selectedReviewerReport.inferredDiagnosisType)}>{selectedReviewerReport.inferredDiagnosisType}</Badge></p>
-        <p>Inferred cohort: {selectedReviewerReport.inferredCohortId ? labelForCohort(selectedReviewerReport.inferredCohortId) : 'none'}</p>
+        <p>Inferred cohort: {selectedReviewerReport.inferredCohortId ? cohortLabels.full(selectedReviewerReport.inferredCohortId) : 'none'}</p>
         <p>Recovery status: <Badge tone={reviewerRecoveryTone(selectedReviewerReport.recoveryStatus)}>{selectedReviewerReport.recoveryStatus}</Badge></p>
       </section>
       <section className="detail-block">
@@ -1809,13 +1824,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <DistributionList
         title="Declared distribution"
         entries={selectedInference.declaredDistribution}
-        labelForCohort={labelForCohort}
+        labelForCohort={cohortLabels.full}
       />
 
       <DistributionList
         title="Behavior distribution"
         entries={selectedInference.behaviorDistribution}
-        labelForCohort={labelForCohort}
+        labelForCohort={cohortLabels.full}
       />
 
       {behaviorIsNonInformative ? (
@@ -1831,7 +1846,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <DistributionList
         title="Inverse behavior distribution"
         entries={selectedInference.inverseBehaviorDistribution}
-        labelForCohort={labelForCohort}
+        labelForCohort={cohortLabels.full}
       />
 
       <section className="diagnosis-card">
@@ -1845,7 +1860,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <span className="muted">
             Suggested cohort:{' '}
             {selectedInference.diagnosis.suggestedCohortId
-              ? labelForCohort(selectedInference.diagnosis.suggestedCohortId)
+              ? cohortLabels.full(selectedInference.diagnosis.suggestedCohortId)
               : 'none'}
           </span>
           <span className="muted">
@@ -2521,7 +2536,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 <div className="debug-grid">
                   <MetricCard
                     label="Hidden seed"
-                    value={selectedUser.hiddenSeedCohortId ? labelForCohort(selectedUser.hiddenSeedCohortId) : 'none'}
+                    value={selectedUser.hiddenSeedCohortId ? cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
@@ -3581,5 +3596,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </main>
   );
 }
+
+
 
 
