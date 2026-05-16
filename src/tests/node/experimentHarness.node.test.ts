@@ -87,10 +87,10 @@ describe('experiment harness', () => {
     assert.equal(golden.userCount, 45);
     assert.equal(golden.islandCount, 36);
     assert.equal(golden.bootstrapRatingsPerUser, 6);
-    assert.equal(golden.turnCount, 5);
+    assert.equal(golden.turnCount, 18);
     assert.equal(golden.turnPolicyTemplate.participatingUsersPerTurn, 12);
-    assert.equal(golden.turnPolicyTemplate.organicRatingsPerUser, 4);
-    assert.equal(golden.turnPolicyTemplate.guidedRecommendationsPerUser, 3);
+    assert.equal(golden.turnPolicyTemplate.organicRatingsPerUser, 2);
+    assert.equal(golden.turnPolicyTemplate.guidedRecommendationsPerUser, 2);
     assert.equal(golden.turnPolicyTemplate.routingRiskProfile, 'balanced');
 
     const lowAlignment = resolveExperimentScenarioDefinition('low-alignment-stress');
