@@ -57,6 +57,46 @@ function buildState() {
   return state;
 }
 
+function buildNoEvidenceState() {
+  const dataset = generateColumbusDataset({
+    seed: 777,
+    numUsers: 8,
+    numIslands: 10,
+    allTags: DEFAULT_TAGS,
+    cohorts: createDefaultCohorts(),
+    tagAlignmentDistribution: { kind: 'fixed', value: 8 },
+    ratingAlignmentDistribution: { kind: 'fixed', value: 8 }
+  });
+  return createInitialSimulationState({
+    seed: 777,
+    allTags: dataset.allTags,
+    latentUsers: dataset.users,
+    cohorts: dataset.cohorts,
+    islands: dataset.islands,
+    initialRatingsPerUser: 0
+  });
+}
+
+function buildBootstrapOnlyState() {
+  const dataset = generateColumbusDataset({
+    seed: 778,
+    numUsers: 8,
+    numIslands: 10,
+    allTags: DEFAULT_TAGS,
+    cohorts: createDefaultCohorts(),
+    tagAlignmentDistribution: { kind: 'fixed', value: 8 },
+    ratingAlignmentDistribution: { kind: 'fixed', value: 8 }
+  });
+  return createInitialSimulationState({
+    seed: 778,
+    allTags: dataset.allTags,
+    latentUsers: dataset.users,
+    cohorts: dataset.cohorts,
+    islands: dataset.islands,
+    initialRatingsPerUser: 2
+  });
+}
+
 describe('system health helper', () => {
   it('builds bounded top-level coverage and confidence values', () => {
     const summary = buildSystemHealthSummary(buildState());
@@ -83,5 +123,38 @@ describe('system health helper', () => {
   it('coverage and confidence are distinct values', () => {
     const summary = buildSystemHealthSummary(buildState());
     assert.equal(summary.systemCoverage === summary.systemConfidence, false);
+  });
+
+  it('no rating events yields very low coverage and confidence', () => {
+    const summary = buildSystemHealthSummary(buildNoEvidenceState());
+    assert.equal(summary.systemCoverage < 0.2, true);
+    assert.equal(summary.systemConfidence < 0.2, true);
+  });
+
+  it('bootstrap can produce nonzero coverage without high confidence', () => {
+    const summary = buildSystemHealthSummary(buildBootstrapOnlyState());
+    assert.equal(summary.systemCoverage > 0, true);
+    assert.equal(summary.systemConfidence < 0.75, true);
+  });
+
+  it('prevents final-state confidence leakage into early trend points', () => {
+    const summary = buildSystemHealthSummary(buildState());
+    assert.equal(summary.trend.length > 1, true);
+
+    const first = summary.trend[0];
+    const last = summary.trend[summary.trend.length - 1];
+
+    assert.equal(first.turn <= last.turn, true);
+    assert.equal(first.systemConfidence >= 0 && first.systemConfidence <= 1, true);
+    assert.equal(last.systemConfidence >= 0 && last.systemConfidence <= 1, true);
+
+    // Guard against regressions where every trend point is stamped with final-state confidence.
+    const nonFinalPoint = summary.trend.slice(0, -1).some((point) =>
+      Math.abs(point.systemConfidence - summary.systemConfidence) > 0.0001
+    );
+    assert.equal(nonFinalPoint, true);
+
+    // Final cumulative trend point should align with the headline confidence.
+    assert.equal(Math.abs(last.systemConfidence - summary.systemConfidence) < 0.05, true);
   });
 });

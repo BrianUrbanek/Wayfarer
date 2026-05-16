@@ -1,4 +1,7 @@
 import type { SimulationState } from '../model/simulation.js';
+import { computeInference } from '../model/inference.js';
+import { buildRaterSignalProfiles } from '../model/raterSignal.js';
+import { buildIslandAffinityReports } from '../model/affinity.js';
 
 export interface SystemHealthPoint {
   turn: number;
@@ -53,21 +56,55 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
   const tagCoverage = clamp01((tagDensity * 0.5) + (ratingsPerUserCoverage * 0.5));
   const systemCoverage = clamp01((playerCoverage * 0.35) + (islandCoverage * 0.3) + (cohortCoverage * 0.2) + (tagCoverage * 0.15));
 
-  const diagnosis = Array.from(state.inferenceByUserId.values());
-  const coherent = diagnosis.filter((d) => d.diagnosis.type === 'HIGH_SIGNAL' || d.diagnosis.type === 'MISMATCH_RETAG' || d.diagnosis.type === 'INVERSE_PROFILE').length;
-  const ambiguityPenalty = diagnosis.filter((d) => d.diagnosis.type === 'UNKNOWN_OR_NOISY' || d.diagnosis.type === 'AMBIGUOUS').length;
-  const playerConfidence = clamp01((coherent / Math.max(1, diagnosis.length)) - (ambiguityPenalty / Math.max(1, diagnosis.length)) * 0.25);
+  const ratingsByUser = new Map<string, Record<string, -1 | 0 | 1 | null>>(
+    state.users.map((user) => [user.id, Object.fromEntries(state.islands.map((island) => [island.id, null])) as Record<string, -1 | 0 | 1 | null>])
+  );
+  for (const event of events) {
+    const userRatings = ratingsByUser.get(event.userId);
+    if (userRatings) {
+      userRatings[event.islandId] = event.rating;
+    }
+  }
+  const visibleUsers = state.users.map((user) => ({ ...user, ratings: ratingsByUser.get(user.id) ?? user.ratings }));
+  const inferenceByUser = new Map(visibleUsers.map((user) => [user.id, computeInference(user, state.cohorts, state.allTags, state.islands)]));
+  const raterSignals = buildRaterSignalProfiles(visibleUsers, inferenceByUser, state.cohorts);
+  const affinity = buildIslandAffinityReports(events, raterSignals.byUserId, state.cohorts, state.islands);
 
-  const affinityReports = Array.from(state.islandAffinityReports.values());
+  const inferenceValues = Array.from(inferenceByUser.values());
+  const playerConfidence = clamp01(
+    mean(
+      inferenceValues.map((inf) => {
+        const diagnosisType = inf.diagnosis.type;
+        const diagnosisWeight =
+          diagnosisType === 'HIGH_SIGNAL' || diagnosisType === 'MISMATCH_RETAG' || diagnosisType === 'INVERSE_PROFILE'
+            ? 1
+            : diagnosisType === 'LOW_SIGNAL'
+              ? 0.4
+              : 0.15;
+        return clamp01((inf.signalEvidence * 0.45) + (Math.max(0, inf.behaviorTop.score) * 0.35) + (diagnosisWeight * 0.2));
+      })
+    )
+  );
+
+  const affinityReports = Array.from(affinity.byIslandId.values());
   const islandConfMean = mean(affinityReports.map((r) => mean(r.estimates.map((e) => e.confidence))));
   const islandEvidence = clamp01(mean(affinityReports.map((r) => Math.min(1, r.estimates.reduce((s, e) => s + e.rawCount, 0) / Math.max(1, users)))));
-  const islandConfidence = clamp01((islandConfMean * 0.65) + (islandEvidence * 0.35));
+  const islandConfidence = clamp01((islandConfMean * 0.7) + (islandEvidence * 0.3));
 
-  const cohortSeparation = mean(diagnosis.map((d) => Math.max(0, d.behaviorTop.score - d.declaredTop.score + 0.5)));
-  const cohortConfidence = clamp01(cohortSeparation);
+  const cohortConfidence = clamp01(
+    mean(
+      inferenceValues.map((inf) => {
+        const knownTop = inf.behaviorTop.cohortId !== null ? inf.behaviorTop.score : 0;
+        const specificity = inf.behaviorSpecificity;
+        const evidence = inf.ratingEvidence;
+        return clamp01((knownTop * 0.45) + (specificity * 0.35) + (evidence * 0.2));
+      })
+    )
+  );
 
-  // Weak proxy: tag confidence reflects whether tag declarations remain interpretable against observed evidence.
-  const tagConfidence = clamp01((tagDensity * 0.35) + (playerConfidence * 0.65));
+  // Weak proxy: tag confidence reflects interpretability of declared tags against observed evidence, not raw tag volume.
+  const tagCoherence = clamp01(mean(inferenceValues.map((inf) => Math.max(0, inf.signalFit))));
+  const tagConfidence = clamp01((tagCoherence * 0.6) + (tagDensity * 0.15) + (playerConfidence * 0.25));
   const systemConfidence = clamp01((playerConfidence * 0.4) + (islandConfidence * 0.35) + (cohortConfidence * 0.2) + (tagConfidence * 0.05));
 
   return {
