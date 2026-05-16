@@ -144,12 +144,14 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
       </div>
 
       <div className="system-confidence-cards">
-        <button
-          type="button"
-          className={`metric-card system-confidence-card${showConfidenceSeries.player ? ' system-confidence-card--active' : ''}`}
-          aria-pressed={showConfidenceSeries.player}
-          onClick={() => onToggleSeries('player')}
-        >
+        <article className={`metric-card system-confidence-card${showConfidenceSeries.player ? ' system-confidence-card--active' : ''}`}>
+          <button
+            type="button"
+            className="system-confidence-card__toggle-hitbox"
+            aria-label={showConfidenceSeries.player ? 'Hide Player Confidence trend line' : 'Show Player Confidence trend line'}
+            aria-pressed={showConfidenceSeries.player}
+            onClick={() => onToggleSeries('player')}
+          />
           <button
             type="button"
             className="system-health-affordance system-health-card-affordance"
@@ -188,14 +190,16 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.playerConfidence)}</div>
           <div className="metric-card__helper">Mismatch/inverse profiles can still be high-confidence.</div>
-        </button>
+        </article>
 
-        <button
-          type="button"
-          className={`metric-card system-confidence-card${showConfidenceSeries.island ? ' system-confidence-card--active' : ''}`}
-          aria-pressed={showConfidenceSeries.island}
-          onClick={() => onToggleSeries('island')}
-        >
+        <article className={`metric-card system-confidence-card${showConfidenceSeries.island ? ' system-confidence-card--active' : ''}`}>
+          <button
+            type="button"
+            className="system-confidence-card__toggle-hitbox"
+            aria-label={showConfidenceSeries.island ? 'Hide Island Confidence trend line' : 'Show Island Confidence trend line'}
+            aria-pressed={showConfidenceSeries.island}
+            onClick={() => onToggleSeries('island')}
+          />
           <button
             type="button"
             className="system-health-affordance system-health-card-affordance"
@@ -226,14 +230,16 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.islandConfidence)}</div>
           <div className="metric-card__helper">Island affinity confidence with evidence weighting.</div>
-        </button>
+        </article>
 
-        <button
-          type="button"
-          className={`metric-card system-confidence-card${showConfidenceSeries.cohort ? ' system-confidence-card--active' : ''}`}
-          aria-pressed={showConfidenceSeries.cohort}
-          onClick={() => onToggleSeries('cohort')}
-        >
+        <article className={`metric-card system-confidence-card${showConfidenceSeries.cohort ? ' system-confidence-card--active' : ''}`}>
+          <button
+            type="button"
+            className="system-confidence-card__toggle-hitbox"
+            aria-label={showConfidenceSeries.cohort ? 'Hide Cohort Confidence trend line' : 'Show Cohort Confidence trend line'}
+            aria-pressed={showConfidenceSeries.cohort}
+            onClick={() => onToggleSeries('cohort')}
+          />
           <button
             type="button"
             className="system-health-affordance system-health-card-affordance"
@@ -265,14 +271,16 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.cohortConfidence)}</div>
           <div className="metric-card__helper">Cohort usefulness as explanatory structure.</div>
-        </button>
+        </article>
 
-        <button
-          type="button"
-          className={`metric-card system-confidence-card${showConfidenceSeries.tag ? ' system-confidence-card--active' : ''}`}
-          aria-pressed={showConfidenceSeries.tag}
-          onClick={() => onToggleSeries('tag')}
-        >
+        <article className={`metric-card system-confidence-card${showConfidenceSeries.tag ? ' system-confidence-card--active' : ''}`}>
+          <button
+            type="button"
+            className="system-confidence-card__toggle-hitbox"
+            aria-label={showConfidenceSeries.tag ? 'Hide Tag Confidence trend line' : 'Show Tag Confidence trend line'}
+            aria-pressed={showConfidenceSeries.tag}
+            onClick={() => onToggleSeries('tag')}
+          />
           <button
             type="button"
             className="system-health-affordance system-health-card-affordance"
@@ -304,7 +312,7 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.tagConfidence)}</div>
           <div className="metric-card__helper">Approximate proxy. Toggle tag confidence series.</div>
-        </button>
+        </article>
       </div>
 
       <div className="system-confidence-trend">

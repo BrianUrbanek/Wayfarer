@@ -1207,8 +1207,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <h3>{selectedUser?.label ?? 'None'}</h3>
         </div>
         <div className="summary-header__actions">
-          <button type="button" className="button button--ghost" onClick={() => setDrawerState(selectedUser ? { type: 'user', id: selectedUser.id } : null)}>
-            Open user detail
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={() => {
+              if (selectedUser) {
+                setPinnedDrilldownKind('user');
+              }
+            }}
+          >
+            Pin current user
           </button>
           <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
             Choose user
@@ -2412,7 +2420,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     recovery: {
       title: 'Recovery',
       panels: [
-        <Panel key="selected-user" title="Selected User Summary">
+        <Panel key="selected-user" title="Selected User Summary" className="panel--wide">
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>,
         <Panel key="reviewer-archetype" title="Reviewer Archetype Recovery" className="panel--wide">
