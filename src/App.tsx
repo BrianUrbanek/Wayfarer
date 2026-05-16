@@ -13,7 +13,7 @@ import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
 import { aggregateBatchTotals, type RecentActionState } from './ui/recentActionSummary';
-import { buildSystemConfidenceSummary } from './ui/systemConfidence';
+import { buildSystemHealthSummary } from './ui/systemHealth';
 import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
@@ -503,7 +503,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ),
     [dataset.users.length, inferenceTypes, dataset.pseudoCohortAnalysis.allReports.length]
   );
-  const systemConfidenceSummary = useMemo(() => buildSystemConfidenceSummary(dataset), [dataset]);
+  const systemHealthSummary = useMemo(() => buildSystemHealthSummary(dataset), [dataset]);
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
   const effectiveRoutingValues = useMemo(
@@ -2416,42 +2416,43 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <MetricCard label="Pseudo-cohort reports" value={populationSummary.pseudoReports} />
           </div>
         </Panel>,
-        <Panel key="system-confidence" title="System Confidence" className="panel--full">
+        <Panel key="system-health" title="System Health" className="panel--full">
           <div className="system-confidence-header">
             <div className="system-confidence-header__headline">
-              <p className="eyebrow">System confidence</p>
-              <h3 className="system-confidence-header__value">{formatPercent(systemConfidenceSummary.systemConfidence)}</h3>
-              <p className="muted">{formatSignedDecimal(systemConfidenceSummary.runDelta * 100, 1)} pts over this run.</p>
+              <p className="eyebrow">System coverage</p>
+              <h3 className="system-confidence-header__value">{formatPercent(systemHealthSummary.systemCoverage)}</h3>
+              <p className="muted">{formatSignedDecimal(systemHealthSummary.coverageDelta * 100, 1)} pts over this run.</p>
+              <p className="muted">System confidence: {formatPercent(systemHealthSummary.systemConfidence)} ({formatSignedDecimal(systemHealthSummary.confidenceDelta * 100, 1)} pts)</p>
             </div>
-            <aside className="system-confidence-header__howto" aria-label="How to read system confidence">
+            <aside className="system-confidence-header__howto" aria-label="How to read system health">
               <p className="muted">
-                This is not accuracy. It is a structure/evidence proxy across players, islands, cohorts, and tags. In a stable run, it should generally rise as the system learns. In live service, dips may indicate churn or stale assumptions.
+                Coverage answers whether enough evidence exists across players, islands, cohorts, and tags. Confidence answers whether current patterns are coherent and trustworthy given that evidence.
               </p>
             </aside>
           </div>
           <div className="system-confidence-cards">
             <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.player ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.player} onClick={() => setShowConfidenceSeries((current) => ({ ...current, player: !current.player }))}>
               <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.player ? '◉' : '○'}</div>
-              <div className="metric-card__label">Player Base Confidence</div>
-              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.playerBaseConfidence)}</div>
-              <div className="metric-card__helper">Toggle player confidence series.</div>
+              <div className="metric-card__label">Player Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemHealthSummary.playerConfidence)}</div>
+              <div className="metric-card__helper">Mismatch/inverse profiles can still be high-confidence.</div>
             </button>
             <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.island ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.island} onClick={() => setShowConfidenceSeries((current) => ({ ...current, island: !current.island }))}>
               <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.island ? '◉' : '○'}</div>
-              <div className="metric-card__label">Island Options Confidence</div>
-              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.islandOptionsConfidence)}</div>
+              <div className="metric-card__label">Island Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemHealthSummary.islandConfidence)}</div>
               <div className="metric-card__helper">Toggle island confidence series.</div>
             </button>
             <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.cohort ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.cohort} onClick={() => setShowConfidenceSeries((current) => ({ ...current, cohort: !current.cohort }))}>
               <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.cohort ? '◉' : '○'}</div>
-              <div className="metric-card__label">Cohort Options Confidence</div>
-              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.cohortOptionsConfidence)}</div>
+              <div className="metric-card__label">Cohort Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemHealthSummary.cohortConfidence)}</div>
               <div className="metric-card__helper">Toggle cohort confidence series.</div>
             </button>
             <button type="button" className={`metric-card system-confidence-card${showConfidenceSeries.tag ? ' system-confidence-card--active' : ''}`} aria-pressed={showConfidenceSeries.tag} onClick={() => setShowConfidenceSeries((current) => ({ ...current, tag: !current.tag }))}>
               <div className="system-confidence-card__state-dot" aria-hidden="true">{showConfidenceSeries.tag ? '◉' : '○'}</div>
-              <div className="metric-card__label">Tag Options Confidence</div>
-              <div className="metric-card__value metric-card__value--text">{formatPercent(systemConfidenceSummary.tagOptionsConfidence)}</div>
+              <div className="metric-card__label">Tag Confidence</div>
+              <div className="metric-card__value metric-card__value--text">{formatPercent(systemHealthSummary.tagConfidence)}</div>
               <div className="metric-card__helper">Approximate proxy. Toggle tag confidence series.</div>
             </button>
           </div>
@@ -2471,13 +2472,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   <text x="8" y={20 + (1 - tick) * 176} className="system-confidence-trend__axis">{Math.round(tick * 100)}%</text>
                 </g>
               ))}
-              <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.systemConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--system" />
-              {showConfidenceSeries.player ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.playerBaseConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--player" /> : null}
-              {showConfidenceSeries.island ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.islandOptionsConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--island" /> : null}
-              {showConfidenceSeries.cohort ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.cohortOptionsConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--cohort" /> : null}
-              {showConfidenceSeries.tag ? <path d={buildLinePath(systemConfidenceSummary.trend.map((point) => point.tagOptionsConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--tag" /> : null}
-              <text x="48" y="214" className="system-confidence-trend__axis">Turn {systemConfidenceSummary.trend[0]?.turn ?? 0}</text>
-              <text x="680" y="214" className="system-confidence-trend__axis">Turn {systemConfidenceSummary.trend.at(-1)?.turn ?? 0}</text>
+              <path d={buildLinePath(systemHealthSummary.trend.map((point) => point.systemConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--system" />
+              {showConfidenceSeries.player ? <path d={buildLinePath(systemHealthSummary.trend.map((point) => point.playerConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--player" /> : null}
+              {showConfidenceSeries.island ? <path d={buildLinePath(systemHealthSummary.trend.map((point) => point.islandConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--island" /> : null}
+              {showConfidenceSeries.cohort ? <path d={buildLinePath(systemHealthSummary.trend.map((point) => point.cohortConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--cohort" /> : null}
+              {showConfidenceSeries.tag ? <path d={buildLinePath(systemHealthSummary.trend.map((point) => point.tagConfidence), 760, 220, 16)} className="system-confidence-trend__line system-confidence-trend__line--tag" /> : null}
+              <text x="48" y="214" className="system-confidence-trend__axis">Turn {systemHealthSummary.trend[0]?.turn ?? 0}</text>
+              <text x="680" y="214" className="system-confidence-trend__axis">Turn {systemHealthSummary.trend.at(-1)?.turn ?? 0}</text>
             </svg>
           </div>
           <p className="muted">Declared-cohort signal remains available in drilldown surfaces, not as the top-level platform metric.</p>
@@ -3623,4 +3624,5 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </main>
   );
 }
+
 

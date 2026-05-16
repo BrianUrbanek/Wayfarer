@@ -4,7 +4,7 @@ import { DEFAULT_TAGS } from '../../data/defaultTags.js';
 import { createDefaultCohorts } from '../../data/defaultCohorts.js';
 import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { createInitialSimulationState, advancePolicyTurn } from '../../model/simulation.js';
-import { buildSystemConfidenceSummary } from '../../ui/systemConfidence.js';
+import { buildSystemHealthSummary } from '../../ui/systemHealth.js';
 
 function buildState() {
   const dataset = generateColumbusDataset({
@@ -57,33 +57,31 @@ function buildState() {
   return state;
 }
 
-describe('system confidence helper', () => {
-  it('builds bounded top-level and subcomponent confidence values', () => {
-    const summary = buildSystemConfidenceSummary(buildState());
+describe('system health helper', () => {
+  it('builds bounded top-level coverage and confidence values', () => {
+    const summary = buildSystemHealthSummary(buildState());
+    assert.equal(summary.systemCoverage >= 0 && summary.systemCoverage <= 1, true);
     assert.equal(summary.systemConfidence >= 0 && summary.systemConfidence <= 1, true);
-    assert.equal(summary.playerBaseConfidence >= 0 && summary.playerBaseConfidence <= 1, true);
-    assert.equal(summary.islandOptionsConfidence >= 0 && summary.islandOptionsConfidence <= 1, true);
-    assert.equal(summary.cohortOptionsConfidence >= 0 && summary.cohortOptionsConfidence <= 1, true);
-    assert.equal(summary.tagOptionsConfidence >= 0 && summary.tagOptionsConfidence <= 1, true);
   });
 
   it('returns turn-ordered bounded trend points', () => {
-    const summary = buildSystemConfidenceSummary(buildState());
+    const summary = buildSystemHealthSummary(buildState());
     for (let i = 1; i < summary.trend.length; i += 1) {
       assert.equal(summary.trend[i - 1].turn <= summary.trend[i].turn, true);
     }
+    assert.equal(summary.trend.every((point) => point.systemCoverage >= 0 && point.systemCoverage <= 1), true);
     assert.equal(summary.trend.every((point) => point.systemConfidence >= 0 && point.systemConfidence <= 1), true);
   });
 
-  it('uses comparable cumulative trend values for run delta', () => {
-    const summary = buildSystemConfidenceSummary(buildState());
-    const first = summary.trend[0]?.systemConfidence ?? summary.systemConfidence;
-    assert.equal(summary.runDelta, summary.systemConfidence - first);
+  it('uses comparable cumulative trend values for both deltas', () => {
+    const summary = buildSystemHealthSummary(buildState());
+    const first = summary.trend[0] ?? summary;
+    assert.equal(summary.coverageDelta, summary.systemCoverage - first.systemCoverage);
+    assert.equal(summary.confidenceDelta, summary.systemConfidence - first.systemConfidence);
   });
 
-  it('keeps stable-run trend and delta plausible', () => {
-    const summary = buildSystemConfidenceSummary(buildState());
-    const first = summary.trend[0]?.systemConfidence ?? summary.systemConfidence;
-    assert.equal(summary.systemConfidence >= first, true);
+  it('coverage and confidence are distinct values', () => {
+    const summary = buildSystemHealthSummary(buildState());
+    assert.equal(summary.systemCoverage === summary.systemConfidence, false);
   });
 });
