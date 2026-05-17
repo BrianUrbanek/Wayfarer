@@ -39,6 +39,22 @@ describe('summary visuals helpers', () => {
     expect(Math.round((slices[3]?.score ?? 0) * 100)).toBe(10);
   });
 
+  it('suppresses zero and near-zero slices from legend output', () => {
+    const slices = collapseDistributionSlices(
+      [
+        { cohortId: 'a', score: 0.7 },
+        { cohortId: 'b', score: 0.25 },
+        { cohortId: 'c', score: 0.009 },
+        { cohortId: 'd', score: 0 }
+      ],
+      (id) => id ?? 'none',
+      4,
+      0.01
+    );
+    expect(slices.some((slice) => slice.label === 'c')).toBe(false);
+    expect(slices.some((slice) => slice.score === 0)).toBe(false);
+  });
+
   it('marks diffuse behavior when gap is small', () => {
     const summary = summarizeBehaviorRead(
       [
@@ -48,6 +64,18 @@ describe('summary visuals helpers', () => {
       0.04
     );
     expect(summary.tone).toBe('diffuse');
+    expect(summary.headline).toBe('No clear leading cohort');
+  });
+
+  it('marks tentative leader for mid separation', () => {
+    const summary = summarizeBehaviorRead(
+      [
+        { cohortId: 'a', score: 0.47 },
+        { cohortId: 'b', score: 0.35 }
+      ],
+      0.1
+    );
+    expect(summary.headline).toBe('Tentative leader');
   });
 
   it('demotes inverse signal unless it is strong and behavior specificity is low', () => {

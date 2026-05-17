@@ -29,8 +29,11 @@ export function DivergingAffinityBars({ rows, formatSigned, formatPercent, forma
           <div key={row.label} className="diverging-affinity__row">
             <span className="diverging-affinity__label">{row.label}</span>
             <div className="diverging-affinity__track">
-              <div className={`diverging-affinity__half ${isPositive ? 'is-positive' : 'is-negative'}`}>
-                <div className={`diverging-affinity__bar ${isPositive ? 'is-positive' : 'is-negative'}`} style={{ width: `${width}%` }} />
+              <div className="diverging-affinity__half diverging-affinity__half--left">
+                {!isPositive ? <div className="diverging-affinity__bar is-negative" style={{ width: `${width}%` }} /> : null}
+              </div>
+              <div className="diverging-affinity__half diverging-affinity__half--right">
+                {isPositive ? <div className="diverging-affinity__bar is-positive" style={{ width: `${width}%` }} /> : null}
               </div>
             </div>
             <span className="diverging-affinity__meta">

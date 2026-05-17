@@ -583,6 +583,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const declaredDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.declaredDistribution, cohortLabels.full, 4) : [];
   const behaviorDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.behaviorDistribution, cohortLabels.full, 4) : [];
   const behaviorReadSummary = selectedInference ? summarizeBehaviorRead(selectedInference.behaviorDistribution, selectedInference.behaviorSpecificity) : null;
+  const hasBehaviorEvidence = selectedInference ? selectedInference.ratingEvidence >= 0.08 && selectedInference.behaviorMatchStrength >= 0.2 : false;
   const showInverseDiagnostic = selectedInference
     ? shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
     : false;
@@ -1324,12 +1325,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </section>
         <section className="distribution-card">
           <h4>Observed Behavior Distribution</h4>
-          <p className="muted">Top cohort: {cohortLabels.full(selectedInference.behaviorTop.cohortId)}</p>
-          <p className="muted">{behaviorReadSummary?.message ?? 'Behavior read unavailable'}</p>
-          <div className="distribution-card__body">
-            <DistributionDonut slices={behaviorDistributionSlices} />
-            <DistributionLegend slices={behaviorDistributionSlices} formatPercent={formatPercent} />
-          </div>
+          {hasBehaviorEvidence ? (
+            <>
+              <p className="muted">
+                {behaviorReadSummary?.headline === 'Top cohort'
+                  ? `Top cohort: ${cohortLabels.full(selectedInference.behaviorTop.cohortId)}`
+                  : behaviorReadSummary?.headline === 'Tentative leader'
+                    ? `Tentative leader: ${cohortLabels.full(selectedInference.behaviorTop.cohortId)}`
+                    : behaviorReadSummary?.headline ?? 'No clear leading cohort'}
+              </p>
+              <p className="muted">{behaviorReadSummary?.message ?? 'Behavior read unavailable'}</p>
+              <div className="distribution-card__body">
+                <DistributionDonut slices={behaviorDistributionSlices} />
+                <DistributionLegend slices={behaviorDistributionSlices} formatPercent={formatPercent} />
+              </div>
+            </>
+          ) : (
+            <div className="notice notice--subtle">
+              <p><strong>Not enough rating data yet.</strong></p>
+              <p>Take a turn to generate observed behavior evidence.</p>
+            </div>
+          )}
         </section>
       </div>
       <div className="notice notice--subtle">

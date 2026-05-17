@@ -1781,8 +1781,12 @@ select {
   display: flex;
 }
 
-.diverging-affinity__half.is-negative {
+.diverging-affinity__half--left {
   justify-content: flex-end;
+}
+
+.diverging-affinity__half--right {
+  justify-content: flex-start;
 }
 
 .diverging-affinity__bar.is-positive {

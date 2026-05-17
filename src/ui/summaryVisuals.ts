@@ -9,6 +9,7 @@ export interface DistributionSlice {
 export interface BehaviorReadSummary {
   tone: 'decisive' | 'moderate' | 'diffuse';
   message: string;
+  headline: string;
 }
 
 export function computeDeclaredTagOverlap(declaredTags: string[], cohort: CohortAnchor | null): {
@@ -33,12 +34,17 @@ export function computeDeclaredTagOverlap(declaredTags: string[], cohort: Cohort
 export function collapseDistributionSlices(
   entries: CohortMatch[],
   labelForCohort: (cohortId: string | null) => string,
-  maxSlices = 4
+  maxSlices = 4,
+  minSliceScore = 0.01
 ): DistributionSlice[] {
-  const sorted = [...entries].sort((a, b) => b.score - a.score);
+  const filtered = entries.filter((entry) => entry.score >= minSliceScore);
+  const sorted = [...filtered].sort((a, b) => b.score - a.score);
+  if (sorted.length === 0) {
+    return [];
+  }
   const take = Math.max(1, maxSlices - 1);
   const top = sorted.slice(0, take);
-  const remainder = sorted.slice(take);
+  const remainder = [...sorted.slice(take), ...entries.filter((entry) => entry.score > 0 && entry.score < minSliceScore)];
   const otherScore = remainder.reduce((sum, entry) => sum + entry.score, 0);
   const slices = top.map((entry) => ({
     cohortId: entry.cohortId,
@@ -57,13 +63,33 @@ export function summarizeBehaviorRead(distribution: CohortMatch[], specificity: 
   const runnerUp = sorted[1]?.score ?? 0;
   const gap = Math.max(0, top - runnerUp);
   const gapPoints = Math.round(gap * 100);
+  const topPoints = Math.round(top * 100);
+  if (top < 0.34) {
+    return {
+      tone: 'diffuse',
+      headline: 'No clear leading cohort',
+      message: `Shared lead across several cohorts - top share ${topPoints}%`
+    };
+  }
   if (specificity < 0.06 || gap < 0.08) {
-    return { tone: 'diffuse', message: `Diffuse behavior read - top cohort leads by ${gapPoints} pts` };
+    return {
+      tone: 'diffuse',
+      headline: 'No clear leading cohort',
+      message: `Diffuse behavior read - top cohort leads by ${gapPoints} pts`
+    };
   }
   if (specificity < 0.12 || gap < 0.16) {
-    return { tone: 'moderate', message: `Moderate behavior lean - top cohort leads by ${gapPoints} pts` };
+    return {
+      tone: 'moderate',
+      headline: 'Tentative leader',
+      message: `Moderate behavior lean - top cohort leads by ${gapPoints} pts`
+    };
   }
-  return { tone: 'decisive', message: `Decisive behavior lean - top cohort leads by ${gapPoints} pts` };
+  return {
+    tone: 'decisive',
+    headline: 'Top cohort',
+    message: `Decisive behavior lean - top cohort leads by ${gapPoints} pts`
+  };
 }
 
 export function shouldPromoteInverseSignal(inverseTopScore: number, behaviorSpecificity: number): boolean {
