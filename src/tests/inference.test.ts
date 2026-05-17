@@ -111,7 +111,7 @@ describe('inference pipeline', () => {
     expect(inference.diagnosis.suggestedCohortId).toBe(cohortB.id);
   });
 
-  it('ignores hidden seed when visible tags and ratings match Cohort B', () => {
+  it('keeps visible declared/behavior tops on Cohort B while target-alignment auditing uses hidden reference fallback', () => {
     const visibleMatch = buildVisibleUser(
       'Visible B user',
       cohortB.tags,
@@ -123,6 +123,8 @@ describe('inference pipeline', () => {
 
     expect(topCohortMatch(inference.declaredDistribution).cohortId).toBe(cohortB.id);
     expect(topCohortMatch(inference.behaviorDistribution).cohortId).toBe(cohortB.id);
+    expect(inference.targetAlignment.cohortId).toBe(cohortA.id);
+    expect(inference.targetAlignment.agreementRate).toBe(0);
     expect(inference.diagnosis.type).toBe('HIGH_SIGNAL');
   });
 
