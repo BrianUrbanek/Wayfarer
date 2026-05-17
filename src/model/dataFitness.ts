@@ -26,12 +26,12 @@ export interface DataFitnessSummary {
 
 export interface DataFitnessInput {
   totalUsers: number;
-  totalIslands: number;
   ratingEventCount: number;
   averageRatingsPerUser: number;
   usersWithUsableSignal: number;
   averageSignalEvidence: number;
   lastTurnRatingsCreated: number;
+  hasTurnHistory: boolean;
   turnMode: TurnMode;
   eligibleRecommendationUsers: number;
   ratedPairCoverage: number;
@@ -86,7 +86,7 @@ export function buildDataFitnessSummary(input: DataFitnessInput): DataFitnessSum
     });
   }
 
-  if (input.lastTurnRatingsCreated === 0) {
+  if (input.hasTurnHistory && input.lastTurnRatingsCreated === 0) {
     warnings.push({
       kind: 'zero-event',
       severity: 'warning',

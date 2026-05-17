@@ -615,12 +615,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       dataset.users.length * dataset.islands.length > 0 ? totalRated / (dataset.users.length * dataset.islands.length) : 0;
     return buildDataFitnessSummary({
       totalUsers: dataset.users.length,
-      totalIslands: dataset.islands.length,
       ratingEventCount: dataset.ratingEvents.length,
       averageRatingsPerUser,
       usersWithUsableSignal,
       averageSignalEvidence,
       lastTurnRatingsCreated,
+      hasTurnHistory: dataset.turnHistory.length > 0,
       turnMode,
       eligibleRecommendationUsers,
       ratedPairCoverage
@@ -3316,6 +3316,17 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <div>
             <p className="eyebrow">Data fitness</p>
             <h2>{dataFitnessSummary.label} · {dataFitnessSummary.warnings.length} active checks</h2>
+            <Badge
+              tone={
+                dataFitnessSummary.status === 'ready'
+                  ? 'success'
+                  : dataFitnessSummary.status === 'caution'
+                    ? 'warning'
+                    : 'danger'
+              }
+            >
+              {dataFitnessSummary.label}
+            </Badge>
             <p className="muted">{dataFitnessSummary.leadMessage}</p>
           </div>
           <button
