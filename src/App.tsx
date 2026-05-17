@@ -24,6 +24,7 @@ import {
   shouldPromoteInverseSignal,
   summarizeBehaviorRead
 } from './ui/summaryVisuals';
+import { buildPrimarySignalSummary } from './ui/userSignalDiagnosis';
 import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
@@ -587,6 +588,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const showInverseDiagnostic = selectedInference
     ? shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
     : false;
+  const selectedPrimarySignal = selectedInference ? buildPrimarySignalSummary(selectedInference) : null;
 
   const signalRows = useMemo(() => {
     if (!selectedRaterSignalProfile) {
@@ -1429,10 +1431,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
 
       <div className="summary-inline">
-        <Badge tone={diagnosisTone(selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS')}>
-          {selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
+        <Badge
+          tone={
+            selectedPrimarySignal?.kind === 'positive'
+              ? 'success'
+              : selectedPrimarySignal?.kind === 'inverse'
+                ? 'danger'
+                : selectedPrimarySignal?.kind === 'mismatch'
+                  ? 'warning'
+                  : 'neutral'
+          }
+        >
+          {selectedPrimarySignal?.title ?? selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
         </Badge>
-        <span className="muted">{selectedInferenceDiagnostics?.message}</span>
+        <span className="muted">{selectedPrimarySignal?.message ?? selectedInferenceDiagnostics?.message}</span>
       </div>
     </div>
   ) : null;
@@ -1626,8 +1638,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
       <section className="detail-block">
         <h4>Diagnosis</h4>
-        <p>{selectedInference.diagnosis.message}</p>
-        <p className="muted">{selectedInference.diagnosis.reasons.join(' | ')}</p>
+        <p>{selectedPrimarySignal?.title ?? selectedInference.diagnosis.message}</p>
+        <p className="muted">{selectedPrimarySignal?.message ?? selectedInference.diagnosis.message}</p>
       </section>
       <section className="detail-block">
         <h4>Reviewer checksum</h4>
