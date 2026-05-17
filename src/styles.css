@@ -1754,6 +1754,8 @@ select {
 
 .diverging-affinity__track {
   position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   height: 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
@@ -1771,18 +1773,23 @@ select {
 }
 
 .diverging-affinity__bar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
+  height: 100%;
+}
+
+.diverging-affinity__half {
+  height: 100%;
+  display: flex;
+}
+
+.diverging-affinity__half.is-negative {
+  justify-content: flex-end;
 }
 
 .diverging-affinity__bar.is-positive {
-  left: 50%;
   background: rgba(115, 226, 167, 0.75);
 }
 
 .diverging-affinity__bar.is-negative {
-  right: 50%;
   background: rgba(255, 139, 139, 0.75);
 }
 

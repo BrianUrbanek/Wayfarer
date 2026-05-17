@@ -23,16 +23,18 @@ export function DivergingAffinityBars({ rows, formatSigned, formatPercent, forma
         <span>Positive fit</span>
       </div>
       {rows.map((row) => {
-        const width = (Math.abs(row.affinity) / maxAbs) * 48;
+        const width = (Math.abs(row.affinity) / maxAbs) * 100;
         const isPositive = row.affinity >= 0;
         return (
           <div key={row.label} className="diverging-affinity__row">
             <span className="diverging-affinity__label">{row.label}</span>
             <div className="diverging-affinity__track">
-              <div className={`diverging-affinity__bar ${isPositive ? 'is-positive' : 'is-negative'}`} style={{ width: `${width}%` }} />
+              <div className={`diverging-affinity__half ${isPositive ? 'is-positive' : 'is-negative'}`}>
+                <div className={`diverging-affinity__bar ${isPositive ? 'is-positive' : 'is-negative'}`} style={{ width: `${width}%` }} />
+              </div>
             </div>
             <span className="diverging-affinity__meta">
-              {formatSigned(row.affinity)} · conf {formatPercent(row.confidence)} · ev {formatDecimal(row.evidence)}
+              {isPositive ? 'Positive' : 'Negative'} {formatSigned(row.affinity)} - conf {formatPercent(row.confidence)} - ev {formatDecimal(row.evidence)}
             </span>
           </div>
         );

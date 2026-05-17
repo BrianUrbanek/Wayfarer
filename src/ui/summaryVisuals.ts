@@ -25,8 +25,9 @@ export function computeDeclaredTagOverlap(declaredTags: string[], cohort: Cohort
   for (const tag of declared) {
     if (cohortTags.has(tag)) overlap += 1;
   }
-  const total = declared.size;
-  return { overlap, total, isExact: total > 0 && overlap === total };
+  const total = cohortTags.size;
+  const isExact = total > 0 && declared.size === cohortTags.size && overlap === total;
+  return { overlap, total, isExact };
 }
 
 export function collapseDistributionSlices(
@@ -57,12 +58,12 @@ export function summarizeBehaviorRead(distribution: CohortMatch[], specificity: 
   const gap = Math.max(0, top - runnerUp);
   const gapPoints = Math.round(gap * 100);
   if (specificity < 0.06 || gap < 0.08) {
-    return { tone: 'diffuse', message: `Diffuse behavior read · top cohort leads by ${gapPoints} pts` };
+    return { tone: 'diffuse', message: `Diffuse behavior read - top cohort leads by ${gapPoints} pts` };
   }
   if (specificity < 0.12 || gap < 0.16) {
-    return { tone: 'moderate', message: `Moderate behavior lean · top cohort leads by ${gapPoints} pts` };
+    return { tone: 'moderate', message: `Moderate behavior lean - top cohort leads by ${gapPoints} pts` };
   }
-  return { tone: 'decisive', message: `Decisive behavior lean · top cohort leads by ${gapPoints} pts` };
+  return { tone: 'decisive', message: `Decisive behavior lean - top cohort leads by ${gapPoints} pts` };
 }
 
 export function shouldPromoteInverseSignal(inverseTopScore: number, behaviorSpecificity: number): boolean {

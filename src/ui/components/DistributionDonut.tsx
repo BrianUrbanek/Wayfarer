@@ -1,10 +1,9 @@
 import type { DistributionSlice } from '../summaryVisuals';
+import { DISTRIBUTION_COLORS } from './distributionPalette';
 
 interface DistributionDonutProps {
   slices: DistributionSlice[];
 }
-
-const COLORS = ['#73e2a7', '#8da4ff', '#ffd36f', '#ff8b8b', '#96d9ff'];
 
 export function DistributionDonut({ slices }: DistributionDonutProps) {
   const radius = 46;
@@ -27,7 +26,7 @@ export function DistributionDonut({ slices }: DistributionDonutProps) {
             cy="60"
             r={radius}
             fill="none"
-            stroke={COLORS[index % COLORS.length]}
+            stroke={DISTRIBUTION_COLORS[index % DISTRIBUTION_COLORS.length]}
             strokeWidth={stroke}
             strokeDasharray={dash}
             strokeDashoffset={-offset}

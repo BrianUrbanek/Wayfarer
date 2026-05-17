@@ -9,6 +9,20 @@ describe('summary visuals helpers', () => {
     expect(overlap.isExact).toBe(true);
   });
 
+  it('computes partial overlap as non-exact against full cohort tag count', () => {
+    const overlap = computeDeclaredTagOverlap(['a'], { id: 'x', label: 'X', tags: ['a', 'b', 'c'], ratings: {}, source: 'meta_moderator' });
+    expect(overlap.overlap).toBe(1);
+    expect(overlap.total).toBe(3);
+    expect(overlap.isExact).toBe(false);
+  });
+
+  it('does not count extra declared tags as exact', () => {
+    const overlap = computeDeclaredTagOverlap(['a', 'b', 'c', 'extra'], { id: 'x', label: 'X', tags: ['a', 'b', 'c'], ratings: {}, source: 'meta_moderator' });
+    expect(overlap.overlap).toBe(3);
+    expect(overlap.total).toBe(3);
+    expect(overlap.isExact).toBe(false);
+  });
+
   it('collapses distribution slices deterministically', () => {
     const slices = collapseDistributionSlices(
       [
