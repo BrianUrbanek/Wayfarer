@@ -51,7 +51,22 @@ function buildInferenceResult(
     signalFit: effectiveSignal,
     signalEvidence: 1,
     ratingEvidence: 1,
-    effectiveSignal
+    effectiveSignal,
+    targetAlignment: {
+      cohortId: 'cohort-known-a',
+      agreementCount: 2,
+      disagreementCount: 0,
+      ratedCount: 2,
+      agreementRate: 1,
+      similarity: behaviorScore,
+      evidence: 1
+    },
+    cohortSeparability: {
+      topGap: Math.max(0, behaviorScore - inverseScore),
+      topShare: behaviorScore,
+      label: 'moderate',
+      message: 'fixture'
+    }
   };
 }
 

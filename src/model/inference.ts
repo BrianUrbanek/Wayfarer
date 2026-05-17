@@ -36,6 +36,21 @@ export interface InferenceResult extends SignalSummary {
   declaredTop: CohortMatch;
   behaviorTop: CohortMatch;
   inverseTop: CohortMatch;
+  targetAlignment: {
+    cohortId: CohortId | null;
+    agreementCount: number;
+    disagreementCount: number;
+    ratedCount: number;
+    agreementRate: number;
+    similarity: number;
+    evidence: number;
+  };
+  cohortSeparability: {
+    topGap: number;
+    topShare: number;
+    label: 'high' | 'moderate' | 'low';
+    message: string;
+  };
 }
 
 export type InferenceAnalysis = InferenceResult & {
@@ -78,6 +93,81 @@ function behaviorSpecificityFromDistribution(distribution: CohortMatch[]): numbe
     .sort((left, right) => right - left);
 
   return Math.max(0, sortedScores[0] - sortedScores[1]);
+}
+
+function resolveReferenceCohortId(
+  user: User,
+  declaredTop: CohortMatch,
+  behaviorTop: CohortMatch
+): CohortId | null {
+  return user.hiddenBehaviorCohortId ?? user.hiddenSeedCohortId ?? declaredTop.cohortId ?? behaviorTop.cohortId ?? null;
+}
+
+function buildTargetAlignment(
+  user: User,
+  cohorts: readonly CohortAnchor[],
+  behavioralSimilarities: CohortSimilarity[],
+  declaredTop: CohortMatch,
+  behaviorTop: CohortMatch
+) {
+  const cohortId = resolveReferenceCohortId(user, declaredTop, behaviorTop);
+  if (!cohortId) {
+    return {
+      cohortId: null,
+      agreementCount: 0,
+      disagreementCount: 0,
+      ratedCount: 0,
+      agreementRate: 0,
+      similarity: 0,
+      evidence: 0
+    };
+  }
+  const cohort = cohorts.find((entry) => entry.id === cohortId);
+  if (!cohort) {
+    return {
+      cohortId,
+      agreementCount: 0,
+      disagreementCount: 0,
+      ratedCount: 0,
+      agreementRate: 0,
+      similarity: 0,
+      evidence: 0
+    };
+  }
+  let agreementCount = 0;
+  let disagreementCount = 0;
+  let ratedCount = 0;
+  for (const [islandId, userRating] of Object.entries(user.ratings)) {
+    const cohortRating = cohort.ratings[islandId] ?? null;
+    if (userRating === null || cohortRating === null) continue;
+    ratedCount += 1;
+    if (userRating === cohortRating) agreementCount += 1;
+    else disagreementCount += 1;
+  }
+  const similarity = behavioralSimilarities.find((entry) => entry.cohortId === cohortId)?.similarity.value ?? 0;
+  const evidence = behavioralSimilarities.find((entry) => entry.cohortId === cohortId)?.similarity.evidence ?? 0;
+  return {
+    cohortId,
+    agreementCount,
+    disagreementCount,
+    ratedCount,
+    agreementRate: ratedCount > 0 ? agreementCount / ratedCount : 0,
+    similarity,
+    evidence
+  };
+}
+
+function buildCohortSeparability(behaviorDistribution: CohortMatch[]) {
+  const sorted = [...behaviorDistribution].sort((a, b) => b.score - a.score);
+  const topShare = sorted[0]?.score ?? 0;
+  const topGap = Math.max(0, topShare - (sorted[1]?.score ?? 0));
+  if (topGap >= 0.2) {
+    return { topGap, topShare, label: 'high' as const, message: `High separability - top cohort leads by ${Math.round(topGap * 100)} pts` };
+  }
+  if (topGap >= 0.1) {
+    return { topGap, topShare, label: 'moderate' as const, message: `Moderate separability - top cohort leads by ${Math.round(topGap * 100)} pts` };
+  }
+  return { topGap, topShare, label: 'low' as const, message: 'Low separability - many cohorts agree on these islands' };
 }
 
 export function positiveBehaviorScore(similarity: SimilarityResult): number {
@@ -243,6 +333,8 @@ export function computeInference(
     declaredTop,
     behaviorTop,
     inverseTop,
+    targetAlignment: buildTargetAlignment(user, cohorts, behavioralSimilarities, declaredTop, behaviorTop),
+    cohortSeparability: buildCohortSeparability(behaviorDistribution),
     behaviorMatchStrength,
     behaviorSpecificity,
     ...signal

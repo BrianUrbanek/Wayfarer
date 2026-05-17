@@ -112,4 +112,17 @@ describe('Columbus generator', () => {
     assert.equal(typeof user.hiddenRatingAlignment, 'number');
     assert.equal(tagsToVector(user.declaredTags, dataset.allTags).length, dataset.allTags.length);
   });
+
+  it('clean cohort archetype preserves strong behavior alignment at high rating alignment', () => {
+    const dataset = generateColumbusDataset({ ...baseConfig, numUsers: 18, ratingAlignmentDistribution: { kind: 'fixed', value: 10 } });
+    const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
+    assert.ok(clean);
+    const targetId = clean?.hiddenBehaviorCohortId ?? clean?.hiddenSeedCohortId;
+    const target = dataset.cohorts.find((cohort) => cohort.id === targetId);
+    assert.ok(target);
+    const userVector = makeRatingVector(dataset.islands, clean?.ratings ?? {});
+    const targetVector = makeRatingVector(dataset.islands, target?.ratings ?? {});
+    const result = pearsonCorrelation(userVector, targetVector, 3);
+    assert.ok(result.value > 0.75);
+  });
 });

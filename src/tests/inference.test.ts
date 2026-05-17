@@ -216,4 +216,26 @@ describe('inference pipeline', () => {
     expect(inverseBehaviorDistribution).toHaveLength(dataset.cohorts.length);
     expect(signal.signalFit).toBeGreaterThan(0.8);
   });
+
+  it('keeps high target agreement even when separability is low due to broad consensus', () => {
+    const consensusFixture = buildFixture();
+    consensusFixture.cohorts.forEach((cohort) => {
+      cohort.ratings = {
+        'i-1': 1,
+        'i-2': 1,
+        'i-3': 1,
+        'i-4': 1
+      };
+    });
+    const user = buildVisibleUser('Consensus user', ['alpha'], {
+      'i-1': 1,
+      'i-2': 1,
+      'i-3': 1,
+      'i-4': 1
+    }, consensusFixture.cohorts[0].id);
+    user.hiddenBehaviorCohortId = consensusFixture.cohorts[0].id;
+    const inference = computeInference(user, consensusFixture.cohorts, consensusFixture.allTags, consensusFixture.islands);
+    expect(inference.targetAlignment.agreementRate).toBe(1);
+    expect(inference.cohortSeparability.label).toBe('low');
+  });
 });

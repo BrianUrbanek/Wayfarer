@@ -1305,7 +1305,43 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           value={selectedInference.behaviorSpecificity.toFixed(3)}
           helper="How much the behavior distribution prefers one cohort over the runner-up."
         />
+        <MetricCard
+          label="Target agreement"
+          value={
+            selectedInference.targetAlignment.ratedCount > 0
+              ? `${selectedInference.targetAlignment.agreementCount}/${selectedInference.targetAlignment.ratedCount}`
+              : 'No evidence'
+          }
+          helper={
+            selectedInference.targetAlignment.cohortId
+              ? `${Math.round(selectedInference.targetAlignment.agreementRate * 100)}% agreement with ${cohortLabels.full(selectedInference.targetAlignment.cohortId)} reference ratings.`
+              : 'No reference cohort available for direct target agreement yet.'
+          }
+          tone={selectedInference.targetAlignment.agreementRate >= 0.7 ? 'success' : selectedInference.targetAlignment.ratedCount > 0 ? 'warning' : 'neutral'}
+        />
+        <MetricCard
+          label="Cohort separability"
+          value={selectedInference.cohortSeparability.label}
+          helper={selectedInference.cohortSeparability.message}
+          tone={
+            selectedInference.cohortSeparability.label === 'high'
+              ? 'success'
+              : selectedInference.cohortSeparability.label === 'moderate'
+                ? 'warning'
+                : 'neutral'
+          }
+        />
       </div>
+
+      <p className="muted">
+        {selectedInference.targetAlignment.ratedCount === 0
+          ? 'Insufficient target-alignment evidence.'
+          : selectedInference.targetAlignment.agreementRate >= 0.7 && selectedInference.cohortSeparability.label === 'low'
+            ? 'Reliable reviewer, low cohort separation so far.'
+            : selectedInference.targetAlignment.agreementRate >= 0.7
+              ? 'Reliable reviewer with useful cohort separation.'
+              : 'Target agreement is still developing; take more turns to stabilize signal.'}
+      </p>
 
       <div className="summary-distribution-grid">
         <section className="distribution-card">
