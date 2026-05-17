@@ -50,6 +50,7 @@ import {
   type RoutingRiskProfile,
   type TurnMode
 } from './model/turnPolicy';
+import { buildDataFitnessSummary } from './model/dataFitness';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
@@ -418,6 +419,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     tag: false
   });
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
+  const [dataFitnessCollapsed, setDataFitnessCollapsed] = useState(false);
   const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
   const [overviewCollapsed, setOverviewCollapsed] = useState(false);
   const [recoveryCollapsed, setRecoveryCollapsed] = useState(false);
@@ -585,6 +587,45 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       routingOptions
     ).recommendations;
   }, [dataset.islandAffinityReports, dataset.islands, dataset.raterSignalProfiles, routingOptions, selectedUser]);
+
+  const eligibleRecommendationUsers = useMemo(() => {
+    return dataset.users.filter((user) => {
+      const recommendations = recommendIslandsForUser(
+        user,
+        dataset.islandAffinityReports,
+        dataset.raterSignalProfiles,
+        dataset.islands,
+        routingOptions
+      ).recommendations;
+      return recommendations.length > 0;
+    }).length;
+  }, [dataset.islandAffinityReports, dataset.islands, dataset.raterSignalProfiles, dataset.users, routingOptions]);
+
+  const dataFitnessSummary = useMemo(() => {
+    const totalRated = dataset.users.reduce((sum, user) => sum + countNonNullRatings(user), 0);
+    const averageRatingsPerUser = dataset.users.length > 0 ? totalRated / dataset.users.length : 0;
+    const usersWithUsableSignal = Array.from(dataset.raterSignalProfiles.values()).filter((profile) => profile.overallSignal >= 0.25).length;
+    const averageSignalEvidence =
+      dataset.raterSignalProfiles.size > 0
+        ? Array.from(dataset.raterSignalProfiles.values()).reduce((sum, profile) => sum + profile.signalEvidence, 0) /
+          dataset.raterSignalProfiles.size
+        : 0;
+    const lastTurnRatingsCreated = dataset.turnHistory[dataset.turnHistory.length - 1]?.ratingsCreated ?? 0;
+    const ratedPairCoverage =
+      dataset.users.length * dataset.islands.length > 0 ? totalRated / (dataset.users.length * dataset.islands.length) : 0;
+    return buildDataFitnessSummary({
+      totalUsers: dataset.users.length,
+      totalIslands: dataset.islands.length,
+      ratingEventCount: dataset.ratingEvents.length,
+      averageRatingsPerUser,
+      usersWithUsableSignal,
+      averageSignalEvidence,
+      lastTurnRatingsCreated,
+      turnMode,
+      eligibleRecommendationUsers,
+      ratedPairCoverage
+    });
+  }, [dataset.islands.length, dataset.ratingEvents.length, dataset.raterSignalProfiles, dataset.turnHistory, dataset.users, eligibleRecommendationUsers, turnMode]);
 
   const selectedRecommendationDetail =
     drawerState?.type === 'recommendation' && selectedUser
@@ -3267,6 +3308,46 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </div>
             </div>
           </>
+        ) : null}
+      </section>
+
+      <section className="panel stage-panel" aria-label="Data fitness">
+        <div className="stage-panel__lead">
+          <div>
+            <p className="eyebrow">Data fitness</p>
+            <h2>{dataFitnessSummary.label} · {dataFitnessSummary.warnings.length} active checks</h2>
+            <p className="muted">{dataFitnessSummary.leadMessage}</p>
+          </div>
+          <button
+            type="button"
+            className="icon-button collapsible-panel__toggle"
+            onClick={() => setDataFitnessCollapsed((value) => !value)}
+            aria-label={dataFitnessCollapsed ? 'Expand Data fitness' : 'Collapse Data fitness'}
+          >
+            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+              {dataFitnessCollapsed ? 'v' : '^'}
+            </span>
+          </button>
+        </div>
+        {!dataFitnessCollapsed ? (
+          <div className="stack">
+            {dataFitnessSummary.topWarnings.length === 0 ? (
+              <div className="notice notice--subtle">
+                <p>Data fitness: ready enough for inspection.</p>
+              </div>
+            ) : (
+              dataFitnessSummary.topWarnings.map((warning) => (
+                <div key={warning.kind} className="notice notice--subtle">
+                  <strong>{warning.title}</strong>
+                  <p>{warning.message}</p>
+                  {warning.suggestedAction ? <p className="muted">Action: {warning.suggestedAction}</p> : null}
+                </div>
+              ))
+            )}
+            {dataFitnessSummary.extraWarningCount > 0 ? (
+              <p className="muted">+{dataFitnessSummary.extraWarningCount} more checks</p>
+            ) : null}
+          </div>
         ) : null}
       </section>
 

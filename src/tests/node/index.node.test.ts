@@ -19,3 +19,4 @@ import './recentActionSummary.node.test.js';
 import './systemHealth.node.test.js';
 import './defaultCohorts.node.test.js';
 import './userSignalDiagnosis.node.test.js';
+import './dataFitness.node.test.js';
