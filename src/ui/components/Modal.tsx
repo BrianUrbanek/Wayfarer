@@ -6,9 +6,10 @@ interface ModalProps extends PropsWithChildren {
   title: string;
   onClose: () => void;
   placement?: 'center' | 'top';
+  className?: string;
 }
 
-export function Modal({ open, title, onClose, children, placement = 'center' }: ModalProps) {
+export function Modal({ open, title, onClose, children, placement = 'center', className }: ModalProps) {
   useEffect(() => {
     if (!open) {
       return;
@@ -48,7 +49,7 @@ export function Modal({ open, title, onClose, children, placement = 'center' }: 
       onMouseDown={onClose}
     >
       <div
-        className={`modal ${placement === 'top' ? 'modal--top' : ''}`}
+        className={`modal ${placement === 'top' ? 'modal--top' : ''}${className ? ` ${className}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

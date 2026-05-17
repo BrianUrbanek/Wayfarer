@@ -2059,6 +2059,10 @@ select {
   max-height: min(78vh, 900px);
 }
 
+.modal--recovery {
+  width: min(1400px, calc(100vw - 48px));
+}
+
 .drawer {
   width: min(520px, 100%);
   height: 100%;
@@ -2350,3 +2354,25 @@ select {
     padding: 16px;
   }
 }
+
+.reviewer-recovery-detail .report-section {
+  grid-template-columns: 1fr;
+}
+
+.reviewer-recovery-detail .report-table-wrap {
+  max-height: none;
+  overflow-x: auto;
+}
+
+.reviewer-recovery-detail .report-table {
+  table-layout: auto;
+  min-width: 1050px;
+}
+
+.reviewer-recovery-detail .report-table th,
+.reviewer-recovery-detail .report-table td {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+}
+
