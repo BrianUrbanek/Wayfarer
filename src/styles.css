@@ -1682,6 +1682,116 @@ select {
   gap: 12px;
 }
 
+.summary-distribution-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.distribution-card {
+  padding: 14px;
+  border: 1px solid rgba(141, 164, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(8, 12, 22, 0.48);
+}
+
+.distribution-card__body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.distribution-donut {
+  width: 120px;
+  height: 120px;
+}
+
+.distribution-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.distribution-legend__item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.distribution-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.distribution-legend__score {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.diverging-affinity {
+  display: grid;
+  gap: 8px;
+}
+
+.diverging-affinity__axis {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.diverging-affinity__row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(220px, 2fr) minmax(160px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.diverging-affinity__track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.diverging-affinity__track::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.diverging-affinity__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.diverging-affinity__bar.is-positive {
+  left: 50%;
+  background: rgba(115, 226, 167, 0.75);
+}
+
+.diverging-affinity__bar.is-negative {
+  right: 50%;
+  background: rgba(255, 139, 139, 0.75);
+}
+
+.diverging-affinity__meta {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .table-cell-stack {
   display: grid;
   gap: 4px;
@@ -2131,7 +2241,17 @@ select {
   .report-section,
   .metric-grid,
   .metric-grid--compact,
-  .summary-top-cohorts {
+  .summary-top-cohorts,
+  .summary-distribution-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .distribution-card__body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .diverging-affinity__row {
     grid-template-columns: 1fr;
   }
 

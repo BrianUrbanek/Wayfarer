@@ -13,8 +13,17 @@ import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
 import { DistributionList } from './ui/components/DistributionList';
+import { DistributionDonut } from './ui/components/DistributionDonut';
+import { DistributionLegend } from './ui/components/DistributionLegend';
+import { DivergingAffinityBars } from './ui/components/DivergingAffinityBars';
 import { aggregateBatchTotals, type RecentActionState } from './ui/recentActionSummary';
 import { buildSystemHealthSummary } from './ui/systemHealth';
+import {
+  collapseDistributionSlices,
+  computeDeclaredTagOverlap,
+  shouldPromoteInverseSignal,
+  summarizeBehaviorRead
+} from './ui/summaryVisuals';
 import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
@@ -507,8 +516,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedIslandAffinityReport?.topNegative?.effectiveWeight ??
     selectedIslandAffinityReport?.estimates[0]?.effectiveWeight ??
     0;
-  const selectedIslandPositiveAffinity = selectedIslandAffinityReport?.topPositive?.affinity ?? 0;
-  const selectedIslandNegativeAffinity = selectedIslandAffinityReport?.topNegative?.affinity ?? 0;
 
   const inferenceTypes = useMemo(() => {
     return new Map(
@@ -570,22 +577,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const reviewerArchetypeAnalysis = dataset.reviewerArchetypeAnalysis;
   const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
   const visibleTurnModeLabel = TURN_MODE_LABELS[turnMode];
-  const selectedUserTopCohorts = selectedInference
-    ? [
-        {
-          label: 'Declared',
-          match: selectedInference.declaredTop
-        },
-        {
-          label: 'Behavior',
-          match: selectedInference.behaviorTop
-        },
-        {
-          label: 'Inverse',
-          match: selectedInference.inverseTop
-        }
-      ]
-    : [];
+  const selectedDeclaredCohort =
+    selectedInference?.declaredTop.cohortId ? dataset.cohorts.find((cohort) => cohort.id === selectedInference.declaredTop.cohortId) ?? null : null;
+  const declaredTagOverlap = selectedUser && selectedDeclaredCohort ? computeDeclaredTagOverlap(selectedUser.declaredTags, selectedDeclaredCohort) : null;
+  const declaredDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.declaredDistribution, cohortLabels.full, 4) : [];
+  const behaviorDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.behaviorDistribution, cohortLabels.full, 4) : [];
+  const behaviorReadSummary = selectedInference ? summarizeBehaviorRead(selectedInference.behaviorDistribution, selectedInference.behaviorSpecificity) : null;
+  const showInverseDiagnostic = selectedInference
+    ? shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
+    : false;
 
   const signalRows = useMemo(() => {
     if (!selectedRaterSignalProfile) {
@@ -1306,19 +1306,41 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         />
       </div>
 
-      <div className="summary-top-cohorts">
-        {selectedUserTopCohorts.map(({ label, match }) => (
-          <MetricCard
-            key={label}
-            label={`${label} top cohort`}
-            labelTitle={`${label} top cohort`}
-            value={cohortLabels.full(match.cohortId)}
-            valueTitle={cohortLabels.full(match.cohortId)}
-            helper={`${formatPercent(match.score)} match`}
-            helperTitle={`${label} top cohort: ${cohortLabels.full(match.cohortId)}`}
-            tone="neutral"
-          />
-        ))}
+      <div className="summary-distribution-grid">
+        <section className="distribution-card">
+          <h4>Declared Tag Distribution</h4>
+          <p className="muted">Top cohort: {cohortLabels.full(selectedInference.declaredTop.cohortId)}</p>
+          <p className="muted">
+            {declaredTagOverlap && declaredTagOverlap.total > 0
+              ? declaredTagOverlap.isExact
+                ? `Exact tag fit · ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
+                : `${declaredTagOverlap.overlap}/${declaredTagOverlap.total} declared tags`
+              : 'Declared tag fit unavailable'}
+          </p>
+          <div className="distribution-card__body">
+            <DistributionDonut slices={declaredDistributionSlices} />
+            <DistributionLegend slices={declaredDistributionSlices} formatPercent={formatPercent} />
+          </div>
+        </section>
+        <section className="distribution-card">
+          <h4>Observed Behavior Distribution</h4>
+          <p className="muted">Top cohort: {cohortLabels.full(selectedInference.behaviorTop.cohortId)}</p>
+          <p className="muted">{behaviorReadSummary?.message ?? 'Behavior read unavailable'}</p>
+          <div className="distribution-card__body">
+            <DistributionDonut slices={behaviorDistributionSlices} />
+            <DistributionLegend slices={behaviorDistributionSlices} formatPercent={formatPercent} />
+          </div>
+        </section>
+      </div>
+      <div className="notice notice--subtle">
+        {showInverseDiagnostic ? (
+          <p>
+            Inverse evidence: {cohortLabels.full(selectedInference.inverseTop.cohortId)} at{' '}
+            {formatPercent(selectedInference.inverseTop.score)} anti-match signal.
+          </p>
+        ) : (
+          <p>No strong inverse signal.</p>
+        )}
       </div>
 
       <section className="detail-block">
@@ -1486,27 +1508,22 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <h4>Cohort-local island affinity</h4>
           <p>Weighted by rater signal only. Higher-signal raters count more for their strongest cohort.</p>
         </div>
+        <section className="distribution-card">
+          <h4>Directional audience affinity</h4>
+          <p className="muted">Directional audience fit only, not a recommendation guarantee or moderation verdict.</p>
+          <DivergingAffinityBars
+            rows={affinityRows.map((row) => ({
+              label: cohortLabels.full(row.cohort.id),
+              affinity: row.estimate.affinity,
+              confidence: row.estimate.confidence,
+              evidence: row.estimate.effectiveWeight
+            }))}
+            formatSigned={formatSignedDecimal}
+            formatPercent={formatPercent}
+            formatDecimal={formatDecimal}
+          />
+        </section>
         <div className="metric-grid metric-grid--compact">
-          <MetricCard
-            label="Top positive affinity"
-            value={selectedIslandAffinityReport?.topPositive ? cohortLabels.full(selectedIslandAffinityReport.topPositive.cohortId) : 'none'}
-          helper={
-            selectedIslandAffinityReport?.topPositive
-                ? `${formatSignedDecimal(selectedIslandPositiveAffinity)} affinity. Indicates strongest positive audience fit, not guaranteed recommendation quality.`
-                : 'No positive cohort estimate yet.'
-          }
-            tone="success"
-          />
-          <MetricCard
-            label="Top negative affinity"
-            value={selectedIslandAffinityReport?.topNegative ? cohortLabels.full(selectedIslandAffinityReport.topNegative.cohortId) : 'none'}
-          helper={
-            selectedIslandAffinityReport?.topNegative
-                ? `${formatSignedDecimal(selectedIslandNegativeAffinity)} affinity. Indicates strongest negative audience fit, not a moderation verdict.`
-                : 'No negative cohort estimate yet.'
-          }
-            tone="danger"
-          />
           <MetricCard
             label="Affinity evidence"
             value={formatDecimal(selectedIslandEffectiveWeight)}
