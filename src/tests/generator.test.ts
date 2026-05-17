@@ -62,17 +62,15 @@ describe('Columbus generator', () => {
     expect(user.declaredTags.sort()).toEqual(seed?.tags.slice().sort());
   });
 
-  it('rating alignment 10 strongly matches seed ratings', () => {
+  it('clean cohort match ratings exactly equal hidden behavior cohort ratings', () => {
     const dataset = generateColumbusDataset(baseConfig);
-    const user = dataset.users[0];
-    const seed = dataset.cohorts.find((cohort) => cohort.id === user.hiddenSeedCohortId);
-
-    expect(seed).toBeDefined();
-    const userVector = makeRatingVector(dataset.islands, user.ratings);
-    const seedVector = makeRatingVector(dataset.islands, seed?.ratings ?? {});
-    const correlation = pearsonCorrelation(userVector, seedVector, 3);
-
-    expect(correlation.value).toBeGreaterThan(0.85);
+    const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
+    const target = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenBehaviorCohortId);
+    expect(clean).toBeDefined();
+    expect(target).toBeDefined();
+    expect(clean?.ratings).toEqual(target?.ratings);
+    expect(clean?.hiddenTagAlignment).toBe(10);
+    expect(clean?.hiddenRatingAlignment).toBe(10);
   });
 
   it('scenario-level alignment distributions do not degrade clean archetype rating alignment', () => {
@@ -94,12 +92,10 @@ describe('Columbus generator', () => {
     expect(correlation.value).toBeGreaterThan(0.95);
   });
 
-  it('rating alignment 5 is approximately uncorrelated over enough samples', () => {
+  it('mixed archetype populations stay around neutral average seed correlation over enough samples', () => {
     const dataset = generateColumbusDataset({
       ...baseConfig,
-      numUsers: 60,
-      ratingAlignmentDistribution: { kind: 'fixed', value: 5 },
-      tagAlignmentDistribution: { kind: 'fixed', value: 5 }
+      numUsers: 60
     });
 
     const correlations = dataset.users.map((user) => {
@@ -149,5 +145,22 @@ describe('Columbus generator', () => {
     expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], 11)).toThrow();
     expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], 7.5)).toThrow();
     expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], Number.NaN)).toThrow();
+  });
+
+  it('legacy scenario alignment config is ignored even when set to hostile fixed-zero values', () => {
+    const dataset = generateColumbusDataset({
+      ...baseConfig,
+      numUsers: 18,
+      tagAlignmentDistribution: { kind: 'fixed', value: 0 },
+      ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
+    });
+    const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
+    const target = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenBehaviorCohortId);
+    expect(clean).toBeDefined();
+    expect(target).toBeDefined();
+    expect(clean?.ratings).toEqual(target?.ratings);
+    expect(clean?.declaredTags.sort()).toEqual(target?.tags.slice().sort());
+    expect(clean?.hiddenTagAlignment).toBe(10);
+    expect(clean?.hiddenRatingAlignment).toBe(10);
   });
 });
