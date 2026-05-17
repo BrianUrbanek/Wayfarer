@@ -233,6 +233,23 @@ function diagnosisTone(type: string): 'neutral' | 'accent' | 'success' | 'warnin
   }
 }
 
+function renderPrimarySignalTitle(
+  summary: ReturnType<typeof buildPrimarySignalSummary> | null,
+  labelForCohort: (cohortId: string | null) => string
+): string {
+  if (!summary) return 'AMBIGUOUS';
+  if (summary.titleKey === 'positive') {
+    return `Primary signal: positive ${labelForCohort(summary.primaryCohortId ?? null)} audience signal`;
+  }
+  if (summary.titleKey === 'inverse') {
+    return `Primary signal: anti-match against ${labelForCohort(summary.inverseCohortId ?? null)}`;
+  }
+  if (summary.titleKey === 'mismatch') return 'Primary signal: declared/observed mismatch';
+  if (summary.titleKey === 'diffuse') return 'Primary signal: diffuse behavior';
+  if (summary.titleKey === 'insufficient') return 'Insufficient behavior evidence';
+  return 'Primary signal: weak explanatory value';
+}
+
 function comparisonLabel(user: User | null, selectedCohort: CohortAnchor | null, cohortLabel: (id: string | null) => string) {
   if (selectedCohort) {
     return selectedCohort.label;
@@ -1387,7 +1404,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </section>
       </div>
       <div className="notice notice--subtle">
-        {showInverseDiagnostic ? (
+        {showInverseDiagnostic && selectedPrimarySignal?.showSecondaryInverse ? (
           <p>
             Inverse evidence: {cohortLabels.full(selectedInference.inverseTop.cohortId)} at{' '}
             {formatPercent(selectedInference.inverseTop.score)} anti-match signal.
@@ -1442,7 +1459,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   : 'neutral'
           }
         >
-          {selectedPrimarySignal?.title ?? selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
+          {renderPrimarySignalTitle(selectedPrimarySignal, cohortLabels.full) ?? selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
         </Badge>
         <span className="muted">{selectedPrimarySignal?.message ?? selectedInferenceDiagnostics?.message}</span>
       </div>
@@ -1638,7 +1655,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
       <section className="detail-block">
         <h4>Diagnosis</h4>
-        <p>{selectedPrimarySignal?.title ?? selectedInference.diagnosis.message}</p>
+        <p>{renderPrimarySignalTitle(selectedPrimarySignal, cohortLabels.full) ?? selectedInference.diagnosis.message}</p>
         <p className="muted">{selectedPrimarySignal?.message ?? selectedInference.diagnosis.message}</p>
       </section>
       <section className="detail-block">

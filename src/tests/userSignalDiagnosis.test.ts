@@ -47,6 +47,8 @@ describe('user signal diagnosis summary', () => {
   it('keeps high target agreement + low separability as reliable positive signal', () => {
     const summary = buildPrimarySignalSummary(baseInference());
     expect(summary.kind).toBe('positive');
+    expect(summary.titleKey).toBe('positive');
+    expect(summary.primaryCohortId).toBe('cohort-a');
     expect(summary.message).toContain('Reliable reviewer, low cohort separation so far');
   });
 
@@ -57,6 +59,8 @@ describe('user signal diagnosis summary', () => {
     inference.behaviorTop.score = 0.35;
     const summary = buildPrimarySignalSummary(inference);
     expect(summary.kind).toBe('inverse');
+    expect(summary.titleKey).toBe('inverse');
+    expect(summary.inverseCohortId).toBe('cohort-b');
   });
 
   it('reports mismatch when declared and behavior diverge with evidence', () => {

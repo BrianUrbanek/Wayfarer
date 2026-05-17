@@ -48,6 +48,8 @@ describe('user signal diagnosis summary', () => {
   it('keeps high target agreement + low separability as reliable positive signal', () => {
     const summary = buildPrimarySignalSummary(baseInference());
     assert.equal(summary.kind, 'positive');
+    assert.equal(summary.titleKey, 'positive');
+    assert.equal(summary.primaryCohortId, 'cohort-a');
     assert.match(summary.message, /Reliable reviewer, low cohort separation so far/);
   });
 });
