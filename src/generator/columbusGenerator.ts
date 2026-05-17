@@ -34,7 +34,9 @@ export interface GeneratorConfig {
   numIslands: number;
   cohorts: CohortAnchor[];
   allTags: TagId[];
+  // Deprecated legacy config: no longer mutates archetype behavior generation.
   tagAlignmentDistribution: AlignmentDistribution;
+  // Deprecated legacy config: no longer mutates archetype behavior generation.
   ratingAlignmentDistribution: AlignmentDistribution;
   islandClassWeights?: Partial<Record<IslandClass, number>>;
 }
@@ -44,28 +46,6 @@ export interface ColumbusDataset {
   cohorts: CohortAnchor[];
   islands: Island[];
   users: User[];
-}
-
-function clampAlignment(value: number): number {
-  return Math.max(0, Math.min(10, Math.round(value)));
-}
-
-function sampleAlignment(
-  rng: ReturnType<typeof createSeededRandom>,
-  distribution: AlignmentDistribution
-): number {
-  if (typeof distribution === 'number') {
-    return clampAlignment(distribution);
-  }
-
-  switch (distribution.kind) {
-    case 'fixed':
-      return clampAlignment(distribution.value);
-    case 'uniform':
-      return clampAlignment(rng.range(distribution.min, distribution.max));
-    default:
-      return 5;
-  }
 }
 
 function cloneCohorts(cohorts: CohortAnchor[]): CohortAnchor[] {
@@ -93,17 +73,15 @@ function buildUser(
   allTags: readonly TagId[],
   cohorts: CohortAnchor[],
   islands: Island[],
-  rng: ReturnType<typeof createSeededRandom>,
-  tagAlignmentDistribution: AlignmentDistribution,
-  ratingAlignmentDistribution: AlignmentDistribution
+  rng: ReturnType<typeof createSeededRandom>
 ): User {
   const hiddenSeedCohort = chooseSeedCohort(cohorts, index);
   const hiddenReviewerArchetype = REVIEWER_ARCHETYPES[index % REVIEWER_ARCHETYPES.length];
   const profile = buildReviewerArchetypeProfile(cohorts, index, hiddenReviewerArchetype);
-  const hiddenTagAlignment = clampAlignment(sampleAlignment(rng, tagAlignmentDistribution));
-  const hiddenRatingAlignment = clampAlignment(sampleAlignment(rng, ratingAlignmentDistribution));
-  const declaredAlignment = Math.min(profile.tagAlignment, hiddenTagAlignment);
-  const ratingAlignment = Math.min(profile.ratingAlignment, hiddenRatingAlignment);
+  const hiddenTagAlignment = profile.tagAlignment;
+  const hiddenRatingAlignment = profile.ratingAlignment;
+  const declaredAlignment = profile.tagAlignment;
+  const ratingAlignment = profile.ratingAlignment;
 
   const declaredTags = generateReviewerDeclaredTags(
     rng,
@@ -152,9 +130,7 @@ export function generateColumbusDataset(config: GeneratorConfig): ColumbusDatase
       allTags,
       cohorts,
       islands,
-      rng,
-      config.tagAlignmentDistribution,
-      config.ratingAlignmentDistribution
+      rng
     )
   );
 

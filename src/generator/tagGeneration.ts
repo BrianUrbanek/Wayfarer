@@ -1,5 +1,6 @@
 import type { CohortAnchor, TagId } from '../model/types.js';
 import type { SeededRng } from './seededRandom.js';
+import { assertValidAlignment } from './alignmentValidation.js';
 
 function uniqueSample<T>(values: readonly T[], count: number, rng: SeededRng): T[] {
   if (count <= 0 || values.length === 0) {
@@ -61,30 +62,30 @@ export function generateAlignedTags(
   seedTags: readonly TagId[],
   alignment: number
 ): TagId[] {
-  const clamped = Math.max(0, Math.min(10, Math.round(alignment)));
+  assertValidAlignment(alignment);
   const count = targetTagCount(seedTags, allTags);
 
-  if (clamped === 10) {
+  if (alignment === 10) {
     return seedTags.slice(0, count);
   }
 
-  if (clamped === 5) {
+  if (alignment === 5) {
     return sampleRandomTags(rng, allTags, count);
   }
 
-  if (clamped === 0) {
+  if (alignment === 0) {
     return sampleAntiSeedTags(rng, allTags, seedTags, count);
   }
 
-  if (clamped > 5) {
-    const seedPortion = (clamped - 5) / 5;
+  if (alignment > 5) {
+    const seedPortion = (alignment - 5) / 5;
     const seedCount = Math.min(count, Math.max(0, Math.round(seedPortion * count)));
     const seedPart = sampleSeedLikeTags(rng, allTags, seedTags, seedCount);
     const remaining = allTags.filter((tag) => !seedPart.includes(tag));
     return seedPart.concat(uniqueSample(remaining, count - seedPart.length, rng));
   }
 
-  const antiPortion = (5 - clamped) / 5;
+  const antiPortion = (5 - alignment) / 5;
   const antiCount = Math.min(count, Math.max(0, Math.round(antiPortion * count)));
   const antiPart = sampleAntiSeedTags(rng, allTags, seedTags, antiCount);
   const remaining = allTags.filter((tag) => !antiPart.includes(tag));

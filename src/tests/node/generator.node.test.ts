@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { DEFAULT_TAGS } from '../../data/defaultTags.js';
 import { createDefaultCohorts } from '../../data/defaultCohorts.js';
 import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
+import { generateAlignedRatings } from '../../generator/ratingGeneration.js';
+import { generateAlignedTags } from '../../generator/tagGeneration.js';
+import { createSeededRandom } from '../../generator/seededRandom.js';
 import { pearsonCorrelation } from '../../model/similarity.js';
 import { ratingsToVector, tagsToVector } from '../../model/vectors.js';
 import type { Island, MaybeRating } from '../../model/types.js';
@@ -43,17 +46,17 @@ describe('Columbus generator', () => {
     assert.deepEqual([...user.declaredTags].sort(), [...seed.tags].sort());
   });
 
-  it('alignment 0 avoids seed tags as much as possible', () => {
+  it('scenario-level alignment distributions do not degrade clean archetype tag alignment', () => {
     const dataset = generateColumbusDataset({
       ...baseConfig,
       tagAlignmentDistribution: { kind: 'fixed', value: 0 },
-      ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+      ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
     const user = dataset.users[0];
     const seed = dataset.cohorts.find((cohort) => cohort.id === user.hiddenSeedCohortId);
     assert.ok(seed);
-    const overlap = user.declaredTags.filter((tag) => seed.tags.includes(tag)).length;
-    assert.equal(overlap, 0);
+    assert.equal(user.hiddenReviewerArchetype, 'CLEAN_COHORT_MATCH');
+    assert.deepEqual([...user.declaredTags].sort(), [...seed.tags].sort());
   });
 
   it('alignment 10 strongly matches seed ratings', () => {
@@ -67,18 +70,21 @@ describe('Columbus generator', () => {
     assert.ok(result.value > 0.85);
   });
 
-  it('alignment 0 strongly anti-correlates with seed ratings', () => {
+  it('scenario-level alignment distributions do not degrade clean archetype rating alignment', () => {
     const dataset = generateColumbusDataset({
       ...baseConfig,
+      numUsers: 18,
+      tagAlignmentDistribution: { kind: 'fixed', value: 0 },
       ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
-    const user = dataset.users[0];
-    const seed = dataset.cohorts.find((cohort) => cohort.id === user.hiddenSeedCohortId);
+    const user = dataset.users.find((entry) => entry.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
+    const seed = dataset.cohorts.find((cohort) => cohort.id === user?.hiddenBehaviorCohortId);
+    assert.ok(user);
     assert.ok(seed);
     const userVector = makeRatingVector(dataset.islands, user.ratings);
     const seedVector = makeRatingVector(dataset.islands, seed.ratings);
     const result = pearsonCorrelation(userVector, seedVector, 3);
-    assert.ok(result.value < -0.85);
+    assert.ok(result.value > 0.95);
   });
 
   it('alignment 5 is approximately uncorrelated on average', () => {
@@ -124,5 +130,23 @@ describe('Columbus generator', () => {
     const targetVector = makeRatingVector(dataset.islands, target?.ratings ?? {});
     const result = pearsonCorrelation(userVector, targetVector, 3);
     assert.ok(result.value > 0.75);
+  });
+
+  it('throws for invalid rating alignment values', () => {
+    const rng = createSeededRandom(123);
+    const islands = [{ id: 'i-1', label: 'Island 1' }];
+    const seedRatings = { 'i-1': 1 as const };
+    assert.throws(() => generateAlignedRatings(rng, islands, seedRatings, -1));
+    assert.throws(() => generateAlignedRatings(rng, islands, seedRatings, 11));
+    assert.throws(() => generateAlignedRatings(rng, islands, seedRatings, 7.5));
+    assert.throws(() => generateAlignedRatings(rng, islands, seedRatings, Number.NaN));
+  });
+
+  it('throws for invalid tag alignment values', () => {
+    const rng = createSeededRandom(456);
+    assert.throws(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], -1));
+    assert.throws(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], 11));
+    assert.throws(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], 7.5));
+    assert.throws(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], Number.NaN));
   });
 });

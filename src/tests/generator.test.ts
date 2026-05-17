@@ -4,6 +4,9 @@ import { ratingsToVector, tagsToVector } from '../model/vectors';
 import { DEFAULT_TAGS } from '../data/defaultTags';
 import { createDefaultCohorts } from '../data/defaultCohorts';
 import { generateColumbusDataset } from '../generator/columbusGenerator';
+import { generateAlignedRatings } from '../generator/ratingGeneration';
+import { generateAlignedTags } from '../generator/tagGeneration';
+import { createSeededRandom } from '../generator/seededRandom';
 import type { GeneratorConfig } from '../generator/columbusGenerator';
 import type { Island } from '../model/types';
 
@@ -45,18 +48,18 @@ describe('Columbus generator', () => {
     expect(user.declaredTags.sort()).toEqual(seed?.tags.slice().sort());
   });
 
-  it('tag alignment 0 avoids seed tags as much as possible', () => {
+  it('scenario-level alignment distributions do not degrade clean archetype tag alignment', () => {
     const dataset = generateColumbusDataset({
       ...baseConfig,
       tagAlignmentDistribution: { kind: 'fixed', value: 0 },
-      ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+      ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
     const user = dataset.users[0];
     const seed = dataset.cohorts.find((cohort) => cohort.id === user.hiddenSeedCohortId);
 
     expect(seed).toBeDefined();
-    const overlap = user.declaredTags.filter((tag) => seed?.tags.includes(tag)).length;
-    expect(overlap).toBe(0);
+    expect(user.hiddenReviewerArchetype).toBe('CLEAN_COHORT_MATCH');
+    expect(user.declaredTags.sort()).toEqual(seed?.tags.slice().sort());
   });
 
   it('rating alignment 10 strongly matches seed ratings', () => {
@@ -72,20 +75,23 @@ describe('Columbus generator', () => {
     expect(correlation.value).toBeGreaterThan(0.85);
   });
 
-  it('rating alignment 0 strongly anti-correlates with seed ratings', () => {
+  it('scenario-level alignment distributions do not degrade clean archetype rating alignment', () => {
     const dataset = generateColumbusDataset({
       ...baseConfig,
+      numUsers: 18,
+      tagAlignmentDistribution: { kind: 'fixed', value: 0 },
       ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
-    const user = dataset.users[0];
-    const seed = dataset.cohorts.find((cohort) => cohort.id === user.hiddenSeedCohortId);
+    const user = dataset.users.find((entry) => entry.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
+    const seed = dataset.cohorts.find((cohort) => cohort.id === user?.hiddenBehaviorCohortId);
 
+    expect(user).toBeDefined();
     expect(seed).toBeDefined();
-    const userVector = makeRatingVector(dataset.islands, user.ratings);
+    const userVector = makeRatingVector(dataset.islands, user?.ratings ?? {});
     const seedVector = makeRatingVector(dataset.islands, seed?.ratings ?? {});
     const correlation = pearsonCorrelation(userVector, seedVector, 3);
 
-    expect(correlation.value).toBeLessThan(-0.85);
+    expect(correlation.value).toBeGreaterThan(0.95);
   });
 
   it('rating alignment 5 is approximately uncorrelated over enough samples', () => {
@@ -125,5 +131,23 @@ describe('Columbus generator', () => {
     expect(typeof user.hiddenRatingAlignment).toBe('number');
     expect(seed).toBeDefined();
     expect(tagsToVector(user.declaredTags, dataset.allTags)).toHaveLength(dataset.allTags.length);
+  });
+
+  it('throws for invalid rating alignment values', () => {
+    const rng = createSeededRandom(123);
+    const islands = [{ id: 'i-1', label: 'Island 1' }];
+    const seedRatings = { 'i-1': 1 as const };
+    expect(() => generateAlignedRatings(rng, islands, seedRatings, -1)).toThrow();
+    expect(() => generateAlignedRatings(rng, islands, seedRatings, 11)).toThrow();
+    expect(() => generateAlignedRatings(rng, islands, seedRatings, 7.5)).toThrow();
+    expect(() => generateAlignedRatings(rng, islands, seedRatings, Number.NaN)).toThrow();
+  });
+
+  it('throws for invalid tag alignment values', () => {
+    const rng = createSeededRandom(456);
+    expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], -1)).toThrow();
+    expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], 11)).toThrow();
+    expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], 7.5)).toThrow();
+    expect(() => generateAlignedTags(rng, DEFAULT_TAGS, ['strategy', 'competition'], Number.NaN)).toThrow();
   });
 });

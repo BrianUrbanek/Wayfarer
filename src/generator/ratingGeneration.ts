@@ -1,6 +1,7 @@
 import type { CohortAnchor, Island, IslandId, MaybeRating, Rating } from '../model/types.js';
 import { ratingsToVector } from '../model/vectors.js';
 import type { SeededRng } from './seededRandom.js';
+import { assertValidAlignment } from './alignmentValidation.js';
 
 function invertRating(rating: Rating): Rating {
   if (rating === 1) {
@@ -25,30 +26,30 @@ export function generateAlignedRatings(
   seedRatings: Record<IslandId, MaybeRating>,
   alignment: number
 ): Record<IslandId, MaybeRating> {
-  const clamped = Math.max(0, Math.min(10, Math.round(alignment)));
+  assertValidAlignment(alignment);
   const seedVector = ratingsToVector(seedRatings, islands);
 
   return Object.fromEntries(
     islands.map((island, index) => {
       const seedRating = seedVector[index] ?? null;
 
-      if (clamped === 10) {
+      if (alignment === 10) {
         return [island.id, seedRating];
       }
 
-      if (clamped === 0) {
+      if (alignment === 0) {
         return [
           island.id,
           seedRating === null ? null : invertRating(seedRating)
         ];
       }
 
-      if (clamped === 5) {
+      if (alignment === 5) {
         return [island.id, randomRating(rng)];
       }
 
-      if (clamped > 5) {
-        const copyProbability = (clamped - 5) / 5;
+      if (alignment > 5) {
+        const copyProbability = (alignment - 5) / 5;
         if (rng.next() < copyProbability) {
           return [island.id, seedRating];
         }
@@ -56,7 +57,7 @@ export function generateAlignedRatings(
         return [island.id, randomRating(rng)];
       }
 
-      const invertProbability = (5 - clamped) / 5;
+      const invertProbability = (5 - alignment) / 5;
       if (rng.next() < invertProbability) {
         return [
           island.id,

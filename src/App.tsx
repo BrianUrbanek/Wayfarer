@@ -2874,10 +2874,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     />
                   </label>
                   <label className="control">
-                    {labeledControl('Tag Alignment', 'Distribution used when generating hidden tag alignment for users.')}
+                    {labeledControl('Tag Alignment (Legacy)', 'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.')}
                     <select
                       value={JSON.stringify(tagAlignmentDistribution)}
                       onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
+                      aria-label="Tag Alignment Legacy Metadata"
                     >
                       <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
                       <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
@@ -2886,10 +2887,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     </select>
                   </label>
                   <label className="control">
-                    {labeledControl('Rating Alignment', 'Distribution used when generating hidden rating alignment for users.')}
+                    {labeledControl('Rating Alignment (Legacy)', 'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.')}
                     <select
                       value={JSON.stringify(ratingAlignmentDistribution)}
                       onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
+                      aria-label="Rating Alignment Legacy Metadata"
                     >
                       <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
                       <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
@@ -2897,6 +2899,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                       <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
                     </select>
                   </label>
+                  <p className="muted">Reviewer archetype profile alignment is authoritative. Legacy alignment controls are metadata-only and do not alter generated user behavior.</p>
                   <label className="control">
                     {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
                     <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
