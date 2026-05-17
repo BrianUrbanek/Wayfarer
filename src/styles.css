@@ -696,6 +696,7 @@ select {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .tray--collapsed .tray__rail-actions {
@@ -705,6 +706,20 @@ select {
 .tray__toggle,
 .tray__clear {
   min-width: 0;
+}
+
+.tray__toggle {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tray__clear {
+  font-size: 0.78rem;
+  opacity: 0.85;
 }
 
 .tray__body {
@@ -1857,6 +1872,8 @@ select {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .report-table__row--clickable {

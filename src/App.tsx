@@ -423,6 +423,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
   const [overviewCollapsed, setOverviewCollapsed] = useState(false);
   const [recoveryCollapsed, setRecoveryCollapsed] = useState(false);
+  const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
+  const [guidedProofCollapsed] = useState(false);
+  const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
   const [routingCollapsed, setRoutingCollapsed] = useState(false);
   const [debugCollapsed, setDebugCollapsed] = useState(false);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -2737,8 +2740,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         ? `Pinned cohort: ${selectedComparisonLabel}`
         : 'Pinned reference';
 
-  const railTop = '140px';
-  const railHeight = 'calc(100vh - 158px)';
   const pinnedTraySpace = pinnedTrayCollapsed ? 92 : 456;
   const instructionTraySpace = showInstructionTray ? (guidanceOpen ? 456 : 92) : 0;
 
@@ -3529,11 +3530,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           collapsed={!guidanceOpen}
           title={isNoviceMode ? 'Guided task journey' : 'Curator notes'}
           className="tray--instruction tray--left"
+          side="left"
           style={{
-            top: railTop,
+            top: '18px',
             left: '18px',
             right: 'auto',
-            height: railHeight
+            height: 'calc(100vh - 36px)'
           }}
           toggleCollapsedLabel={isNoviceMode ? 'Open guided journey' : 'Open curator notes'}
           toggleExpandedLabel={isNoviceMode ? 'Collapse guided journey' : 'Collapse curator notes'}
@@ -3555,18 +3557,33 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </div>
           <div className="instruction-grid">
             <section className="detail-block">
-              <h4>System use case</h4>
-              <p className="detail-block__title">{selectedStory.systemUseCase.title}</p>
-              <p>{selectedStory.systemUseCase.description}</p>
-              <p className="muted">{selectedStory.systemUseCase.detail}</p>
+              <div className="section-heading section-heading--collapse-row">
+                <h4>Story overview</h4>
+                <button
+                  type="button"
+                  className="icon-button collapsible-panel__toggle"
+                  onClick={() => setGuidedStoryCollapsed((value) => !value)}
+                  aria-label={guidedStoryCollapsed ? 'Expand Story overview' : 'Collapse Story overview'}
+                >
+                  <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                    {guidedStoryCollapsed ? 'v' : '^'}
+                  </span>
+                </button>
+              </div>
+              {!guidedStoryCollapsed ? (
+                <>
+                  <h4>System use case</h4>
+                  <p className="detail-block__title">{selectedStory.systemUseCase.title}</p>
+                  <p>{selectedStory.systemUseCase.description}</p>
+                  <p className="muted">{selectedStory.systemUseCase.detail}</p>
+                  <h4>Player journey</h4>
+                  <p className="detail-block__title">{selectedStory.playerJourney.title}</p>
+                  <p>{selectedStory.playerJourney.description}</p>
+                  <p className="muted">{selectedStory.playerJourney.detail}</p>
+                </>
+              ) : null}
             </section>
-            <section className="detail-block">
-              <h4>Player journey</h4>
-              <p className="detail-block__title">{selectedStory.playerJourney.title}</p>
-              <p>{selectedStory.playerJourney.description}</p>
-              <p className="muted">{selectedStory.playerJourney.detail}</p>
-            </section>
-            <details className="detail-block detail-block--foldout" open={!isNoviceMode}>
+            <details className="detail-block detail-block--foldout" open={!guidedProofCollapsed}>
               <summary className="detail-block__summary">
                 <span>Proof points</span>
                 <span className="muted">Shared steps, expected results, and failure signs.</span>
@@ -3605,12 +3622,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <Tray
         collapsed={pinnedTrayCollapsed}
         title={pinnedDrilldownTitle}
+        side="right"
         className="tray--pinned"
         style={{
-          top: railTop,
+          top: '18px',
           right: '18px',
           left: 'auto',
-          height: railHeight
+          height: 'calc(100vh - 36px)'
         }}
         toggleCollapsedLabel="Open pinned drilldown"
         toggleExpandedLabel="Collapse pinned drilldown"
@@ -3622,7 +3640,22 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         secondaryActionLabel="Clear pinned drilldown"
       >
         {pinnedDrilldownContent ? (
-          pinnedDrilldownContent
+          <section className="detail-block">
+            <div className="section-heading section-heading--collapse-row">
+              <h4>Pinned details</h4>
+              <button
+                type="button"
+                className="icon-button collapsible-panel__toggle"
+                onClick={() => setPinnedDetailCollapsed((value) => !value)}
+                aria-label={pinnedDetailCollapsed ? 'Expand pinned details' : 'Collapse pinned details'}
+              >
+                <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                  {pinnedDetailCollapsed ? 'v' : '^'}
+                </span>
+              </button>
+            </div>
+            {!pinnedDetailCollapsed ? pinnedDrilldownContent : <p className="muted">Pinned drilldown is collapsed.</p>}
+          </section>
         ) : (
           <EmptyState
             title="Nothing pinned yet"
@@ -3779,13 +3812,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         {reviewerDrawerContent}
       </Drawer>
 
-      <Drawer
+      <Modal
         open={drawerState?.type === 'reviewer-recovery'}
         title="Reviewer archetype recovery"
+        placement="top"
         onClose={() => setDrawerState(null)}
       >
         {reviewerArchetypeRecoveryDetail}
-      </Drawer>
+      </Modal>
     </main>
   );
 }
