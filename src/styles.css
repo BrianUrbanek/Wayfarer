@@ -662,6 +662,9 @@ select {
 
 .tray--collapsed {
   width: 76px;
+  height: auto;
+  min-height: 220px;
+  grid-template-rows: 1fr;
 }
 
 .tray__rail {
@@ -677,6 +680,7 @@ select {
   padding: 14px 12px;
   align-items: center;
   justify-content: center;
+  border-bottom: 0;
 }
 
 .tray__rail-title h2 {
@@ -1330,6 +1334,12 @@ select {
   .tray--left {
     left: 12px;
     right: auto;
+  }
+
+  .tray--collapsed {
+    width: 76px;
+    height: auto;
+    min-height: 200px;
   }
 
   .stack--two-up {
@@ -2332,6 +2342,8 @@ select {
 
   .tray--collapsed {
     width: 76px;
+    height: auto;
+    min-height: 180px;
   }
 
   .modal,

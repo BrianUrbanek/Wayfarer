@@ -1103,37 +1103,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       behaviorDistributionChart={behaviorDistributionCard}
     />
   ) : null;
-const discoveryRoutingSummary = selectedUser ? (
+  const discoveryRoutingSummary = selectedUser ? (
     <div className="stack">
-      <div className="summary-header">
-        <div>
-          <p className="eyebrow">Discovery routing</p>
-          <h3>Recommended unrated islands</h3>
-        </div>
-        <div className="summary-header__actions">
-          <button
-            type="button"
-            className="button button--ghost"
-            onClick={() =>
-              setDrawerState(
-                selectedUserRecommendations[0]
-                  ? {
-                      type: 'recommendation',
-                      userId: selectedUser.id,
-                      islandId: selectedUserRecommendations[0].islandId
-                    }
-                  : null
-              )
-            }
-          >
-            Open top route
-          </button>
-          <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
-            Choose user
-          </button>
-        </div>
-      </div>
-
       <div className="metric-grid metric-grid--compact">
         <MetricCard
           label="Routing mode"
@@ -1178,20 +1149,6 @@ const discoveryRoutingSummary = selectedUser ? (
 
   const selectedIslandSummary = selectedIsland ? (
     <div className="stack">
-      <div className="summary-header">
-        <div>
-          <p className="eyebrow">Selected island</p>
-          <h3>{selectedIsland.label}</h3>
-        </div>
-        <div className="summary-header__actions">
-          <button type="button" className="button button--ghost" onClick={() => setDrawerState({ type: 'island', id: selectedIsland.id })}>
-            Open island detail
-          </button>
-          <button type="button" className="button button--ghost" onClick={() => setModalKind('island')}>
-            Choose island
-          </button>
-        </div>
-      </div>
 
       <div className="metric-grid metric-grid--compact">
         <MetricCard label="User rating" value={formatRating(selectedComparisonUserRating)} helper="Visible rating from the selected user." />
@@ -2210,18 +2167,41 @@ const discoveryRoutingSummary = selectedUser ? (
           <div className="section-heading section-heading--collapse-row">
             <div>
               <p className="eyebrow">Discovery Routing</p>
+              <h3>Recommended unrated islands</h3>
               <p className="muted">Routes unrated islands for the selected user using current affinity, evidence, and routing policy.</p>
             </div>
-            <button
-              type="button"
-              className="icon-button collapsible-panel__toggle"
-              onClick={() => setDiscoveryRoutingCollapsed((value) => !value)}
-              aria-label={discoveryRoutingCollapsed ? 'Expand Discovery Routing' : 'Collapse Discovery Routing'}
-            >
-              <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                {discoveryRoutingCollapsed ? 'v' : '^'}
-              </span>
-            </button>
+            <div className="section-toolbar__buttons">
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={() =>
+                  setDrawerState(
+                    selectedUser && selectedUserRecommendations[0]
+                      ? {
+                          type: 'recommendation',
+                          userId: selectedUser.id,
+                          islandId: selectedUserRecommendations[0].islandId
+                        }
+                      : null
+                  )
+                }
+              >
+                Open top route
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
+                Choose user
+              </button>
+              <button
+                type="button"
+                className="icon-button collapsible-panel__toggle"
+                onClick={() => setDiscoveryRoutingCollapsed((value) => !value)}
+                aria-label={discoveryRoutingCollapsed ? 'Expand Discovery Routing' : 'Collapse Discovery Routing'}
+              >
+                <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                  {discoveryRoutingCollapsed ? 'v' : '^'}
+                </span>
+              </button>
+            </div>
           </div>
           {!discoveryRoutingCollapsed ? discoveryRoutingSummary : null}
         </Panel>,
@@ -2229,18 +2209,27 @@ const discoveryRoutingSummary = selectedUser ? (
           <div className="section-heading section-heading--collapse-row">
             <div>
               <p className="eyebrow">Selected Island</p>
+              <h3>{selectedIsland?.label ?? 'No island selected'}</h3>
               <p className="muted">Compare selected user/cohort ratings and inspect cohort-local audience affinity.</p>
             </div>
-            <button
-              type="button"
-              className="icon-button collapsible-panel__toggle"
-              onClick={() => setSelectedIslandCollapsed((value) => !value)}
-              aria-label={selectedIslandCollapsed ? 'Expand Selected Island' : 'Collapse Selected Island'}
-            >
-              <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                {selectedIslandCollapsed ? 'v' : '^'}
-              </span>
-            </button>
+            <div className="section-toolbar__buttons">
+              <button type="button" className="button button--ghost" onClick={() => selectedIsland ? setDrawerState({ type: 'island', id: selectedIsland.id }) : null}>
+                Open island detail
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => setModalKind('island')}>
+                Choose island
+              </button>
+              <button
+                type="button"
+                className="icon-button collapsible-panel__toggle"
+                onClick={() => setSelectedIslandCollapsed((value) => !value)}
+                aria-label={selectedIslandCollapsed ? 'Expand Selected Island' : 'Collapse Selected Island'}
+              >
+                <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                  {selectedIslandCollapsed ? 'v' : '^'}
+                </span>
+              </button>
+            </div>
           </div>
           {!selectedIslandCollapsed
             ? (selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />)
@@ -2937,9 +2926,7 @@ const discoveryRoutingSummary = selectedUser ? (
             </div>
           </>
         ) : null}
-      </section>
-
-            <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />`n`n<section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
+      </section>`r`n      <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />`r`n`r`n      <section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
         <div className="section-heading section-heading--collapse-row">
           <h3>Primary workflow details</h3>
           <button
@@ -3401,6 +3388,11 @@ const discoveryRoutingSummary = selectedUser ? (
     </main>
   );
 }
+
+
+
+
+
 
 
 
