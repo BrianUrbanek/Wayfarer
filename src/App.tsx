@@ -855,7 +855,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     },
     {
       key: 'evidence',
-      label: 'Evidence ƒ',
+      label: 'Evidence',
       render: (row) => formatPercent(row.evidence),
       align: 'right'
     },
@@ -3365,6 +3365,7 @@ const discoveryRoutingSummary = selectedUser ? (
     </main>
   );
 }
+
 
 
 
