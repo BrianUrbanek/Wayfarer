@@ -894,13 +894,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     },
     {
       key: 'confidence',
-      label: 'Confidence ƒ',
+      label: 'Confidence',
       render: (row) => formatPercent(row.estimate.confidence),
       align: 'right'
     },
     {
       key: 'evidence',
-      label: 'Evidence ƒ',
+      label: 'Evidence',
       render: (row) => formatDecimal(row.estimate.effectiveWeight),
       align: 'right'
     },
@@ -1242,12 +1242,12 @@ const discoveryRoutingSummary = selectedUser ? (
         </section>
         <div className="metric-grid metric-grid--compact">
           <MetricCard
-            label="Affinity evidence ƒ"
+            label="Affinity evidence"
             value={formatDecimal(selectedIslandEffectiveWeight)}
             helper="Effective rater signal backing this estimate. Low evidence means treat affinity direction as tentative."
           />
           <MetricCard
-            label="Weighted ratings ƒ"
+            label="Weighted ratings"
             value={selectedIslandRatingCount}
             helper="Sparse events contributing to island/cohort affinity reports."
           />
