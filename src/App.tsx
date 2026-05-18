@@ -923,9 +923,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       key: 'hidden',
       label: 'Hidden',
       render: (row) => (
-        <div className="table-cell-stack">
+        <div className="table-cell-stack" title={row.hiddenReviewerChecksum || undefined}>
           <span>{archetypeLabel(row.hiddenReviewerArchetype)}</span>
-          <span className="muted">Checksum {row.hiddenReviewerChecksum}</span>
+          <span className="muted">{hiddenCohortLine(row)}</span>
+          <span className="muted">Alignment: {parseHiddenAlignment(row.hiddenReviewerChecksum)}</span>
         </div>
       )
     },
@@ -1040,6 +1041,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       align: 'right'
     }
   ];
+
+  const parseHiddenAlignment = (checksum: string): string => {
+    const parts = checksum.split(':');
+    if (parts.length < 5) {
+      return 'n/a';
+    }
+    const tagAlignment = Number(parts[parts.length - 2]);
+    const ratingAlignment = Number(parts[parts.length - 1]);
+    if (!Number.isFinite(tagAlignment) || !Number.isFinite(ratingAlignment)) {
+      return 'n/a';
+    }
+    return `${tagAlignment}/${ratingAlignment}`;
+  };
+
+  const hiddenCohortLine = (row: ReviewerArchetypeReport): string => {
+    const seed = row.hiddenSeedCohortId ? cohortLabels.full(row.hiddenSeedCohortId) : 'none';
+    const behavior = row.hiddenBehaviorCohortId ? cohortLabels.full(row.hiddenBehaviorCohortId) : 'none';
+    return row.hiddenBehaviorCohortId && row.hiddenBehaviorCohortId !== row.hiddenSeedCohortId
+      ? `Seed: ${seed} · Behavior: ${behavior}`
+      : `Seed: ${seed}`;
+  };
 
   const selectedReviewerReport = drawerState?.type === 'reviewer'
     ? reviewerReportRows.find((report) => report.userId === drawerState.userId) ?? null
@@ -3826,7 +3848,4 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </main>
   );
 }
-
-
-
 

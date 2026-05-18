@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { PropsWithChildren } from 'react';
 
 interface ModalProps extends PropsWithChildren {
@@ -10,6 +10,7 @@ interface ModalProps extends PropsWithChildren {
 }
 
 export function Modal({ open, title, onClose, children, placement = 'center', className }: ModalProps) {
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!open) {
       return;
@@ -38,6 +39,14 @@ export function Modal({ open, title, onClose, children, placement = 'center', cl
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    bodyRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -64,7 +73,7 @@ export function Modal({ open, title, onClose, children, placement = 'center', cl
             Close
           </button>
         </header>
-        <div className="modal__body">{children}</div>
+        <div ref={bodyRef} className="modal__body">{children}</div>
       </div>
     </div>
   );
