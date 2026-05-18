@@ -1284,8 +1284,8 @@ select {
 
 @media (max-width: 1180px) {
   .app-shell {
-    padding-left: 32px;
-    padding-right: 32px;
+    padding-left: calc(20px + var(--left-tray-space, 0px));
+    padding-right: calc(20px + var(--right-tray-space, 0px));
   }
 
   .control-bar {
