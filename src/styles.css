@@ -2330,6 +2330,10 @@ select {
     width: min(320px, calc(100vw - 24px));
   }
 
+  .tray--collapsed {
+    width: 76px;
+  }
+
   .modal,
   .drawer {
     width: 100%;

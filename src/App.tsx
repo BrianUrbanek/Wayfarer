@@ -430,7 +430,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
   const [guidedProofCollapsed] = useState(false);
   const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
-  const [routingCollapsed, setRoutingCollapsed] = useState(false);
+  const [discoveryRoutingCollapsed, setDiscoveryRoutingCollapsed] = useState(false);
+  const [selectedIslandCollapsed, setSelectedIslandCollapsed] = useState(false);
   const [debugCollapsed, setDebugCollapsed] = useState(false);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const scenarioExecutionTokenRef = useRef(0);
@@ -2206,10 +2207,44 @@ const discoveryRoutingSummary = selectedUser ? (
       title: 'Routing',
       panels: [
         <Panel key="discovery-routing" title="Discovery Routing" className="panel--wide">
-          {discoveryRoutingSummary}
+          <div className="section-heading section-heading--collapse-row">
+            <div>
+              <p className="eyebrow">Discovery Routing</p>
+              <p className="muted">Routes unrated islands for the selected user using current affinity, evidence, and routing policy.</p>
+            </div>
+            <button
+              type="button"
+              className="icon-button collapsible-panel__toggle"
+              onClick={() => setDiscoveryRoutingCollapsed((value) => !value)}
+              aria-label={discoveryRoutingCollapsed ? 'Expand Discovery Routing' : 'Collapse Discovery Routing'}
+            >
+              <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                {discoveryRoutingCollapsed ? 'v' : '^'}
+              </span>
+            </button>
+          </div>
+          {!discoveryRoutingCollapsed ? discoveryRoutingSummary : null}
         </Panel>,
-        <Panel key="selected-island" title="Selected Island Summary">
-          {selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />}
+        <Panel key="selected-island" title="Selected Island" className="panel--wide">
+          <div className="section-heading section-heading--collapse-row">
+            <div>
+              <p className="eyebrow">Selected Island</p>
+              <p className="muted">Compare selected user/cohort ratings and inspect cohort-local audience affinity.</p>
+            </div>
+            <button
+              type="button"
+              className="icon-button collapsible-panel__toggle"
+              onClick={() => setSelectedIslandCollapsed((value) => !value)}
+              aria-label={selectedIslandCollapsed ? 'Expand Selected Island' : 'Collapse Selected Island'}
+            >
+              <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                {selectedIslandCollapsed ? 'v' : '^'}
+              </span>
+            </button>
+          </div>
+          {!selectedIslandCollapsed
+            ? (selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />)
+            : null}
         </Panel>,
         ...(isNoviceMode
           ? []
@@ -3018,6 +3053,7 @@ const discoveryRoutingSummary = selectedUser ? (
 
             return (
               <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
+                {sectionKey !== 'routing' ? (
                 <div className="section-heading dashboard-section__heading">
                   <p className="eyebrow">{section.title}</p>
                   <button
@@ -3026,13 +3062,12 @@ const discoveryRoutingSummary = selectedUser ? (
                     onClick={() => {
                       if (sectionKey === 'overview') setOverviewCollapsed((value) => !value);
                       if (sectionKey === 'recovery') setRecoveryCollapsed((value) => !value);
-                      if (sectionKey === 'routing') setRoutingCollapsed((value) => !value);
                       if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
                     }}
                     aria-label={
                       (sectionKey === 'overview' && overviewCollapsed) ||
                       (sectionKey === 'recovery' && recoveryCollapsed) ||
-                      (sectionKey === 'routing' && routingCollapsed) ||
+                      false ||
                       (sectionKey === 'debug' && debugCollapsed)
                         ? `Expand ${section.title}`
                         : `Collapse ${section.title}`
@@ -3041,7 +3076,7 @@ const discoveryRoutingSummary = selectedUser ? (
                     <span className="collapsible-panel__toggle-icon" aria-hidden="true">
                       {(sectionKey === 'overview' && overviewCollapsed) ||
                       (sectionKey === 'recovery' && recoveryCollapsed) ||
-                      (sectionKey === 'routing' && routingCollapsed) ||
+                      false ||
                       (sectionKey === 'debug' && debugCollapsed)
                         ? 'v'
                         : '^'}
@@ -3052,12 +3087,13 @@ const discoveryRoutingSummary = selectedUser ? (
                       ? 'Summary and current state'
                       : sectionKey === 'recovery'
                         ? 'Checks on seeded anchors, signal, and recovery'
-                        : sectionKey === 'routing'
-                          ? 'Recommendations, island comparison, and pseudo-cohorts'
-                          : 'Checksums, hidden metadata, and debug-only fields'}
+                        : 'Checksums, hidden metadata, and debug-only fields'}
                   </p>
                 </div>
-                {!((sectionKey === 'overview' && overviewCollapsed) || (sectionKey === 'recovery' && recoveryCollapsed) || (sectionKey === 'routing' && routingCollapsed) || (sectionKey === 'debug' && debugCollapsed)) ? (
+                ) : null}
+                {sectionKey === 'routing' ? (
+                  <div className="dashboard-section__panels">{section.panels}</div>
+                ) : !((sectionKey === 'overview' && overviewCollapsed) || (sectionKey === 'recovery' && recoveryCollapsed) || (sectionKey === 'debug' && debugCollapsed)) ? (
                   <div className="dashboard-section__panels">{section.panels}</div>
                 ) : null}
               </section>
