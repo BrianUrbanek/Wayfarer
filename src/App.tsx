@@ -13,6 +13,8 @@ import { SelectionModal, type SelectionOption } from './ui/components/SelectionM
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
+import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
+import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -2077,6 +2079,24 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const routingSurfaceLabel = stageTopRecommendation
     ? dataset.islands.find((island) => island.id === stageTopRecommendation.islandId)?.label ?? stageTopRecommendation.islandId
     : 'No routed island';
+  const handleInspectTopRoute = () => {
+    setDrawerState(
+      selectedUser && selectedUserRecommendations[0]
+        ? {
+            type: 'recommendation',
+            userId: selectedUser.id,
+            islandId: selectedUserRecommendations[0].islandId
+          }
+        : null
+    );
+  };
+  const handlePinIsland = () => {
+    if (!selectedIsland) {
+      return;
+    }
+    setPinnedDrilldownKind('island');
+    setPinnedTrayCollapsed(false);
+  };
 
   const dashboardSections: Record<DashboardPanelGroupKey, { title: string; panels: JSX.Element[] }> = {
     overview: {
@@ -2163,78 +2183,25 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     routing: {
       title: 'Routing',
       panels: [
-        <Panel key="discovery-routing" title="Discovery Routing" className="panel--wide">
-          <div className="section-heading section-heading--collapse-row">
-            <div>
-              <p className="eyebrow">Discovery Routing</p>
-              <h3>Recommended unrated islands</h3>
-              <p className="muted">Routes unrated islands for the selected user using current affinity, evidence, and routing policy.</p>
-            </div>
-            <div className="section-toolbar__buttons">
-              <button
-                type="button"
-                className="button button--ghost"
-                onClick={() =>
-                  setDrawerState(
-                    selectedUser && selectedUserRecommendations[0]
-                      ? {
-                          type: 'recommendation',
-                          userId: selectedUser.id,
-                          islandId: selectedUserRecommendations[0].islandId
-                        }
-                      : null
-                  )
-                }
-              >
-                Open top route
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
-                Choose user
-              </button>
-              <button
-                type="button"
-                className="icon-button collapsible-panel__toggle"
-                onClick={() => setDiscoveryRoutingCollapsed((value) => !value)}
-                aria-label={discoveryRoutingCollapsed ? 'Expand Discovery Routing' : 'Collapse Discovery Routing'}
-              >
-                <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                  {discoveryRoutingCollapsed ? 'v' : '^'}
-                </span>
-              </button>
-            </div>
-          </div>
-          {!discoveryRoutingCollapsed ? discoveryRoutingSummary : null}
-        </Panel>,
-        <Panel key="selected-island" title="Selected Island" className="panel--wide">
-          <div className="section-heading section-heading--collapse-row">
-            <div>
-              <p className="eyebrow">Selected Island</p>
-              <h3>{selectedIsland?.label ?? 'No island selected'}</h3>
-              <p className="muted">Compare selected user/cohort ratings and inspect cohort-local audience affinity.</p>
-            </div>
-            <div className="section-toolbar__buttons">
-              <button type="button" className="button button--ghost" onClick={() => selectedIsland ? setDrawerState({ type: 'island', id: selectedIsland.id }) : null}>
-                Open island detail
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => setModalKind('island')}>
-                Choose island
-              </button>
-              <button
-                type="button"
-                className="icon-button collapsible-panel__toggle"
-                onClick={() => setSelectedIslandCollapsed((value) => !value)}
-                aria-label={selectedIslandCollapsed ? 'Expand Selected Island' : 'Collapse Selected Island'}
-              >
-                <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                  {selectedIslandCollapsed ? 'v' : '^'}
-                </span>
-              </button>
-            </div>
-          </div>
-          {!selectedIslandCollapsed
-            ? (selectedIsland ? selectedIslandSummary : <EmptyState title="No island selected" description="Open the island picker to inspect an island." />)
-            : null}
-        </Panel>,
+        <DiscoveryRoutingPanel
+          key="discovery-routing"
+          collapsed={discoveryRoutingCollapsed}
+          onToggleCollapsed={() => setDiscoveryRoutingCollapsed((value) => !value)}
+          onInspectTopRoute={handleInspectTopRoute}
+          onChooseUser={() => setModalKind('user')}
+          hasSelectedUser={Boolean(selectedUser)}
+          summary={discoveryRoutingSummary}
+        />,
+        <SelectedIslandPanel
+          key="selected-island"
+          collapsed={selectedIslandCollapsed}
+          onToggleCollapsed={() => setSelectedIslandCollapsed((value) => !value)}
+          onPinIsland={handlePinIsland}
+          onChooseIsland={() => setModalKind('island')}
+          islandLabel={selectedIsland?.label ?? 'No island selected'}
+          hasSelectedIsland={Boolean(selectedIsland)}
+          summary={selectedIslandSummary}
+        />,
         ...(isNoviceMode
           ? []
           : [
