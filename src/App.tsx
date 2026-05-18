@@ -51,12 +51,15 @@ import {
   type TurnMode
 } from './model/turnPolicy';
 import { buildDataFitnessSummary } from './model/dataFitness';
+import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
+import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
+import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
 import type { CohortAffinityEstimate } from './model/affinity';
 import type { PseudoCohortReport } from './model/pseudoCohorts';
-import { archetypeLabel, type ReviewerArchetypeReport } from './model/reviewerArchetypes';
+import { archetypeLabel } from './model/reviewerArchetypes';
 import { recommendIslandsForUser, type IslandRecommendation } from './model/recommendations';
 import {
   advancePolicyTurn,
@@ -645,7 +648,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const declaredDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.declaredDistribution, cohortLabels.full, 4) : [];
   const behaviorDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.behaviorDistribution, cohortLabels.full, 4) : [];
   const behaviorReadSummary = selectedInference ? summarizeBehaviorRead(selectedInference.behaviorDistribution, selectedInference.behaviorSpecificity) : null;
-  const hasBehaviorEvidence = selectedInference ? selectedInference.ratingEvidence >= 0.08 && selectedInference.behaviorMatchStrength >= 0.2 : false;
+  const declaredObservedRelationshipText = selectedInference ? buildDeclaredObservedRelationshipText(selectedInference) : '';
   const showInverseDiagnostic = selectedInference
     ? shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
     : false;
@@ -908,97 +911,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     }
   ];
 
-  const reviewerRecoveryColumns: ReportTableColumn<ReviewerArchetypeReport>[] = [
-    {
-      key: 'user',
-      label: 'User',
-      render: (row) => (
-        <div className="table-cell-stack">
-          <strong>{row.label}</strong>
-          <span className="muted">{row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'No visible cohort'}</span>
-        </div>
-      )
-    },
-    {
-      key: 'hidden',
-      label: 'Hidden',
-      render: (row) => (
-        <div className="table-cell-stack" title={row.hiddenReviewerChecksum || undefined}>
-          <span>{archetypeLabel(row.hiddenReviewerArchetype)}</span>
-          <span className="muted">{hiddenCohortLine(row)}</span>
-          <span className="muted">Alignment: {parseHiddenAlignment(row.hiddenReviewerChecksum)}</span>
-        </div>
-      )
-    },
-    {
-      key: 'visibleRead',
-      label: 'Visible read',
-      render: (row) => (
-        <div className="table-cell-stack">
-          <span>{row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'No cohort read yet'}</span>
-          <span className="muted">{row.inferredDiagnosisType}</span>
-        </div>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row) => <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>,
-      align: 'center'
-    },
-    {
-      key: 'signal',
-      label: 'Signal',
-      render: (row) => formatDecimal(row.effectiveSignal),
-      align: 'right'
-    },
-    {
-      key: 'evidence',
-      label: 'Evidence',
-      render: (row) => formatPercent(row.signalEvidence),
-      align: 'right'
-    },
-    {
-      key: 'flags',
-      label: 'Flags',
-      render: (row) => row.analystFlags.slice(0, 4).join(' · ') || 'none'
-    }
-  ];
-
-  const reviewerRecoveryCohortColumns: ReportTableColumn<{
-    cohort: CohortAnchor | null;
-    users: ReviewerArchetypeReport[];
-    topUser: ReviewerArchetypeReport | null;
-  }>[] = [
-    {
-      key: 'cohort',
-      label: 'Cohort',
-      render: (row) => row.cohort?.label ?? 'none'
-    },
-    {
-      key: 'leadUser',
-      label: 'Lead user',
-      render: (row) => row.topUser?.label ?? 'none'
-    },
-    {
-      key: 'count',
-      label: 'Users',
-      render: (row) => row.users.length,
-      align: 'right'
-    },
-    {
-      key: 'signal',
-      label: 'Signal',
-      render: (row) => formatDecimal(row.topUser?.effectiveSignal ?? 0),
-      align: 'right'
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row) => <Badge tone={reviewerRecoveryTone(row.topUser?.recoveryStatus ?? 'UNCERTAIN')}>{row.topUser?.recoveryStatus ?? 'UNCERTAIN'}</Badge>,
-      align: 'center'
-    }
-  ];
 
   const recommendationColumns: ReportTableColumn<IslandRecommendation>[] = [
     {
@@ -1022,200 +934,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       label: 'Predicted fit',
       render: (row) => <ProgressBar value={(row.predictedFit + 1) / 2} label={formatSignedDecimal(row.predictedFit)} tone={row.predictedFit >= 0 ? 'success' : 'danger'} />
     },
-    {
-      key: 'support',
-      label: 'Support',
-      render: (row) => formatPercent(row.affinitySupport),
-      align: 'right'
-    },
-    {
-      key: 'discovery',
-      label: 'Discovery',
-      render: (row) => formatPercent(row.discoveryValue),
-      align: 'right'
-    },
-    {
-      key: 'score',
-      label: 'Score',
-      render: (row) => formatDecimal(row.recommendationScore),
-      align: 'right'
-    }
-  ];
-
-  const parseHiddenAlignment = (checksum: string): string => {
-    const parts = checksum.split(':');
-    if (parts.length < 5) {
-      return 'n/a';
-    }
-    const tagAlignment = Number(parts[parts.length - 2]);
-    const ratingAlignment = Number(parts[parts.length - 1]);
-    if (!Number.isFinite(tagAlignment) || !Number.isFinite(ratingAlignment)) {
-      return 'n/a';
-    }
-    return `${tagAlignment}/${ratingAlignment}`;
-  };
-
-  const hiddenCohortLine = (row: ReviewerArchetypeReport): string => {
-    const seed = row.hiddenSeedCohortId ? cohortLabels.full(row.hiddenSeedCohortId) : 'none';
-    const behavior = row.hiddenBehaviorCohortId ? cohortLabels.full(row.hiddenBehaviorCohortId) : 'none';
-    return row.hiddenBehaviorCohortId && row.hiddenBehaviorCohortId !== row.hiddenSeedCohortId
-      ? `Seed: ${seed} · Behavior: ${behavior}`
-      : `Seed: ${seed}`;
-  };
-
-  const selectedReviewerReport = drawerState?.type === 'reviewer'
+    { key: 'support', label: 'Support', render: (row) => formatPercent(row.affinitySupport), align: 'right' },
+    { key: 'discovery', label: 'Discovery', render: (row) => formatPercent(row.discoveryValue), align: 'right' },
+    { key: 'score', label: 'Score', render: (row) => formatDecimal(row.recommendationScore), align: 'right' }
+  ];  const selectedReviewerReport = drawerState?.type === 'reviewer'
     ? reviewerReportRows.find((report) => report.userId === drawerState.userId) ?? null
     : null;
 
   const selectedUserReviewerReport = selectedUser
     ? reviewerReportRows.find((report) => report.userId === selectedUser.id) ?? null
     : null;
-
-  const reviewerArchetypeRecoveryDetail = (
-    <div className="stack reviewer-recovery-detail">
-      <div className="summary-header">
-        <div>
-          <p className="eyebrow">Reviewer archetype recovery</p>
-          <h3>Hidden generator checksums vs inferred behavior</h3>
-        </div>
-        <p className="muted">
-          Debug-only labels are used to evaluate whether the visible model recovers the intended synthetic pattern
-          when the evidence is there, and stays unsure when it is not.
-        </p>
-      </div>
-
-      <div className="metric-grid metric-grid--compact">
-        <MetricCard label="Generated archetypes" value={reviewerArchetypeAnalysis.recoverySummary.totalUsers} tone="accent" />
-        <MetricCard label="Matches" value={reviewerArchetypeAnalysis.recoverySummary.matchCount} tone="success" />
-        <MetricCard label="Partial" value={reviewerArchetypeAnalysis.recoverySummary.partialCount} tone="accent" />
-        <MetricCard label="Misses" value={reviewerArchetypeAnalysis.recoverySummary.missCount} tone="danger" />
-        <MetricCard label="Uncertain" value={reviewerArchetypeAnalysis.recoverySummary.uncertainCount} tone="warning" />
-        <MetricCard label="Candidate review" value={reviewerArchetypeAnalysis.recoverySummary.candidateSeedCount} tone="accent" />
-        <MetricCard label="False positives" value={reviewerArchetypeAnalysis.recoverySummary.falsePositiveCount} tone="danger" />
-        <MetricCard label="False negatives" value={reviewerArchetypeAnalysis.recoverySummary.falseNegativeCount} tone="warning" />
-      </div>
-
-      <section className="detail-block">
-        <h4>Column guide</h4>
-        <ul className="diagnosis-list">
-          <li>Hidden: generator checksum label, used only for debug validation.</li>
-          <li>Visible read: model-derived behavior/cohort from visible ratings.</li>
-          <li>Status: whether visible inference recovered the hidden checksum.</li>
-          <li>Signal: usable reviewer signal strength.</li>
-          <li>Evidence: rating support behind the read.</li>
-          <li>Flags: analyst/debug tags that explain why the row is surfaced.</li>
-        </ul>
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>High Signal by Cohort</h3>
-          <p>Top signal users grouped by their strongest cohort fit.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryCohortColumns}
-          rows={reviewerCohortRows.filter((row): row is { cohort: CohortAnchor; users: ReviewerArchetypeReport[]; topUser: ReviewerArchetypeReport } => row.cohort !== null && row.topUser !== null)}
-          getRowKey={(row) => row.cohort.id}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.topUser.userId })}
-          emptyTitle="No high-signal users"
-          emptyDescription="Take more turns so the visible model can accumulate cohort-local signal."
-        />
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>Candidate New Seed Users</h3>
-          <p>High-value reviewers that do not fit known cohorts cleanly and should stay analyst-review only.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryColumns}
-          rows={reviewerArchetypeAnalysis.candidateSeedUsers}
-          getRowKey={(row) => row.userId}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-          emptyTitle="No analyst candidates"
-          emptyDescription="This panel fills when the system finds strong signal but weak known-cohort fit."
-        />
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>High Signal, Weak Known Fit</h3>
-          <p>Users the model trusts, but only loosely explains with current cohort labels.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryColumns}
-          rows={reviewerArchetypeAnalysis.weakFitHighSignalUsers}
-          getRowKey={(row) => row.userId}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-          emptyTitle="No weak-fit high-signal users"
-          emptyDescription="This list fills when a user has strong signal but poor known-cohort fit."
-        />
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>Early Scouts</h3>
-          <p>Users whose guided routing bias lands early in the turn history.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryColumns}
-          rows={reviewerArchetypeAnalysis.earlyScouts}
-          getRowKey={(row) => row.userId}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-          emptyTitle="No early scouts"
-          emptyDescription="Guided turn timing has not yet produced any early-scout patterns."
-        />
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>Popularity Chasers and Noise</h3>
-          <p>Broad-hit followers, noisy users, and low-evidence mismatches.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryColumns}
-          rows={[
-            ...reviewerArchetypeAnalysis.popularityChasers,
-            ...reviewerArchetypeAnalysis.noisyUsers
-          ]}
-          getRowKey={(row) => row.userId}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-          emptyTitle="No popularity chasers or noisy users"
-          emptyDescription="The current sample has not produced any obvious broad-hit followers or random noise."
-        />
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>False Positives</h3>
-          <p>Hidden noise or detached predictors that the model may be reading as meaningful signal.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryColumns}
-          rows={reviewerArchetypeAnalysis.falsePositives}
-          getRowKey={(row) => row.userId}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-          emptyTitle="No false positives"
-          emptyDescription="The visible model has not over-classified any noisy or detached users yet."
-        />
-      </section>
-
-      <section className="stack">
-        <div className="section-heading">
-          <h3>False Negatives</h3>
-          <p>Hidden clean matches, mislabeled users, or inverse raters the model failed to recover.</p>
-        </div>
-        <ReportTable
-          columns={reviewerRecoveryColumns}
-          rows={reviewerArchetypeAnalysis.falseNegatives}
-          getRowKey={(row) => row.userId}
-          onRowClick={(row) => setDrawerState({ type: 'reviewer', userId: row.userId })}
-          emptyTitle="No false negatives"
-          emptyDescription="The current synthetic sample has not produced any misses worth flagging."
-        />
-      </section>
-    </div>
-  );
 
   const reviewerArchetypeSummary = (
     <div className="stack">
@@ -1325,216 +1053,55 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   );
 
-  const selectedUserSummary = selectedInference ? (
+  const declaredOverlapText = declaredTagOverlap
+    ? declaredTagOverlap.isExact
+      ? `Exact tag fit · ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
+      : `${declaredTagOverlap.overlap}/${declaredTagOverlap.total} declared tags`
+    : 'No declared-tag overlap available.';
+  const inverseNotice = showInverseDiagnostic
+    ? `Anti-match signal: ${cohortLabels.full(selectedInference?.inverseTop.cohortId ?? null)} · inverse evidence ${formatPercent(selectedInference?.inverseTop.score ?? 0)}`
+    : 'No strong inverse signal';
+  const declaredDistributionCard = (
     <div className="stack">
-      <div className="summary-header">
-        <div>
-          <p className="eyebrow">Selected user</p>
-          <h3>{selectedUser?.label ?? 'None'}</h3>
-        </div>
-        <div className="summary-header__actions">
-          <button
-            type="button"
-            className="button button--ghost"
-            onClick={() => {
-              if (selectedUser) {
-                setPinnedDrilldownKind('user');
-              }
-            }}
-          >
-            Pin current user
-          </button>
-          <button type="button" className="button button--ghost" onClick={() => setModalKind('user')}>
-            Choose user
-          </button>
-        </div>
-      </div>
-
-      <div className="badge-row">
-        {(selectedUser?.declaredTags ?? []).map((tag) => (
-          <Badge key={tag} tone="accent">
-            {tag}
-          </Badge>
-        ))}
-      </div>
-
-      <div className="metric-grid">
-        <MetricCard
-          label="Declared vs observed fit"
-          value={selectedInference.signalFit.toFixed(3)}
-          helper="How closely declared tags and observed ratings align at the cohort level."
-          tone="accent"
-        />
-        <MetricCard
-          label="Rating Evidence"
-          value={selectedInference.ratingEvidence.toFixed(3)}
-          helper="How much sparse rating data supports this judgment?"
-          tone="neutral"
-        />
-        <MetricCard
-          label="Recommendation signal weight"
-          value={selectedInference.effectiveSignal.toFixed(3)}
-          helper="How strongly this player's ratings should influence routing decisions right now."
-          tone="success"
-        />
-      </div>
-
-      <p className="muted">{buildDeclaredObservedRelationshipText(selectedInference)}</p>
-
-      <div className="metric-grid metric-grid--compact">
-        <MetricCard
-          label="Behavior match strength"
-          value={selectedInference.behaviorMatchStrength.toFixed(3)}
-          helper="Strongest raw positive cohort fit before the distribution is normalized."
-        />
-        <MetricCard
-          label="Behavior specificity"
-          value={selectedInference.behaviorSpecificity.toFixed(3)}
-          helper="How much the behavior distribution prefers one cohort over the runner-up."
-        />
-        <MetricCard
-          label="Target agreement"
-          value={
-            selectedInference.targetAlignment.ratedCount > 0
-              ? `${selectedInference.targetAlignment.agreementCount}/${selectedInference.targetAlignment.ratedCount}`
-              : 'No evidence'
-          }
-          helper={
-            selectedInference.targetAlignment.cohortId
-              ? `${Math.round(selectedInference.targetAlignment.agreementRate * 100)}% agreement with ${cohortLabels.full(selectedInference.targetAlignment.cohortId)} reference ratings.`
-              : 'No reference cohort available for direct target agreement yet.'
-          }
-          tone={selectedInference.targetAlignment.agreementRate >= 0.7 ? 'success' : selectedInference.targetAlignment.ratedCount > 0 ? 'warning' : 'neutral'}
-        />
-        <MetricCard
-          label="Cohort separability"
-          value={selectedInference.cohortSeparability.label}
-          helper={selectedInference.cohortSeparability.message}
-          tone={
-            selectedInference.cohortSeparability.label === 'high'
-              ? 'success'
-              : selectedInference.cohortSeparability.label === 'moderate'
-                ? 'warning'
-                : 'neutral'
-          }
-        />
-      </div>
-
-      <p className="muted">
-        {selectedInference.targetAlignment.ratedCount === 0
-          ? 'Insufficient target-alignment evidence.'
-          : selectedInference.targetAlignment.agreementRate >= 0.7 && selectedInference.cohortSeparability.label === 'low'
-            ? 'Reliable reviewer, low cohort separation so far.'
-            : selectedInference.targetAlignment.agreementRate >= 0.7
-              ? 'Reliable reviewer with useful cohort separation.'
-              : 'Target agreement is still developing; take more turns to stabilize signal.'}
-      </p>
-
-      <div className="summary-distribution-grid">
-        <section className="distribution-card">
-          <h4>Declared Tag Distribution</h4>
-          <p className="muted">Top cohort: {cohortLabels.full(selectedInference.declaredTop.cohortId)}</p>
-          <p className="muted">
-            {declaredTagOverlap && declaredTagOverlap.total > 0
-              ? declaredTagOverlap.isExact
-                ? `Exact tag fit · ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
-                : `${declaredTagOverlap.overlap}/${declaredTagOverlap.total} declared tags`
-              : 'Declared tag fit unavailable'}
-          </p>
-          <div className="distribution-card__body">
-            <DistributionDonut slices={declaredDistributionSlices} />
-            <DistributionLegend slices={declaredDistributionSlices} formatPercent={formatPercent} />
-          </div>
-        </section>
-        <section className="distribution-card">
-          <h4>Observed Behavior Distribution</h4>
-          {hasBehaviorEvidence ? (
-            <>
-              <p className="muted">
-                {behaviorReadSummary?.headline === 'Top cohort'
-                  ? `Top cohort: ${cohortLabels.full(selectedInference.behaviorTop.cohortId)}`
-                  : behaviorReadSummary?.headline === 'Tentative leader'
-                    ? `Tentative leader: ${cohortLabels.full(selectedInference.behaviorTop.cohortId)}`
-                    : behaviorReadSummary?.headline ?? 'No clear leading cohort'}
-              </p>
-              <p className="muted">{behaviorReadSummary?.message ?? 'Behavior read unavailable'}</p>
-              <div className="distribution-card__body">
-                <DistributionDonut slices={behaviorDistributionSlices} />
-                <DistributionLegend slices={behaviorDistributionSlices} formatPercent={formatPercent} />
-              </div>
-            </>
-          ) : (
-            <div className="notice notice--subtle">
-              <p><strong>Not enough rating data yet.</strong></p>
-              <p>Take a turn to generate observed behavior evidence.</p>
-            </div>
-          )}
-        </section>
-      </div>
-      <div className="notice notice--subtle">
-        {showInverseDiagnostic && selectedPrimarySignal?.showSecondaryInverse ? (
-          <p>
-            Inverse evidence: {cohortLabels.full(selectedInference.inverseTop.cohortId)} at{' '}
-            {formatPercent(selectedInference.inverseTop.score)} anti-match signal.
-          </p>
-        ) : (
-          <p>No strong inverse signal.</p>
-        )}
-      </div>
-
-      <section className="detail-block">
-        <div className="section-heading">
-          <h4>Rater signal profile</h4>
-          <p>Cohort-local signal only. No tag-level trust weights are calculated here.</p>
-        </div>
-        <div className="metric-grid metric-grid--compact">
-          <MetricCard
-            label="Top behavioral signal"
-            value={formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)}
-            helper="Strongest cohort-local signal score."
-            tone="accent"
-          />
-          <MetricCard
-            label="Signal evidence"
-            value={formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
-            helper="Evidence supporting the strongest positive cohort signal."
-          />
-          <MetricCard
-            label="Top cohort"
-            value={cohortLabels.full(selectedRaterSignalProfile?.topCohortId ?? null)}
-            helper="The cohort with the strongest visible behavioral signal."
-            tone="success"
-          />
-        </div>
-        <ReportTable
-          columns={signalColumns}
-          rows={signalRows}
-          getRowKey={(row) => row.cohort.id}
-          emptyTitle="No signal profile"
-          emptyDescription="This user has not yet accumulated enough overlap to form cohort-local signal."
-        />
-      </section>
-
-      <div className="summary-inline">
-        <Badge
-          tone={
-            selectedPrimarySignal?.kind === 'positive'
-              ? 'success'
-              : selectedPrimarySignal?.kind === 'inverse'
-                ? 'danger'
-                : selectedPrimarySignal?.kind === 'mismatch'
-                  ? 'warning'
-                  : 'neutral'
-          }
-        >
-          {renderPrimarySignalTitle(selectedPrimarySignal, cohortLabels.full) ?? selectedInferenceDiagnostics?.type ?? 'AMBIGUOUS'}
-        </Badge>
-        <span className="muted">{selectedPrimarySignal?.message ?? selectedInferenceDiagnostics?.message}</span>
-      </div>
+      <DistributionDonut slices={declaredDistributionSlices} />
+      <DistributionLegend slices={declaredDistributionSlices} formatPercent={formatPercent} />
     </div>
-  ) : null;
+  );
+  const behaviorDistributionCard = (
+    <div className="stack">
+      <DistributionDonut slices={behaviorDistributionSlices} />
+      <DistributionLegend slices={behaviorDistributionSlices} formatPercent={formatPercent} />
+    </div>
+  );
 
-  const discoveryRoutingSummary = selectedUser ? (
+  const selectedUserSummary = selectedInference ? (
+    <SelectedUserSummary
+      selectedUserLabel={selectedUser?.label ?? 'None'}
+      declaredTags={selectedUser?.declaredTags ?? []}
+      selectedInference={selectedInference}
+      selectedPrimarySignal={selectedPrimarySignal}
+      selectedInferenceDiagnosticsMessage={selectedInferenceDiagnostics?.message}
+      selectedInferenceDiagnosticsType={selectedInferenceDiagnostics?.type}
+      selectedRaterSignalProfile={selectedRaterSignalProfile}
+      declaredOverlapText={declaredOverlapText}
+      declaredObservedRelationshipText={declaredObservedRelationshipText}
+      behaviorReadText={behaviorReadSummary?.message ?? 'Not enough rating data yet.'}
+      inverseNotice={inverseNotice}
+      cohortLabel={(cohortId) => cohortLabels.full(cohortId ?? null)}
+      openUserPicker={() => setModalKind('user')}
+      pinCurrentUser={() => {
+        if (selectedUser) {
+          setPinnedDrilldownKind('user');
+        }
+      }}
+      renderPrimarySignalTitle={(signal) => renderPrimarySignalTitle(signal, cohortLabels.full)}
+      signalRows={signalRows}
+      signalColumns={signalColumns}
+      declaredDistributionChart={declaredDistributionCard}
+      behaviorDistributionChart={behaviorDistributionCard}
+    />
+  ) : null;
+const discoveryRoutingSummary = selectedUser ? (
     <div className="stack">
       <div className="summary-header">
         <div>
@@ -3336,58 +2903,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         ) : null}
       </section>
 
-      <section className="panel stage-panel" aria-label="Data fitness">
-        <div className="stage-panel__lead">
-          <div>
-            <p className="eyebrow">Data fitness</p>
-            <h2>{dataFitnessSummary.label} · {dataFitnessSummary.warnings.length} active checks</h2>
-            <Badge
-              tone={
-                dataFitnessSummary.status === 'ready'
-                  ? 'success'
-                  : dataFitnessSummary.status === 'caution'
-                    ? 'warning'
-                    : 'danger'
-              }
-            >
-              {dataFitnessSummary.label}
-            </Badge>
-            <p className="muted">{dataFitnessSummary.leadMessage}</p>
-          </div>
-          <button
-            type="button"
-            className="icon-button collapsible-panel__toggle"
-            onClick={() => setDataFitnessCollapsed((value) => !value)}
-            aria-label={dataFitnessCollapsed ? 'Expand Data fitness' : 'Collapse Data fitness'}
-          >
-            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-              {dataFitnessCollapsed ? 'v' : '^'}
-            </span>
-          </button>
-        </div>
-        {!dataFitnessCollapsed ? (
-          <div className="stack">
-            {dataFitnessSummary.topWarnings.length === 0 ? (
-              <div className="notice notice--subtle">
-                <p>Data fitness: ready enough for inspection.</p>
-              </div>
-            ) : (
-              dataFitnessSummary.topWarnings.map((warning) => (
-                <div key={warning.kind} className="notice notice--subtle">
-                  <strong>{warning.title}</strong>
-                  <p>{warning.message}</p>
-                  {warning.suggestedAction ? <p className="muted">Action: {warning.suggestedAction}</p> : null}
-                </div>
-              ))
-            )}
-            {dataFitnessSummary.extraWarningCount > 0 ? (
-              <p className="muted">+{dataFitnessSummary.extraWarningCount} more checks</p>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
-
-      <section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
+            <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />`n`n<section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
         <div className="section-heading section-heading--collapse-row">
           <h3>Primary workflow details</h3>
           <button
@@ -3836,16 +3352,29 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         {reviewerDrawerContent}
       </Drawer>
 
-      <Modal
+      <ReviewerArchetypeRecoveryModal
         open={drawerState?.type === 'reviewer-recovery'}
-        title="Reviewer archetype recovery"
-        placement="top"
-        className="modal--recovery"
         onClose={() => setDrawerState(null)}
-      >
-        {reviewerArchetypeRecoveryDetail}
-      </Modal>
+        analysis={reviewerArchetypeAnalysis}
+        cohortRows={reviewerCohortRows}
+        cohortLabel={(cohortId) => cohortLabels.full(cohortId ?? null)}
+        reviewerRecoveryTone={reviewerRecoveryTone}
+        onOpenReviewer={(userId) => setDrawerState({ type: 'reviewer', userId })}
+      />
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
