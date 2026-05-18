@@ -8,6 +8,7 @@ import { Panel } from './ui/components/Panel';
 import { ProgressBar } from './ui/components/ProgressBar';
 import { ReportTable, type ReportTableColumn } from './ui/components/ReportTable';
 import { InfoTip } from './ui/components/InfoTip';
+import { FormulaTip } from './ui/components/FormulaTip';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
@@ -854,7 +855,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     },
     {
       key: 'evidence',
-      label: 'Evidence',
+      label: 'Evidence ƒ',
       render: (row) => formatPercent(row.evidence),
       align: 'right'
     },
@@ -893,13 +894,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     },
     {
       key: 'confidence',
-      label: 'Confidence',
+      label: 'Confidence ƒ',
       render: (row) => formatPercent(row.estimate.confidence),
       align: 'right'
     },
     {
       key: 'evidence',
-      label: 'Evidence',
+      label: 'Evidence ƒ',
       render: (row) => formatDecimal(row.estimate.effectiveWeight),
       align: 'right'
     },
@@ -1221,11 +1222,11 @@ const discoveryRoutingSummary = selectedUser ? (
 
       <section className="detail-block">
         <div className="section-heading">
-          <h4>Cohort-local island affinity</h4>
+          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating × cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
           <p>Weighted by rater signal only. Higher-signal raters count more for their strongest cohort.</p>
         </div>
         <section className="distribution-card">
-          <h4>Directional audience affinity</h4>
+          <h4>Directional audience affinity <FormulaTip label="Directional audience affinity" formula="affinity is centered around zero from weighted ratings per cohort" inputs="positive affinity extends right; negative affinity extends left; values are shrinkage-adjusted." interpretation="Direction indicates audience fit polarity, not certainty by itself." /></h4>
           <p className="muted">Directional audience fit only, not a recommendation guarantee or moderation verdict.</p>
           <DivergingAffinityBars
             rows={affinityRows.map((row) => ({
@@ -1241,12 +1242,12 @@ const discoveryRoutingSummary = selectedUser ? (
         </section>
         <div className="metric-grid metric-grid--compact">
           <MetricCard
-            label="Affinity evidence"
+            label="Affinity evidence ƒ"
             value={formatDecimal(selectedIslandEffectiveWeight)}
             helper="Effective rater signal backing this estimate. Low evidence means treat affinity direction as tentative."
           />
           <MetricCard
-            label="Weighted ratings"
+            label="Weighted ratings ƒ"
             value={selectedIslandRatingCount}
             helper="Sparse events contributing to island/cohort affinity reports."
           />
@@ -3364,6 +3365,7 @@ const discoveryRoutingSummary = selectedUser ? (
     </main>
   );
 }
+
 
 
 
