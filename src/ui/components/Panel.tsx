@@ -10,6 +10,16 @@ interface PanelProps extends PropsWithChildren {
 
 export function Panel({ title, children, className, hideTitle = false, collapsible = false, id }: PanelProps) {
   const [collapsed, setCollapsed] = useState(false);
+
+  if (hideTitle && !collapsible) {
+    return (
+      <section id={id} className={`panel${className ? ` ${className}` : ''}`}>
+        <h2 className="sr-only">{title}</h2>
+        {children}
+      </section>
+    );
+  }
+
   return (
     <section id={id} className={`panel${className ? ` ${className}` : ''}`}>
       <div className="panel__header-row">
