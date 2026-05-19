@@ -27,6 +27,18 @@
   box-sizing: border-box;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html,
 body,
 #root {
@@ -912,8 +924,12 @@ select {
 .section-heading--collapse-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
+}
+
+.section-heading--collapse-row .section-toolbar__buttons {
+  align-self: flex-start;
 }
 
 .card-list {

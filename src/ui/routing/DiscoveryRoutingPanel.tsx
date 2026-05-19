@@ -21,9 +21,9 @@ export function DiscoveryRoutingPanel({
   summary
 }: DiscoveryRoutingPanelProps) {
   return (
-    <Panel title="Discovery Routing" className="panel--wide">
+    <Panel title="Discovery Routing" className="panel--wide" hideTitle>
       <ModulePanelHeader
-        eyebrow="Discovery Routing"
+        eyebrow="Routing"
         title="Recommended unrated islands"
         subtitle="Routes unrated islands for the selected user using current affinity, evidence, and routing policy."
         actions={

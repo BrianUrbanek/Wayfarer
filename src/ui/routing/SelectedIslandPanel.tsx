@@ -23,9 +23,9 @@ export function SelectedIslandPanel({
   summary
 }: SelectedIslandPanelProps) {
   return (
-    <Panel title="Selected Island" className="panel--wide">
+    <Panel title="Selected Island" className="panel--wide" hideTitle>
       <ModulePanelHeader
-        eyebrow="Selected Island"
+        eyebrow="Island comparison"
         title={islandLabel}
         subtitle="Compare selected user/cohort ratings and inspect cohort-local audience affinity."
         actions={
