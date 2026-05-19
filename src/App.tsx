@@ -430,7 +430,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
   const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
   const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
-  const [guidedProofCollapsed] = useState(false);
+  const [guidedProofCollapsed, setGuidedProofCollapsed] = useState(false);
   const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
   const [discoveryRoutingCollapsed, setDiscoveryRoutingCollapsed] = useState(false);
   const [selectedIslandCollapsed, setSelectedIslandCollapsed] = useState(false);
@@ -2135,7 +2135,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     overview: {
       title: 'Overview',
       panels: [
-        <Panel key="turn-summary" id="turn-summary" title="Turn Summary" className="panel--full" hideTitle collapsible>
+        <Panel key="turn-summary" id="turn-summary" title="Turn Summary" className="panel--full" hideTitle>
           <ModulePanelHeader
             title="Turn Summary"
             subtitle="Current state and most recent turn output."
@@ -3118,14 +3118,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               <p className="eyebrow">Demo narrative</p>
               <h3>{selectedStory.title}</h3>
             </div>
-            <div className="summary-header__actions">
-              <Badge tone="accent">Recommended: {DASHBOARD_ORDERING_LABELS[selectedStory.recommendedOrdering]}</Badge>
-              {selectedStory.primaryPanels?.map((panelKey) => (
-                <Badge key={panelKey} tone="neutral">
-                  {panelKey}
-                </Badge>
-              ))}
-            </div>
           </div>
           <div className="instruction-grid">
             <section className="detail-block">
@@ -3155,12 +3147,24 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 </>
               ) : null}
             </section>
-            <details className="detail-block detail-block--foldout" open={!guidedProofCollapsed}>
-              <summary className="detail-block__summary">
-                <span>Proof points</span>
-                <span className="muted">Shared steps, expected results, and failure signs.</span>
-              </summary>
-              <div className="detail-block__foldout-grid">
+            <section className="detail-block detail-block--foldout">
+              <div className="detail-block__summary detail-block__summary--row">
+                <div>
+                  <span>Proof points</span>
+                  <span className="muted">Shared steps, expected results, and failure signs.</span>
+                </div>
+                <button
+                  type="button"
+                  className="icon-button collapsible-panel__toggle"
+                  onClick={() => setGuidedProofCollapsed((value) => !value)}
+                  aria-label={guidedProofCollapsed ? 'Expand Proof points' : 'Collapse Proof points'}
+                >
+                  <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                    {guidedProofCollapsed ? 'v' : '^'}
+                  </span>
+                </button>
+              </div>
+              {!guidedProofCollapsed ? <div className="detail-block__foldout-grid">
                 <section className="detail-block detail-block--foldout-section">
                   <h4>Shared steps</h4>
                   <ol className="instruction-list">
@@ -3185,8 +3189,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     ))}
                   </ul>
                 </section>
-              </div>
-            </details>
+              </div> : null}
+            </section>
           </div>
         </Tray>
       ) : null}

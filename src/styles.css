@@ -685,11 +685,17 @@ select {
 
 .tray__rail {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
+  align-items: flex-start;
   justify-content: space-between;
   padding: 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tray__rail-title {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .tray--collapsed .tray__rail {
@@ -717,6 +723,7 @@ select {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  margin-left: auto;
 }
 
 .tray--collapsed .tray__rail-actions {
@@ -1712,7 +1719,7 @@ select {
 .summary-header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 14px;
   flex-wrap: wrap;
 }
@@ -1720,12 +1727,6 @@ select {
 .summary-header h3 {
   margin: 4px 0 0;
   font-size: 1.3rem;
-}
-
-.summary-header__actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .badge-row,
@@ -2278,6 +2279,38 @@ select {
   gap: 8px 12px;
   padding: 14px;
   cursor: pointer;
+}
+
+.detail-block__summary--row {
+  align-items: flex-start;
+  cursor: default;
+}
+
+.detail-block__summary--row > div {
+  display: grid;
+  gap: 4px;
+}
+
+.tray--instruction .section-heading--collapse-row,
+.tray--instruction .detail-block__summary--row {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.tray--instruction .section-heading--collapse-row > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tray--pinned .section-heading--collapse-row {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.tray--pinned .section-heading--collapse-row > :first-child {
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .detail-block__summary span:first-child {

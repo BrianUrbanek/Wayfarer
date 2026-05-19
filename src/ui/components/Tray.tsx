@@ -31,11 +31,7 @@ export function Tray({
   return (
     <aside className={`tray${collapsed ? ' tray--collapsed' : ''}${className ? ` ${className}` : ''}`} aria-label={title} style={style}>
       <div className="tray__rail">
-        <div className="tray__rail-title">
-          <p className="eyebrow">Pinned</p>
-          <h2>{title}</h2>
-        </div>
-        <div className="tray__rail-actions">
+        {side === 'right' ? (
           <button
             type="button"
             className="icon-button tray__toggle"
@@ -44,6 +40,22 @@ export function Tray({
           >
             <span className="collapsible-panel__toggle-icon" aria-hidden="true">{toggleGlyph}</span>
           </button>
+        ) : null}
+        <div className="tray__rail-title">
+          <p className="eyebrow">Pinned</p>
+          <h2>{title}</h2>
+        </div>
+        <div className="tray__rail-actions">
+          {side === 'left' ? (
+            <button
+              type="button"
+              className="icon-button tray__toggle"
+              onClick={onToggle}
+              aria-label={collapsed ? toggleCollapsedLabel : toggleExpandedLabel}
+            >
+              <span className="collapsible-panel__toggle-icon" aria-hidden="true">{toggleGlyph}</span>
+            </button>
+          ) : null}
           {onSecondaryAction && secondaryActionLabel ? (
             <button type="button" className="icon-button tray__clear" onClick={onSecondaryAction} aria-label={secondaryActionLabel}>
               {secondaryActionLabel}
