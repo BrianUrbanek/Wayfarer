@@ -22,7 +22,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Novice keeps the instructional rails open while expert exposes the resolved controls.');
     expect(html).toContain('Read path');
     expect(html).toContain('Demo narrative');
-    expect(html).toContain('Guided task journey');
+    expect(html).toContain('Guided paths');
     expect(html).toContain('Drilldown targets');
     expect(html).toContain('Pinned reference');
     expect(html).toContain('Scenario preset');
@@ -53,12 +53,13 @@ describe('App analyst console', () => {
     expect(html).toContain('Participation:');
     expect(html).toContain('Rating counts:');
     expect(html).toContain('Routing:');
-    expect(html).toContain('First-time walkthrough');
-    expect(html).toContain('System use case');
-    expect(html).toContain('Player journey');
-    expect(html).toContain('Shared steps');
-    expect(html).toContain('Expected system result');
-    expect(html).toContain('Expected player result');
+    expect(html).toContain('Navigation Tutorial');
+    expect(html).toContain('Guided path overview');
+    expect(html).toContain('System framing');
+    expect(html).toContain('Experience framing');
+    expect(html).toContain('Path steps');
+    expect(html).toContain('Success criteria');
+    expect(html).toContain('Maintenance note');
     expect(html).toContain('Open full recovery table');
     expect(html).toContain('Candidate New Seed Users');
     expect(html).toContain('Early Scouts');

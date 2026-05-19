@@ -33,12 +33,12 @@ import { useRef } from 'react';
 import {
   DASHBOARD_ORDERINGS,
   DASHBOARD_ORDERING_LABELS,
-  getUseCaseStory,
-  USE_CASE_STORIES,
+  getGuidedPath,
+  GUIDED_PATHS,
   type DashboardOrderingPreset,
   type DashboardPanelGroupKey,
   type GuidanceMode,
-  type UseCaseStoryId
+  type GuidedPathId
 } from './ui/dashboardGuidance';
 import {
   DEFAULT_TURN_POLICY,
@@ -404,7 +404,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
   const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
-  const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
+  const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>('navigation-tutorial');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
@@ -726,7 +726,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
 
-  const selectedStory = useMemo(() => getUseCaseStory(useCaseId), [useCaseId]);
+  const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
   const runContextNote = isNoviceMode
@@ -2430,10 +2430,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </label>
           <label className="control control--inline control--wide">
             <span>Demo narrative</span>
-            <select value={useCaseId} onChange={(event) => setUseCaseId(event.target.value as UseCaseStoryId)}>
-              {USE_CASE_STORIES.map((story) => (
-                <option key={story.id} value={story.id}>
-                  {story.title}
+              <select value={guidedPathId} onChange={(event) => setGuidedPathId(event.target.value as GuidedPathId)}>
+              {GUIDED_PATHS.map((path) => (
+                <option key={path.id} value={path.id}>
+                  {path.title}
                 </option>
               ))}
             </select>
@@ -3100,7 +3100,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       {showInstructionTray ? (
         <Tray
           collapsed={!guidanceOpen}
-          title={isNoviceMode ? 'Guided task journey' : 'Curator notes'}
+          title={isNoviceMode ? 'Guided paths' : 'Curator notes'}
           className="tray--instruction tray--left"
           side="left"
           style={{
@@ -3109,25 +3109,25 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             right: 'auto',
             height: 'calc(100vh - 36px)'
           }}
-          toggleCollapsedLabel={isNoviceMode ? 'Open guided journey' : 'Open curator notes'}
-          toggleExpandedLabel={isNoviceMode ? 'Collapse guided journey' : 'Collapse curator notes'}
+          toggleCollapsedLabel={isNoviceMode ? 'Open guided paths' : 'Open curator notes'}
+          toggleExpandedLabel={isNoviceMode ? 'Collapse guided paths' : 'Collapse curator notes'}
           onToggle={() => setGuidanceOpen((value) => !value)}
         >
           <div className="summary-header">
             <div>
               <p className="eyebrow">Demo narrative</p>
-              <h3>{selectedStory.title}</h3>
+              <h3>{selectedGuidedPath.title}</h3>
             </div>
           </div>
           <div className="instruction-grid">
             <section className="detail-block">
               <div className="section-heading section-heading--collapse-row">
-                <h4>Story overview</h4>
+                <h4>Guided path overview</h4>
                 <button
                   type="button"
                   className="icon-button collapsible-panel__toggle"
                   onClick={() => setGuidedStoryCollapsed((value) => !value)}
-                  aria-label={guidedStoryCollapsed ? 'Expand Story overview' : 'Collapse Story overview'}
+                  aria-label={guidedStoryCollapsed ? 'Expand Guided path overview' : 'Collapse Guided path overview'}
                 >
                   <span className="collapsible-panel__toggle-icon" aria-hidden="true">
                     {guidedStoryCollapsed ? 'v' : '^'}
@@ -3136,28 +3136,26 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </div>
               {!guidedStoryCollapsed ? (
                 <>
-                  <h4>System use case</h4>
-                  <p className="detail-block__title">{selectedStory.systemUseCase.title}</p>
-                  <p>{selectedStory.systemUseCase.description}</p>
-                  <p className="muted">{selectedStory.systemUseCase.detail}</p>
-                  <h4>Player journey</h4>
-                  <p className="detail-block__title">{selectedStory.playerJourney.title}</p>
-                  <p>{selectedStory.playerJourney.description}</p>
-                  <p className="muted">{selectedStory.playerJourney.detail}</p>
+                  <h4>System framing</h4>
+                  <p className="detail-block__title">{selectedGuidedPath.framing.system}</p>
+                  <h4>Experience framing</h4>
+                  <p className="detail-block__title">{selectedGuidedPath.framing.experience}</p>
+                  <p className="muted">Recommended preset: {selectedGuidedPath.recommendedPreset}</p>
+                  <p className="muted">Recommended ordering: {DASHBOARD_ORDERING_LABELS[selectedGuidedPath.recommendedOrdering]}</p>
                 </>
               ) : null}
             </section>
             <section className="detail-block detail-block--foldout">
               <div className="detail-block__summary detail-block__summary--row">
                 <div>
-                  <span>Proof points</span>
-                  <span className="muted">Shared steps, expected results, and failure signs.</span>
+                  <span>Path steps</span>
+                  <span className="muted">Steps, success criteria, and maintenance notes.</span>
                 </div>
                 <button
                   type="button"
                   className="icon-button collapsible-panel__toggle"
                   onClick={() => setGuidedProofCollapsed((value) => !value)}
-                  aria-label={guidedProofCollapsed ? 'Expand Proof points' : 'Collapse Proof points'}
+                  aria-label={guidedProofCollapsed ? 'Expand Path steps' : 'Collapse Path steps'}
                 >
                   <span className="collapsible-panel__toggle-icon" aria-hidden="true">
                     {guidedProofCollapsed ? 'v' : '^'}
@@ -3166,28 +3164,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </div>
               {!guidedProofCollapsed ? <div className="detail-block__foldout-grid">
                 <section className="detail-block detail-block--foldout-section">
-                  <h4>Shared steps</h4>
+                  <h4>Steps</h4>
                   <ol className="instruction-list">
-                    {selectedStory.sharedSteps.map((step) => (
-                      <li key={step}>{step}</li>
+                    {selectedGuidedPath.steps.map((step) => (
+                      <li key={step.title}>
+                        <strong>{step.title}:</strong> {step.instruction}
+                        {step.why ? <span className="muted"> {step.why}</span> : null}
+                      </li>
                     ))}
                   </ol>
                 </section>
                 <section className="detail-block detail-block--foldout-section">
-                  <h4>Expected system result</h4>
-                  <p>{selectedStory.expectedSystemResult}</p>
-                </section>
-                <section className="detail-block detail-block--foldout-section">
-                  <h4>Expected player result</h4>
-                  <p>{selectedStory.expectedPlayerResult}</p>
-                </section>
-                <section className="detail-block detail-block--foldout-section">
-                  <h4>Failure signs</h4>
+                  <h4>Success criteria</h4>
                   <ul className="diagnosis-list">
-                    {selectedStory.failureSigns.map((failureSign) => (
-                      <li key={failureSign}>{failureSign}</li>
+                    {selectedGuidedPath.successCriteria.map((criterion) => (
+                      <li key={criterion}>{criterion}</li>
                     ))}
                   </ul>
+                </section>
+                <section className="detail-block detail-block--foldout-section">
+                  <h4>Maintenance note</h4>
+                  <p>{selectedGuidedPath.maintenanceNote}</p>
                 </section>
               </div> : null}
             </section>
