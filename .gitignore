@@ -5,6 +5,7 @@ coverage
 .vite
 .npm-cache
 .pw-browsers
+.gh-config
 .tmp-wayfarer-*.png
 artifacts
 *.tsbuildinfo
