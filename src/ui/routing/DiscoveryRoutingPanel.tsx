@@ -4,6 +4,7 @@ import { ModulePanelHeader } from '../components/ModulePanelHeader';
 import { Panel } from '../components/Panel';
 
 interface DiscoveryRoutingPanelProps {
+  id?: string;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onInspectTopRoute: () => void;
@@ -13,6 +14,7 @@ interface DiscoveryRoutingPanelProps {
 }
 
 export function DiscoveryRoutingPanel({
+  id,
   collapsed,
   onToggleCollapsed,
   onInspectTopRoute,
@@ -21,7 +23,7 @@ export function DiscoveryRoutingPanel({
   summary
 }: DiscoveryRoutingPanelProps) {
   return (
-    <Panel title="Discovery Routing" className="panel--wide" hideTitle>
+    <Panel id={id} title="Discovery Routing" className="panel--wide" hideTitle>
       <ModulePanelHeader
         eyebrow="Routing"
         title="Recommended unrated islands"

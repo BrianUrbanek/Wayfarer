@@ -11,6 +11,7 @@ interface ConfidenceSeriesState {
 }
 
 interface SystemHealthPanelProps {
+  id?: string;
   summary: SystemHealthSummary;
   showConfidenceSeries: ConfidenceSeriesState;
   onToggleSeries: (key: keyof ConfidenceSeriesState) => void;
@@ -50,7 +51,7 @@ function buildLinePath(values: number[], width: number, height: number, padding:
     .join(' ');
 }
 
-export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSeries }: SystemHealthPanelProps) {
+export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleSeries }: SystemHealthPanelProps) {
   const [openPopover, setOpenPopover] = useState<PopoverKey | null>(null);
 
   const trendLines = useMemo(
@@ -65,7 +66,7 @@ export function SystemHealthPanel({ summary, showConfidenceSeries, onToggleSerie
   );
 
   return (
-    <Panel title="System Health" className="panel--full">
+    <Panel id={id} title="System Health" className="panel--full">
       <div className="system-confidence-header">
         <div className="system-confidence-header__headline">
           <div className="system-health-metric-header-row">

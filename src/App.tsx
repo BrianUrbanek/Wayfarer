@@ -11,6 +11,7 @@ import { InfoTip } from './ui/components/InfoTip';
 import { FormulaTip } from './ui/components/FormulaTip';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
+import { ModulePanelHeader } from './ui/components/ModulePanelHeader';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
@@ -427,8 +428,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
   const [dataFitnessCollapsed, setDataFitnessCollapsed] = useState(false);
   const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
-  const [overviewCollapsed, setOverviewCollapsed] = useState(false);
-  const [recoveryCollapsed, setRecoveryCollapsed] = useState(false);
+  const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
   const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
   const [guidedProofCollapsed] = useState(false);
   const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
@@ -2097,13 +2097,53 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setPinnedDrilldownKind('island');
     setPinnedTrayCollapsed(false);
   };
+  const scrollModuleIntoView = (targetId: string) => {
+    const target = document.getElementById(targetId);
+    if (!target) {
+      return;
+    }
+    const sticky = document.getElementById('primary-workflow');
+    const stickyHeight = sticky?.getBoundingClientRect().height ?? 0;
+    const top = window.scrollY + target.getBoundingClientRect().top - stickyHeight - 14;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  };
+  const moduleJumpOptions = useMemo(() => {
+    const options = [
+      { id: 'primary-workflow', label: 'Primary Workflow' },
+      { id: 'data-fitness', label: 'Data Fitness' },
+      { id: 'primary-workflow-details', label: 'Primary Workflow Details' },
+      { id: 'turn-summary', label: 'Turn Summary' },
+      { id: 'population-summary', label: 'Population Summary' },
+      { id: 'system-health', label: 'System Health' },
+      { id: 'selected-user-summary', label: 'Selected User Summary' },
+      { id: 'reviewer-archetype-recovery', label: 'Reviewer Archetype Recovery' },
+      { id: 'discovery-routing', label: 'Recommended Unrated Islands' },
+      { id: 'selected-island', label: 'Selected Island' }
+    ];
+    if (!isNoviceMode) {
+      options.push({ id: 'model-explanation', label: 'Model Explanation' });
+      options.push({ id: 'island-comparison', label: 'Island Comparison' });
+      options.push({ id: 'pseudo-cohort-reports', label: 'Pseudo-Cohort Reports' });
+    }
+    if (showDebug) {
+      options.push({ id: 'debug-data', label: 'Debug Data' });
+    }
+    return options;
+  }, [isNoviceMode, showDebug]);
 
   const dashboardSections: Record<DashboardPanelGroupKey, { title: string; panels: JSX.Element[] }> = {
     overview: {
       title: 'Overview',
       panels: [
-        <Panel key="turn-summary" title="Turn Summary" className="panel--full">
-          <div className="metric-grid metric-grid--compact">
+        <Panel key="turn-summary" id="turn-summary" title="Turn Summary" className="panel--full" hideTitle collapsible>
+          <ModulePanelHeader
+            title="Turn Summary"
+            subtitle="Current state and most recent turn output."
+            collapsed={turnSummaryCollapsed}
+            onToggleCollapsed={() => setTurnSummaryCollapsed((value) => !value)}
+            collapseLabel={turnSummaryCollapsed ? 'Expand Turn Summary' : 'Collapse Turn Summary'}
+          />
+          {!turnSummaryCollapsed ? <div className="metric-grid metric-grid--compact">
             <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
             <MetricCard
               label="Mode"
@@ -2130,8 +2170,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               label="Discovery probes"
               value={currentTurnSummary?.recommendationKinds.DISCOVERY_PROBE ?? 0}
             />
-          </div>
-          <div className="summary-inline">
+          </div> : null}
+          {!turnSummaryCollapsed ? <div className="summary-inline">
             {(dataset.turnHistory.slice(-3) ?? []).map((turn) => (
               <Badge key={turn.turn} tone="neutral">
                 Turn {turn.turn}:{' '}
@@ -2143,9 +2183,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 {turn.ratingsCreated} ratings
               </Badge>
             ))}
-          </div>
+          </div> : null}
         </Panel>,
-        <Panel key="population-summary" title="Population Summary" className="panel--full">
+        <Panel key="population-summary" id="population-summary" title="Population Summary" className="panel--full" collapsible>
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
             <MetricCard label="Seeded anchors" value={dataset.cohorts.length} />
@@ -2163,6 +2203,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </Panel>,
         <SystemHealthPanel
           key="system-health"
+          id="system-health"
           summary={systemHealthSummary}
           showConfidenceSeries={showConfidenceSeries}
           onToggleSeries={(key) => setShowConfidenceSeries((current) => ({ ...current, [key]: !current[key] }))}
@@ -2172,10 +2213,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     recovery: {
       title: 'Recovery',
       panels: [
-        <Panel key="selected-user" title="Selected User Summary" className="panel--wide">
+        <Panel key="selected-user" id="selected-user-summary" title="Selected User Summary" className="panel--wide" collapsible>
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>,
-        <Panel key="reviewer-archetype" title="Reviewer Archetype Recovery" className="panel--wide">
+        <Panel key="reviewer-archetype" id="reviewer-archetype-recovery" title="Reviewer Archetype Recovery" className="panel--wide" collapsible>
           {reviewerArchetypeSummary}
         </Panel>
       ]
@@ -2185,6 +2226,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       panels: [
         <DiscoveryRoutingPanel
           key="discovery-routing"
+          id="discovery-routing"
           collapsed={discoveryRoutingCollapsed}
           onToggleCollapsed={() => setDiscoveryRoutingCollapsed((value) => !value)}
           onInspectTopRoute={handleInspectTopRoute}
@@ -2194,6 +2236,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         />,
         <SelectedIslandPanel
           key="selected-island"
+          id="selected-island"
           collapsed={selectedIslandCollapsed}
           onToggleCollapsed={() => setSelectedIslandCollapsed((value) => !value)}
           onPinIsland={handlePinIsland}
@@ -2205,13 +2248,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         ...(isNoviceMode
           ? []
           : [
-              <Panel key="model-explanation" title="Model Explanation" className="panel--wide">
+              <Panel key="model-explanation" id="model-explanation" title="Model Explanation" className="panel--wide" collapsible>
                 {modelExplanation}
               </Panel>,
-              <Panel key="island-comparison" title="Island Comparison" className="panel--wide">
+              <Panel key="island-comparison" id="island-comparison" title="Island Comparison" className="panel--wide" collapsible>
                 {islandComparison}
               </Panel>,
-              <Panel key="pseudo-cohorts" title="Pseudo-Cohort Reports" className="panel--wide">
+              <Panel key="pseudo-cohorts" id="pseudo-cohort-reports" title="Pseudo-Cohort Reports" className="panel--wide" collapsible>
                 <div className="section-toolbar">
                   <button type="button" className="button button--ghost" onClick={() => setModalKind('pseudo')}>
                     Choose report row
@@ -2256,7 +2299,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       title: 'Debug',
       panels: showDebug
         ? [
-            <Panel key="debug-data" title="Debug Data" className="panel--wide">
+            <Panel key="debug-data" id="debug-data" title="Debug Data" className="panel--wide" collapsible>
               {selectedUser && selectedInference ? (
                 <div className="debug-grid">
                   <MetricCard
@@ -2846,12 +2889,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </CollapsiblePanel>
       </section>
 
-      <section className="panel stage-panel stage-panel__sticky" aria-label="Primary workflow">
+      <section id="primary-workflow" className="panel stage-panel stage-panel__sticky" aria-label="Primary workflow">
         <div className="stage-panel__lead">
           <div>
             <p className="eyebrow">Primary workflow</p>
-            <h2>Inspect the current state, then advance one turn.</h2>
-            <p className="muted">Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.</p>
+            {!primaryWorkflowCollapsed ? <h2>Inspect the current state, then advance one turn.</h2> : null}
+            {!primaryWorkflowCollapsed ? <p className="muted">Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.</p> : null}
           </div>
           <button
             type="button"
@@ -2864,16 +2907,37 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </span>
           </button>
         </div>
+        <div className="stage-panel__badges">
+          <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+          <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
+          <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+          <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+          <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+          <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+          <label className="control control--inline control--jump">
+            <span>Jump to module</span>
+            <select
+              defaultValue=""
+              onChange={(event) => {
+                const targetId = event.target.value;
+                if (!targetId) return;
+                scrollModuleIntoView(targetId);
+                event.target.value = '';
+              }}
+            >
+              <option value="" disabled>
+                Select module
+              </option>
+              {moduleJumpOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {!primaryWorkflowCollapsed ? (
           <>
-            <div className="stage-panel__badges">
-              <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-              <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
-              <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-              <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-              <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-              <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
-            </div>
             <div className="stage-panel__actions">
               <div className="stage-panel__action-group">
                 <button type="button" className="button button--primary" onClick={takeSingleTurn} disabled={isExecutingScenario}>
@@ -2893,7 +2957,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </div>
           </>
         ) : null}
-      </section>`r`n      <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />`r`n`r`n      <section className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
+      </section>
+      <div id="data-fitness">
+        <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />
+      </div>
+
+      <section id="primary-workflow-details" className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
         <div className="section-heading section-heading--collapse-row">
           <h3>Primary workflow details</h3>
           <button
@@ -2991,12 +3060,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
 
       <section className="inspection-shell" aria-label="Inspection / dashboard panels">
-        <div className="section-heading inspection-shell__heading">
-          <p className="eyebrow">Inspection / dashboard panels</p>
-          <p className="muted">
-            Summary panels, recovery checks, routing detail, and debug views live here once setup and the current turn are clear.
-          </p>
-        </div>
         <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
           {visibleDashboardSections.map((sectionKey) => {
             if (sectionKey === 'debug' && !showDebug) {
@@ -3007,47 +3070,25 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
             return (
               <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
-                {sectionKey !== 'routing' ? (
-                <div className="section-heading dashboard-section__heading">
-                  <p className="eyebrow">{section.title}</p>
-                  <button
-                    type="button"
-                    className="icon-button collapsible-panel__toggle"
-                    onClick={() => {
-                      if (sectionKey === 'overview') setOverviewCollapsed((value) => !value);
-                      if (sectionKey === 'recovery') setRecoveryCollapsed((value) => !value);
-                      if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
-                    }}
-                    aria-label={
-                      (sectionKey === 'overview' && overviewCollapsed) ||
-                      (sectionKey === 'recovery' && recoveryCollapsed) ||
-                      false ||
-                      (sectionKey === 'debug' && debugCollapsed)
-                        ? `Expand ${section.title}`
-                        : `Collapse ${section.title}`
-                    }
-                  >
-                    <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                      {(sectionKey === 'overview' && overviewCollapsed) ||
-                      (sectionKey === 'recovery' && recoveryCollapsed) ||
-                      false ||
-                      (sectionKey === 'debug' && debugCollapsed)
-                        ? 'v'
-                        : '^'}
-                    </span>
-                  </button>
-                  <p className="muted">
-                    {sectionKey === 'overview'
-                      ? 'Summary and current state'
-                      : sectionKey === 'recovery'
-                        ? 'Checks on seeded anchors, signal, and recovery'
-                        : 'Checksums, hidden metadata, and debug-only fields'}
-                  </p>
-                </div>
+                {sectionKey !== 'routing' && sectionKey !== 'recovery' && sectionKey !== 'overview' ? (
+                <ModulePanelHeader
+                  eyebrow={section.title}
+                  title="Debug checksums"
+                  subtitle="Checksums, hidden metadata, and debug-only fields"
+                  collapsed={sectionKey === 'debug' && debugCollapsed}
+                  onToggleCollapsed={() => {
+                    if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
+                  }}
+                  collapseLabel={
+                    sectionKey === 'debug' && debugCollapsed
+                      ? `Expand ${section.title}`
+                      : `Collapse ${section.title}`
+                  }
+                />
                 ) : null}
-                {sectionKey === 'routing' ? (
+                {sectionKey === 'routing' || sectionKey === 'recovery' || sectionKey === 'overview' ? (
                   <div className="dashboard-section__panels">{section.panels}</div>
-                ) : !((sectionKey === 'overview' && overviewCollapsed) || (sectionKey === 'recovery' && recoveryCollapsed) || (sectionKey === 'debug' && debugCollapsed)) ? (
+                ) : !(sectionKey === 'debug' && debugCollapsed) ? (
                   <div className="dashboard-section__panels">{section.panels}</div>
                 ) : null}
               </section>

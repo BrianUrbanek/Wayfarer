@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 interface ModulePanelHeaderProps {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   actions?: ReactNode;
@@ -22,7 +22,7 @@ export function ModulePanelHeader({
   return (
     <div className="section-heading section-heading--collapse-row">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
         <h3>{title}</h3>
         {subtitle ? <p className="muted">{subtitle}</p> : null}
       </div>

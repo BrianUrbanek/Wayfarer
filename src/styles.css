@@ -338,6 +338,10 @@ select {
   align-items: center;
 }
 
+.control--jump {
+  min-width: 220px;
+}
+
 .stage-panel__metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -883,6 +887,12 @@ select {
   text-transform: uppercase;
   color: #f2f5ff;
 }
+.panel__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
 
 .panel--users {
   grid-row: span 2;
@@ -926,10 +936,19 @@ select {
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.section-heading--collapse-row > :first-child {
+  flex: 1 1 420px;
+  min-width: 0;
 }
 
 .section-heading--collapse-row .section-toolbar__buttons {
   align-self: flex-start;
+  flex-wrap: nowrap;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .card-list {
