@@ -81,6 +81,14 @@ export const CONCEPT_PRIMER_SECTIONS: ConceptPrimerSection[] = [
     ]
   },
   {
+    id: 'algorithmic-lineage',
+    title: 'Algorithmic Lineage',
+    paragraphs: [
+      'Wayfarer draws from adjacent ideas: trust propagation, reputation-weighted moderation, and taste clustering for sparse preference spaces.',
+      'Its confidence framing also follows a Glicko-like estimate-plus-uncertainty pattern, adapted for audience-fit inference rather than PvP outcomes.'
+    ]
+  },
+  {
     id: 'ratings-vs-behavior',
     title: 'Ratings as Proxy, Behavior as Stronger Evidence',
     paragraphs: [

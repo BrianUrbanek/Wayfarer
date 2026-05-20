@@ -3228,7 +3228,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         )}
       </Tray>
 
-      <Modal open={showAbout} title="About / Prior Art" placement="top" onClose={() => setShowAbout(false)}>
+      <Modal open={showAbout} title="Concept Primer / Glossary" placement="top" onClose={() => setShowAbout(false)}>
         <AboutGlossaryContent />
       </Modal>
 
