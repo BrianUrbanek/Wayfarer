@@ -41,6 +41,43 @@ If a region has no clear job, it is probably noise, duplication, or decoration.
 
 ## Core Rules
 
+### Module Chrome And Collapse Grammar
+
+Treat each visible module as the primary unit of comprehension.
+
+- one visible hierarchy per module:
+  - optional eyebrow;
+  - exactly one title;
+  - optional subtitle;
+  - optional actions;
+  - optional collapse toggle.
+- do not stack duplicate titles/eyebrows that restate the same module.
+- collapse controls must be owned by one component only (no duplicate toggles for the same surface).
+- collapse controls must be on the same row as the title, not on a row below it.
+
+Structural grouping keys (for ordering/state) may exist in code without visible chrome.
+
+- if a group header is only scaffolding, suppress visible wrapper chrome and let child modules stand on their own;
+- preserve ordering semantics even when group chrome is hidden.
+
+### Tray Inward-Edge Toggle Rule
+
+For side trays and tray sub-sections, place collapse controls on the inward edge to minimize wasted width.
+
+- left-edge tray/surfaces: toggle on the right side of the title row;
+- right-edge tray/surfaces: toggle on the left side of the title row;
+- apply this at tray header level and nested section level;
+- keep title and toggle on the same row.
+
+### Sticky Header Aware Jump Navigation
+
+When adding jump-to-module navigation:
+
+- option labels should match visible module names;
+- include only modules visible in the current mode/state;
+- every option must map to a real DOM anchor id;
+- scroll behavior must account for sticky header height so targets land below sticky surfaces, not behind them.
+
 ### Card And Affordance Taxonomy
 
 Use visible card copy first. A well-formed summary card should usually explain itself through:
@@ -141,6 +178,8 @@ When refining this project, prefer:
 6. Regenerate/reset/debug grouped as quieter administrative actions.
 7. Novice instructional rails open by default when they teach.
 8. Side panels aligned intentionally rather than feeling accidental.
+9. Dashboard section group keys can remain structural (`overview`, `routing`, `recovery`, `debug`) while visible chrome is module-first.
+10. `Primary workflow` collapsed state should keep high-value at-a-glance controls/status and hide instructional prose.
 
 ## Decision Test
 
@@ -164,6 +203,29 @@ If the answer is no, move it, collapse it, shorten it, or remove it.
 - Narrow utility boxes so they feel subordinate.
 - Balance footer actions across the available horizontal space.
 - Reduce tangents and accidental box-to-box collisions.
+- Remove visible scaffold headers that do not explain workflow decisions.
+- Convert repeated section/group wrappers into chrome-less structural containers.
+- Add per-module collapse where modules are visually discrete and independently scannable.
+- Place jump controls with at-a-glance status surfaces if they are useful in collapsed workflow state.
+
+## Pattern Table (Before / After)
+
+Use this table as a fast decision rubric during refinement passes.
+
+| Concern | Bad Pattern | Preferred Pattern |
+|---|---|---|
+| Module hierarchy | Panel title + repeated inner heading + repeated subtitle | One visible hierarchy stack owned by module header |
+| Group wrappers | Visible `Inspection / dashboard panels` scaffolding with no workflow meaning | Structural grouping in code, chrome-less rendering in UI |
+| Collapse placement | Toggle below title row or floating away from actions | Toggle on same row as title, grouped with local actions |
+| Collapse ownership | Two toggles controlling one visual module | Single owner of collapse behavior per module |
+| Tray alignment | Left/right trays both place toggles on same side regardless of edge | Inward-edge rule: left tray toggle right, right tray toggle left |
+| Tray subsection headers | Collapsible subsection title on one line, arrow on next line | Title and toggle on same row in tray subsections |
+| Narrative tray density | Header badges/chips that restate obvious context | Keep header minimal; prioritize narrative title and section entry points |
+| Jump navigation labels | Internal key names or stale labels | Labels match visible module names exactly |
+| Jump navigation options | Options for hidden modules in current mode | Visibility-aware options (novice/expert/debug state) |
+| Jump target behavior | `scrollIntoView` hides target behind sticky header | Sticky-aware offset scrolling below primary sticky surface |
+| Anchor integrity | Jump options with missing DOM ids | Every option maps to a real, unique anchor id |
+| Collapsed sticky workflow | Collapsed state hides both prose and key status controls | Collapsed state keeps at-a-glance status + high-value controls |
 
 ## Anti-Goals
 

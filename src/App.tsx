@@ -31,11 +31,16 @@ import {
 import { buildPrimarySignalSummary } from './ui/userSignalDiagnosis';
 import { useRef } from 'react';
 import {
+<<<<<<< HEAD
   DASHBOARD_ORDERINGS,
   DASHBOARD_ORDERING_LABELS,
   getGuidedPath,
   GUIDED_PATHS,
   type DashboardOrderingPreset,
+=======
+  getUseCaseStory,
+  USE_CASE_STORIES,
+>>>>>>> 158b688 (Refine system confidence UI composition and trends)
   type DashboardPanelGroupKey,
   type GuidanceMode,
   type GuidedPathId
@@ -403,8 +408,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [showAbout, setShowAbout] = useState(false);
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
+<<<<<<< HEAD
   const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>('navigation-tutorial');
+=======
+  const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
+>>>>>>> 158b688 (Refine system confidence UI composition and trends)
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
@@ -726,9 +735,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
 
+<<<<<<< HEAD
   const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
+=======
+  const selectedStory = useMemo(() => getUseCaseStory(useCaseId), [useCaseId]);
+  const visibleDashboardSections: DashboardPanelGroupKey[] = ['overview', 'recovery', 'routing', 'debug'];
+>>>>>>> 158b688 (Refine system confidence UI composition and trends)
   const runContextNote = isNoviceMode
     ? 'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
     : 'Expert keeps the same run-context choices visible and exposes the resolved controls. Current run badges live in Primary Workflow.';
@@ -2418,16 +2432,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               Expert
             </button>
           </div>
-          <label className="control control--inline">
-            <span>Read path</span>
-            <select value={dashboardOrdering} onChange={(event) => setDashboardOrdering(event.target.value as DashboardOrderingPreset)}>
-              {Object.entries(DASHBOARD_ORDERING_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
           <label className="control control--inline control--wide">
             <span>Demo narrative</span>
               <select value={guidedPathId} onChange={(event) => setGuidedPathId(event.target.value as GuidedPathId)}>

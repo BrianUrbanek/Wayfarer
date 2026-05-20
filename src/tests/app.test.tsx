@@ -20,7 +20,6 @@ describe('App analyst console', () => {
     expect(html).toContain('Novice');
     expect(html).toContain('Expert');
     expect(html).toContain('Novice keeps the instructional rails open while expert exposes the resolved controls.');
-    expect(html).toContain('Read path');
     expect(html).toContain('Demo narrative');
     expect(html).toContain('Guided paths');
     expect(html).toContain('Drilldown targets');
