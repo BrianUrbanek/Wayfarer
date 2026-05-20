@@ -20,3 +20,4 @@ import './systemHealth.node.test.js';
 import './defaultCohorts.node.test.js';
 import './userSignalDiagnosis.node.test.js';
 import './dataFitness.node.test.js';
+import './glossary.node.test.js';

@@ -14,6 +14,7 @@ import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { ModulePanelHeader } from './ui/components/ModulePanelHeader';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
+import { AboutGlossaryContent } from './ui/components/AboutGlossaryContent';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
 import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
 import { DistributionList } from './ui/components/DistributionList';
@@ -31,16 +32,11 @@ import {
 import { buildPrimarySignalSummary } from './ui/userSignalDiagnosis';
 import { useRef } from 'react';
 import {
-<<<<<<< HEAD
   DASHBOARD_ORDERINGS,
   DASHBOARD_ORDERING_LABELS,
   getGuidedPath,
   GUIDED_PATHS,
   type DashboardOrderingPreset,
-=======
-  getUseCaseStory,
-  USE_CASE_STORIES,
->>>>>>> 158b688 (Refine system confidence UI composition and trends)
   type DashboardPanelGroupKey,
   type GuidanceMode,
   type GuidedPathId
@@ -408,12 +404,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [showAbout, setShowAbout] = useState(false);
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
-<<<<<<< HEAD
-  const [dashboardOrdering, setDashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
+  const [dashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>('navigation-tutorial');
-=======
-  const [useCaseId, setUseCaseId] = useState<UseCaseStoryId>('first-time-walkthrough');
->>>>>>> 158b688 (Refine system confidence UI composition and trends)
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
@@ -735,14 +727,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
 
-<<<<<<< HEAD
   const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
-=======
-  const selectedStory = useMemo(() => getUseCaseStory(useCaseId), [useCaseId]);
-  const visibleDashboardSections: DashboardPanelGroupKey[] = ['overview', 'recovery', 'routing', 'debug'];
->>>>>>> 158b688 (Refine system confidence UI composition and trends)
   const runContextNote = isNoviceMode
     ? 'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
     : 'Expert keeps the same run-context choices visible and exposes the resolved controls. Current run badges live in Primary Workflow.';
@@ -3242,36 +3229,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </Tray>
 
       <Modal open={showAbout} title="About / Prior Art" placement="top" onClose={() => setShowAbout(false)}>
-        <div className="stack about-copy">
-          <p>Wayfarer is adjacent to known work in trust-aware recommender systems.</p>
-          <p>
-            For example, Massa and Avesani&apos;s trust-aware collaborative filtering explored using propagated
-            trust to improve recommender coverage while preserving prediction quality, especially when ordinary
-            similarity matching becomes sparse. TrustSVD later incorporated explicit and implicit trust influence
-            into a matrix-factorization recommender to address sparsity and cold-start problems.
-          </p>
-          <p>
-            Those systems are useful landmarks. They suggest that trust and rating behavior can help recommender
-            systems when ordinary rating coverage is thin.
-          </p>
-          <p>Wayfarer explores a different product-shaped version of that idea.</p>
-          <p>
-            Instead of using explicit social trust links or global user reputation, Wayfarer starts with trusted
-            cohort anchors: seed reviewers chosen because they represent meaningful taste groups in a UGC
-            ecosystem. Ordinary users earn cohort-local signal by rating known islands similarly to those anchors.
-            Their later ratings then extend the effective reach of those anchors into sparse, under-reviewed
-            content.
-          </p>
-          <p>
-            So the propagated unit is not &ldquo;Alice trusts Bob&rdquo; or &ldquo;Bob is globally reputable.&rdquo;
-            It is narrower:
-          </p>
-          <p className="about-copy__quote">Bob appears to be a reliable signal source for this cohort&apos;s taste.</p>
-          <p>
-            That makes Wayfarer an exploration of cohort-local trust propagation for UGC discovery, not a claim to
-            have invented trust-aware recommendation from scratch.
-          </p>
-        </div>
+        <AboutGlossaryContent />
       </Modal>
 
       <SelectionModal

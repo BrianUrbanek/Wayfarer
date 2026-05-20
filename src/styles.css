@@ -1611,6 +1611,33 @@ select {
   font-weight: 600;
 }
 
+.about-copy__section {
+  display: grid;
+  gap: 10px;
+}
+
+.about-copy__section h3 {
+  margin: 0;
+}
+
+.about-copy__block {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(141, 164, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.about-copy__block h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.about-copy__glossary-wrap {
+  max-height: none;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
