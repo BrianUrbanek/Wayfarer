@@ -2433,7 +2433,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </button>
           </div>
           <label className="control control--inline control--wide">
-            <span>Demo narrative</span>
+            <span>Guided path</span>
               <select value={guidedPathId} onChange={(event) => setGuidedPathId(event.target.value as GuidedPathId)}>
               {GUIDED_PATHS.map((path) => (
                 <option key={path.id} value={path.id}>
@@ -3119,7 +3119,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         >
           <div className="summary-header">
             <div>
-              <p className="eyebrow">Demo narrative</p>
+              <p className="eyebrow">Guided path</p>
               <h3>{selectedGuidedPath.title}</h3>
             </div>
           </div>
