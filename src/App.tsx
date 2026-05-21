@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from './ui/components/Badge';
 import { Drawer } from './ui/components/Drawer';
 import { EmptyState } from './ui/components/EmptyState';
@@ -177,7 +177,7 @@ function labelForCohortFactory(cohorts: CohortAnchor[]) {
       }
       const analyst = analystLabels.get(cohortId) ?? cohortId;
       const technical = labels.get(cohortId) ?? cohortId;
-      return analyst === technical ? technical : `${analyst} â€” ${technical}`;
+      return analyst === technical ? technical : `${analyst} — ${technical}`;
     }
   };
 }
@@ -248,15 +248,15 @@ function renderPrimarySignalTitle(
 ): string {
   if (!summary) return 'AMBIGUOUS';
   if (summary.titleKey === 'positive') {
-    return `Primary signal: positive ${labelForCohort(summary.primaryCohortId ?? null)} audience signal`;
+    return `Primary behavior read: positive ${labelForCohort(summary.primaryCohortId ?? null)} audience fit`;
   }
   if (summary.titleKey === 'inverse') {
-    return `Primary signal: anti-match against ${labelForCohort(summary.inverseCohortId ?? null)}`;
+    return `Primary behavior read: anti-match against ${labelForCohort(summary.inverseCohortId ?? null)}`;
   }
-  if (summary.titleKey === 'mismatch') return 'Primary signal: declared/observed mismatch';
-  if (summary.titleKey === 'diffuse') return 'Primary signal: diffuse behavior';
+  if (summary.titleKey === 'mismatch') return 'Primary behavior read: declared/observed mismatch';
+  if (summary.titleKey === 'diffuse') return 'Primary behavior read: diffuse behavior';
   if (summary.titleKey === 'insufficient') return 'Insufficient behavior evidence';
-  return 'Primary signal: weak explanatory value';
+  return 'Primary behavior read: weak explanatory value';
 }
 
 function comparisonLabel(user: User | null, selectedCohort: CohortAnchor | null, cohortLabel: (id: string | null) => string) {
@@ -737,7 +737,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
       const inference = dataset.inferenceByUserId.get(user.id);
-      const tags = user.declaredTags.slice(0, 3).join(' Â· ');
+      const tags = user.declaredTags.slice(0, 3).join(' · ');
 
       return {
         id: user.id,
@@ -769,7 +769,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ...dataset.cohorts.map((cohort) => ({
         id: cohort.id,
         label: cohort.label,
-        description: cohort.tags.join(' Â· '),
+        description: cohort.tags.join(' · '),
         badge: cohort.source
       }))
     ];
@@ -779,7 +779,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return dataset.pseudoCohortAnalysis.allReports.map((report) => ({
       id: report.key,
       label: report.tags.join(' | '),
-      description: `${report.userCount} users Â· ${report.reportType}`,
+      description: `${report.userCount} users · ${report.reportType}`,
       badge: report.analystPriority
     }));
   }, [dataset.pseudoCohortAnalysis.allReports]);
@@ -854,7 +854,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     },
     {
       key: 'weight',
-      label: 'Signal',
+      label: 'Trust proxy',
       render: (row) => <ProgressBar value={row.weight} label={formatSignedDecimal(row.weight)} tone="accent" />
     },
     {
@@ -995,7 +995,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
                   </div>
                   <span className="muted">
-                    {archetypeLabel(row.hiddenReviewerArchetype)} Â· {row.inferredDiagnosisType}
+                    {archetypeLabel(row.hiddenReviewerArchetype)} · {row.inferredDiagnosisType}
                   </span>
                 </div>
                 <div className="recovery-preview-row__meta">
@@ -1003,7 +1003,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
-                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' Â· ')}</span> : null}
+                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
                   <span className="recovery-preview-row__action">Open detail</span>
                 </div>
               </button>
@@ -1036,7 +1036,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
                   </div>
                   <span className="muted">
-                    {archetypeLabel(row.hiddenReviewerArchetype)} Â· guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
+                    {archetypeLabel(row.hiddenReviewerArchetype)} · guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
                   </span>
                 </div>
                 <div className="recovery-preview-row__meta">
@@ -1044,7 +1044,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
-                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' Â· ')}</span> : null}
+                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
                   <span className="recovery-preview-row__action">Open detail</span>
                 </div>
               </button>
@@ -1060,11 +1060,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
   const declaredOverlapText = declaredTagOverlap
     ? declaredTagOverlap.isExact
-      ? `Exact tag fit Â· ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
+      ? `Exact tag fit · ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
       : `${declaredTagOverlap.overlap}/${declaredTagOverlap.total} declared tags`
     : 'No declared-tag overlap available.';
   const inverseNotice = showInverseDiagnostic
-    ? `Anti-match signal: ${cohortLabels.full(selectedInference?.inverseTop.cohortId ?? null)} Â· inverse evidence ${formatPercent(selectedInference?.inverseTop.score ?? 0)}`
+    ? `Anti-match signal: ${cohortLabels.full(selectedInference?.inverseTop.cohortId ?? null)} · inverse evidence ${formatPercent(selectedInference?.inverseTop.score ?? 0)}`
     : 'No strong inverse signal';
   const declaredDistributionCard = (
     <div className="stack">
@@ -1183,7 +1183,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <section className="detail-block">
         <div className="section-heading">
-          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating Ã— cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
+          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating × cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
           <p>Weighted by rater signal only. Higher-signal raters count more for their strongest cohort.</p>
         </div>
         <section className="distribution-card">
@@ -1245,7 +1245,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Rater signal</h4>
         <p>
-          Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} Â· Evidence:{' '}
+          Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} · Evidence:{' '}
           {formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
         </p>
         <p className="muted">Top cohort: {cohortLabels.full(selectedRaterSignalProfile?.topCohortId ?? null)}</p>
@@ -1272,7 +1272,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           )}
         </p>
         <p className="muted">
-          Analyst flags: {selectedUserReviewerReport?.analystFlags.join(' Â· ') ?? 'n/a'}
+          Analyst flags: {selectedUserReviewerReport?.analystFlags.join(' · ') ?? 'n/a'}
         </p>
         <p className="muted">Hidden labels are debug checksums only. They do not feed the model.</p>
       </section>
@@ -1374,7 +1374,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <div key={entry.cohortId} className="detail-mini-table__row">
               <span>{cohortLabels.full(entry.cohortId)}</span>
               <span className="muted">
-                {formatSignedDecimal(entry.affinity)} Â· confidence {formatPercent(entry.confidence)} Â· evidence {formatDecimal(entry.effectiveWeight)}
+                {formatSignedDecimal(entry.affinity)} · confidence {formatPercent(entry.confidence)} · evidence {formatDecimal(entry.effectiveWeight)}
               </span>
             </div>
           ))}
@@ -2180,7 +2180,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   ? TURN_MODE_LABELS.guided
                   : turn.mode === 'mixed'
                     ? TURN_MODE_LABELS.mixed
-                    : TURN_MODE_LABELS.organic} Â·{' '}
+                    : TURN_MODE_LABELS.organic} ·{' '}
                 {turn.ratingsCreated} ratings
               </Badge>
             ))}
@@ -3014,7 +3014,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                               : 'Scenario exported'}
                   </p>
                   <p className="muted">
-                    Turn {recentAction.previousTurn} to {recentAction.currentTurn} â€¢ Scenario: {recentAction.scenarioLabel} â€¢ Mode: {recentAction.turnModeLabel}
+                    Turn {recentAction.previousTurn} to {recentAction.currentTurn} • Scenario: {recentAction.scenarioLabel} • Mode: {recentAction.turnModeLabel}
                   </p>
                   {batchTotals ? (
                     <div className="recent-action__metrics">
