@@ -33,83 +33,27 @@ export interface GlossaryTerm {
   relatedTerms?: GlossaryTermId[];
 }
 
-export interface ConceptPrimerSection {
-  id: string;
-  title: string;
-  paragraphs: string[];
-}
+export const CONCEPT_PRIMER_MARKDOWN = `## Content Discovery Under Uncertainty
 
-export const CONCEPT_PRIMER_SECTIONS: ConceptPrimerSection[] = [
-  {
-    id: 'problem-goal',
-    title: 'Problem and Goal',
-    paragraphs: [
-      'Wayfarer is built for UGC worlds where brute-force intelligent review does not scale. Too many islands arrive too quickly for uniform high-confidence manual routing.',
-      'The product goal is two-sided: route likely-good islands toward players who will enjoy them, and confidently deprioritize islands that are unlikely to fit a specific player right now.'
-    ]
-  },
-  {
-    id: 'why-popularity-is-not-enough',
-    title: 'Why Popularity Is Not Enough',
-    paragraphs: [
-      'Raw popularity helps identify broad hits, but it can hide audience mismatch. A globally popular island can still be wrong for a specific player taste profile.',
-      'Wayfarer treats taste fit as cohort-local evidence, not as a single global quality score.'
-    ]
-  },
-  {
-    id: 'anchor-seeded-taste-space',
-    title: 'Anchor-Seeded Taste Space',
-    paragraphs: [
-      'Cohort Anchors are trusted seed reviewers that define initial taste poles. They are the implementation-facing form of meta-raters.',
-      'Other players accumulate trust by producing ratings that align predictably with cohort-local patterns, then extend anchor reach into sparse islands.'
-    ]
-  },
-  {
-    id: 'core-semantic-split',
-    title: 'Trust, Discovery Signal, and Confidence',
-    paragraphs: [
-      'Trust belongs to raters and describes how reliably their ratings can be used as evidence.',
-      'Discovery Signal is player-facing and tracks useful contribution or progression; it is related to trust but not identical.',
-      'Confidence belongs to island audience-fit estimates, ideally per island/cohort pairing even when the UI summarizes confidence at a higher level.'
-    ]
-  },
-  {
-    id: 'glicko-analogy',
-    title: 'Why Glicko-like Estimate + Uncertainty',
-    paragraphs: [
-      'Islands do not fight opponents, but the same estimate-plus-uncertainty framing still applies: each new evidence event can move a low-certainty estimate more than a high-certainty one.',
-      'This framing helps keep sparse evidence honest and discourages overconfident routing from thin data.'
-    ]
-  },
-  {
-    id: 'algorithmic-lineage',
-    title: 'Algorithmic Lineage',
-    paragraphs: [
-      'Wayfarer draws from adjacent ideas: trust propagation, reputation-weighted moderation, and taste clustering for sparse preference spaces.',
-      'Its confidence framing also follows a Glicko-like estimate-plus-uncertainty pattern, adapted for audience-fit inference rather than PvP outcomes.'
-    ]
-  },
-  {
-    id: 'ratings-vs-behavior',
-    title: 'Ratings as Proxy, Behavior as Stronger Evidence',
-    paragraphs: [
-      'Ratings are early proxy evidence. They are useful for cold-start routing, but they are not the final truth source.',
-      'Observed behavior should eventually dominate because engagement outcomes can confirm or contradict the earlier rating signal.'
-    ]
-  },
-  {
-    id: 'assumptions-and-risks',
-    title: 'Assumptions and Failure Risks',
-    paragraphs: [
-      'Core assumptions: anchor cohorts are meaningful, rating behavior carries transferable fit signal, and sparse evidence can be stabilized through trust and confidence controls.',
-      'Primary risks: anchor bias, noisy early evidence, overconfident cohort mapping, and stale island confidence after major content changes unless a soft reset path is applied.'
-    ]
-  }
-];
+Wayfarer treats islands as the prototype framing for a broader content discovery problem. The same model shape can apply to video, books, music, podcasts, apps, creator marketplaces, and other content surfaces where early evidence is sparse and expensive to interpret.
 
-export const CONCEPT_PRIMER_MARKDOWN = CONCEPT_PRIMER_SECTIONS.map(
-  (section) => `## ${section.title}\n\n${section.paragraphs.map((paragraph) => paragraph).join('\n\n')}`
-).join('\n\n');
+The system is not limited to UGC worlds, even if islands are the current concrete example. Islands are the working object that lets us inspect how cohort-local evidence, trust weighting, and confidence behave before generalizing the same logic to other content domains.
+
+## Trust, Discovery Signal, and Confidence
+
+Trust belongs to raters. It answers whether a person\'s ratings can be used as evidence. Discovery Signal belongs to the player-facing contribution layer. It answers whether a player has been useful over time. Confidence belongs to the island/cohort estimate itself. It answers how certain we are about fit right now.
+
+These three ideas are related but not interchangeable. Trust weights evidence. Discovery Signal is retrospective usefulness. Confidence is the current uncertainty attached to an island/cohort read.
+
+## Ratings, Behavior, and Hidden Truth
+
+Ratings are early proxy evidence. They help the prototype route and explain fit before stronger evidence exists. Observed behavior is a separate evidence layer and should eventually outweigh early proxy ratings when it is available.
+
+The generator also has hidden truth layers for auditability: seed cohorts, unseeded cohorts, user preference vectors, island appeal vectors, and truth classes. Those hidden layers explain why the synthetic ratings and later behavior look the way they do.
+
+## Why the Prototype Uses Cohorts
+
+Cohorts make the taste space inspectable. They let the system compare a player against multiple stable audience lenses instead of collapsing everything into one global quality score. That is the core reason confidence is modeled per island/cohort pairing and why analyst surfaces need to expose the underlying generator truth.`;
 
 export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {

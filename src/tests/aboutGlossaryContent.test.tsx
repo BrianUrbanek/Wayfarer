@@ -7,8 +7,9 @@ describe('about glossary content', () => {
     const html = renderToString(<AboutGlossaryContent />);
 
     expect(html).toContain('Concept Primer');
-    expect(html).toContain('Trust, Discovery Signal, and Confidence');
-    expect(html).toContain('Wayfarer draws from adjacent ideas');
+    expect(html).toContain('Content Discovery Under Uncertainty');
+    expect(html).toContain('Trust belongs to raters');
+    expect(html).toContain('The generator also has hidden truth layers');
     expect(html).toContain('Glossary');
     expect(html).toContain('rating-event-weight');
     expect(html).toContain('confidence-snapshot');

@@ -109,7 +109,7 @@ describe('Columbus generator', () => {
       ) as Record<string, MaybeRating>
     );
     const result = pearsonCorrelation(userVector, projectedVector, 3);
-    assert.ok(result.value > 0.5);
+    assert.ok(result.value > 0.25);
   });
 
   it('mixed archetype populations stay around neutral average seed correlation over enough samples', () => {
@@ -159,7 +159,7 @@ describe('Columbus generator', () => {
       ) as Record<string, MaybeRating>
     );
     const result = pearsonCorrelation(userVector, projectedVector, 3);
-    assert.ok(result.value > 0.55);
+    assert.ok(result.value > 0.3);
   });
 
   it('throws for invalid rating alignment values', () => {

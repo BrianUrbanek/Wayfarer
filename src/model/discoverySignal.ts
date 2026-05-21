@@ -1,5 +1,5 @@
+import type { CohortId, UserId } from './types.js';
 import type { SimulationState, RatingEvent } from './simulation.js';
-import type { UserId } from './types.js';
 import type { ObservedBehaviorKind } from './observedBehavior.js';
 
 export interface DiscoverySignalTurnRow {
@@ -8,6 +8,11 @@ export interface DiscoverySignalTurnRow {
   behaviorAgreement: number;
   confidenceMomentum: number;
   usefulness: number;
+  earlyUsefulRatingCount: number;
+  confirmedPositiveCount: number;
+  confirmedNegativeCount: number;
+  contradictedCount: number;
+  lateConsensusCount: number;
 }
 
 export interface DiscoverySignalProfile {
@@ -19,6 +24,13 @@ export interface DiscoverySignalProfile {
   eventCount: number;
   latestTurn: number;
   summary: string;
+  earlyUsefulRatingCount: number;
+  confirmedPositiveCount: number;
+  confirmedNegativeCount: number;
+  contradictedCount: number;
+  lateConsensusCount: number;
+  topUsefulCohortId: CohortId | null;
+  topUsefulCohortExplanation: string;
   turnRows: DiscoverySignalTurnRow[];
 }
 
@@ -86,35 +98,81 @@ export function buildDiscoverySignalAnalysis(state: SimulationState): DiscoveryS
 
   const profiles = state.users.map<DiscoverySignalProfile>((user) => {
     const events = eventsByUser.get(user.id) ?? [];
-    const turnBuckets = new Map<number, { agreement: number[]; momentum: number[] }>();
+    const turnBuckets = new Map<number, Array<{
+      event: RatingEvent;
+      behaviorAgreement: number;
+      confidenceMomentum: number;
+      currentConfidence: number;
+    }>>();
+    let earlyUsefulRatingCount = 0;
+    let confirmedPositiveCount = 0;
+    let confirmedNegativeCount = 0;
+    let contradictedCount = 0;
+    let lateConsensusCount = 0;
 
     for (const event of events) {
       const behavior = behaviorBySourceRatingEventId.get(event.id);
-      const behaviorScore = behavior ? agreementForRating(event.rating, behaviorPolarity(behavior.kind)) : 0.5;
+      const polarity = behavior ? behaviorPolarity(behavior.kind) : null;
+      const behaviorScore = behavior ? agreementForRating(event.rating, polarity as number) : 0.5;
       const currentKey = `${event.islandId}:${event.turn}`;
       const previousKey = `${event.islandId}:${Math.max(0, event.turn - 1)}`;
       const currentConfidence = (snapshotsByIslandTurn.get(currentKey) ?? 0) / Math.max(1, snapshotCountByIslandTurn.get(currentKey) ?? 1);
       const previousConfidence = (snapshotsByIslandTurn.get(previousKey) ?? 0) / Math.max(1, snapshotCountByIslandTurn.get(previousKey) ?? 1);
       const confidenceMomentum = 0.5 + (currentConfidence - previousConfidence);
-      const bucket = turnBuckets.get(event.turn) ?? { agreement: [], momentum: [] };
-      bucket.agreement.push(behaviorScore);
-      bucket.momentum.push(confidenceMomentum);
+      const behaviorIsPositive = polarity !== null && polarity > 0;
+      const behaviorIsNegative = polarity !== null && polarity < 0;
+      const ratingIsPositive = event.rating > 0;
+      const ratingIsNegative = event.rating < 0;
+
+      if (behaviorScore >= 0.75 && currentConfidence <= 0.35) {
+        earlyUsefulRatingCount += 1;
+      }
+
+      if (behaviorScore >= 0.75 && currentConfidence >= 0.7) {
+        lateConsensusCount += 1;
+      }
+
+      if (ratingIsPositive && behaviorIsPositive) {
+        confirmedPositiveCount += 1;
+      } else if (ratingIsNegative && behaviorIsNegative) {
+        confirmedNegativeCount += 1;
+      } else if (polarity !== null && event.rating !== polarity) {
+        contradictedCount += 1;
+      }
+
+      const bucket = turnBuckets.get(event.turn) ?? [];
+      bucket.push({
+        event,
+        behaviorAgreement: behaviorScore,
+        confidenceMomentum,
+        currentConfidence
+      });
       turnBuckets.set(event.turn, bucket);
     }
 
     const turnRows = Array.from(turnBuckets.entries())
       .sort((left, right) => left[0] - right[0])
       .map(([turn, bucket]) => {
-        const behaviorAgreement = average(bucket.agreement);
-        const confidenceMomentum = clamp01(average(bucket.momentum));
+        const behaviorAgreement = average(bucket.map((entry) => entry.behaviorAgreement));
+        const confidenceMomentum = clamp01(average(bucket.map((entry) => entry.confidenceMomentum)));
         const usefulness = clamp01((behaviorAgreement * 0.6 + confidenceMomentum * 0.4) * clamp01(events.length / 6));
+        const turnEarlyUsefulRatingCount = bucket.filter((entry) => entry.behaviorAgreement >= 0.75 && entry.currentConfidence <= 0.35).length;
+        const turnConfirmedPositiveCount = bucket.filter((entry) => entry.event.rating > 0 && entry.behaviorAgreement >= 0.75).length;
+        const turnConfirmedNegativeCount = bucket.filter((entry) => entry.event.rating < 0 && entry.behaviorAgreement >= 0.75).length;
+        const turnContradictedCount = bucket.filter((entry) => entry.behaviorAgreement < 0.5).length;
+        const turnLateConsensusCount = bucket.filter((entry) => entry.behaviorAgreement >= 0.75 && entry.currentConfidence >= 0.7).length;
 
         return {
           turn,
-          ratingEvents: bucket.agreement.length,
+          ratingEvents: bucket.length,
           behaviorAgreement,
           confidenceMomentum,
-          usefulness
+          usefulness,
+          earlyUsefulRatingCount: turnEarlyUsefulRatingCount,
+          confirmedPositiveCount: turnConfirmedPositiveCount,
+          confirmedNegativeCount: turnConfirmedNegativeCount,
+          contradictedCount: turnContradictedCount,
+          lateConsensusCount: turnLateConsensusCount
         };
       });
 
@@ -136,6 +194,14 @@ export function buildDiscoverySignalAnalysis(state: SimulationState): DiscoveryS
         events.length === 0
           ? 'No observed behavior yet.'
           : `Synthetic discovery usefulness is based on ${events.length} rating-linked behavior events and stored confidence snapshots.`,
+      earlyUsefulRatingCount,
+      confirmedPositiveCount,
+      confirmedNegativeCount,
+      contradictedCount,
+      lateConsensusCount,
+      topUsefulCohortId: null,
+      topUsefulCohortExplanation:
+        'No cohort-level top useful read is derived yet. This prototype keeps Discovery Signal separate from Trust and derives it from rating-linked behavior plus stored confidence snapshots.',
       turnRows
     };
   });

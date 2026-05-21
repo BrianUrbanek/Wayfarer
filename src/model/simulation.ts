@@ -177,6 +177,14 @@ function cloneObservedBehaviorEvent(event: ObservedBehaviorEvent): ObservedBehav
   return { ...event };
 }
 
+function cloneIsland(island: Island): Island {
+  return {
+    ...island,
+    hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined,
+    hiddenAppealVector: island.hiddenAppealVector ? { ...island.hiddenAppealVector } : undefined
+  };
+}
+
 function cloneHiddenTasteCohort(cohort: HiddenTasteCohort): HiddenTasteCohort {
   return {
     ...cohort,
@@ -451,10 +459,7 @@ function recomputeState(
       tags: cohort.tags.slice(),
       ratings: { ...cohort.ratings }
     })),
-    islands: islands.map((island) => ({
-      ...island,
-      hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined
-    })),
+    islands: islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: ratingEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: observedBehaviorEvents
@@ -492,10 +497,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       tags: cohort.tags.slice(),
       ratings: { ...cohort.ratings }
     })),
-    islands: state.islands.map((island) => ({
-      ...island,
-      hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined
-    })),
+    islands: state.islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: state.ratingEvents.map((event) => ({
       ...event,

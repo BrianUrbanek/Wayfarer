@@ -26,8 +26,9 @@ function hashString(input: string): number {
   return hash >>> 0 || 1;
 }
 
-function normalizeWeight(value: number): number {
-  return Math.max(-1, Math.min(1, value));
+function randomDiscreteAppealValue(rng: SeededRng): -1 | 0 | 1 {
+  const values: Array<-1 | 0 | 1> = [-1, 0, 1];
+  return values[rng.int(values.length)] ?? 0;
 }
 
 function vectorDot(left: Record<TagId, number>, right: Record<TagId, number>): number {
@@ -76,6 +77,42 @@ function sampleTags(rng: SeededRng, tags: readonly TagId[], count: number): TagI
   }
 
   return rng.shuffle(tags).slice(0, Math.min(count, tags.length));
+}
+
+function clampAppealVector(
+  appealVector: Record<TagId, number>,
+  stampedTags: ReadonlySet<TagId>
+): Record<TagId, number> {
+  return Object.fromEntries(
+    Object.entries(appealVector).map(([tag, value]) => {
+      if (stampedTags.has(tag)) {
+        return [tag, value];
+      }
+
+      return [tag, Math.max(-2, Math.min(2, value))];
+    })
+  ) as Record<TagId, number>;
+}
+
+function buildTargetedAppealVector(
+  rng: SeededRng,
+  allTags: readonly TagId[],
+  targetCohort: HiddenTasteCohort
+): Record<TagId, number> {
+  const stampedTags = new Set(targetCohort.tagSignature);
+  const appealVector = Object.fromEntries(
+    allTags.map((tag) => [tag, stampedTags.has(tag) ? 1 : randomDiscreteAppealValue(rng)])
+  ) as Record<TagId, number>;
+
+  return clampAppealVector(appealVector, stampedTags);
+}
+
+function buildRandomAppealVector(
+  rng: SeededRng,
+  allTags: readonly TagId[]
+): Record<TagId, number> {
+  const appealVector = Object.fromEntries(allTags.map((tag) => [tag, randomDiscreteAppealValue(rng)])) as Record<TagId, number>;
+  return clampAppealVector(appealVector, new Set());
 }
 
 function makeSeedTasteCohort(cohort: CohortAnchor, allTags: readonly TagId[]): HiddenTasteCohort {
@@ -152,10 +189,10 @@ export function buildIslandTruth(
   let hiddenTargetTasteCohortId: CohortId | null = null;
   let targetCohort: HiddenTasteCohort | null = null;
 
-  if (roll < 0.42 && seedTasteCohorts.length > 0) {
+  if (roll < 0.4 && seedTasteCohorts.length > 0) {
     hiddenTruthClass = 'seed-cohort-match';
     targetCohort = seedTasteCohorts[Math.abs(hashString(`${island.id}:${islandIndex}:seed`)) % seedTasteCohorts.length] ?? null;
-  } else if (roll < 0.78 && unseededTasteCohorts.length > 0) {
+  } else if (roll < 0.7 && unseededTasteCohorts.length > 0) {
     hiddenTruthClass = 'unseeded-cohort-match';
     targetCohort = unseededTasteCohorts[Math.abs(hashString(`${island.id}:${islandIndex}:unseeded`)) % unseededTasteCohorts.length] ?? null;
   }
@@ -164,13 +201,12 @@ export function buildIslandTruth(
     hiddenTargetTasteCohortId = targetCohort.id;
   }
 
-  const hiddenAppealVector = Object.fromEntries(
-    allTags.map((tag) => {
-      const base = targetCohort?.preferenceVector[tag] ?? 0;
-      const jitter = hiddenTruthClass === 'random' ? (rng.next() * 2 - 1) * 0.85 : (rng.next() * 2 - 1) * 0.25;
-      return [tag, normalizeWeight(base + jitter)];
-    })
-  ) as Record<TagId, number>;
+  const hiddenAppealVector =
+    hiddenTruthClass === 'random'
+      ? buildRandomAppealVector(rng, allTags)
+      : targetCohort
+        ? buildTargetedAppealVector(rng, allTags, targetCohort)
+        : buildRandomAppealVector(rng, allTags);
 
   const hiddenAppealPattern = Object.fromEntries(
     seedTasteCohorts.map((cohort) => [

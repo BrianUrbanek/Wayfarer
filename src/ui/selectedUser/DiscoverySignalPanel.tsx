@@ -48,6 +48,39 @@ export function DiscoverySignalPanel({ profile }: DiscoverySignalPanelProps) {
           helper="Rating-linked behavior events included in the retrospective usefulness read."
         />
       </div>
+      <div className="metric-grid metric-grid--compact">
+        <MetricCard
+          label="Early useful ratings"
+          value={profile ? String(profile.earlyUsefulRatingCount) : 'n/a'}
+          helper="Ratings that already agree with observed behavior while confidence is still low."
+        />
+        <MetricCard
+          label="Confirmed positive"
+          value={profile ? String(profile.confirmedPositiveCount) : 'n/a'}
+          helper="Positive ratings backed by positive observed behavior."
+        />
+        <MetricCard
+          label="Confirmed negative"
+          value={profile ? String(profile.confirmedNegativeCount) : 'n/a'}
+          helper="Negative ratings backed by negative observed behavior."
+        />
+        <MetricCard
+          label="Contradicted"
+          value={profile ? String(profile.contradictedCount) : 'n/a'}
+          helper="Rating-linked behavior that disagrees with the source rating direction."
+          tone="warning"
+        />
+        <MetricCard
+          label="Late consensus"
+          value={profile ? String(profile.lateConsensusCount) : 'n/a'}
+          helper="Agreement events that arrive after confidence has already risen."
+        />
+        <MetricCard
+          label="Top useful cohort"
+          value={profile?.topUsefulCohortId ?? 'n/a'}
+          helper={profile?.topUsefulCohortExplanation ?? 'No cohort-level top useful read yet.'}
+        />
+      </div>
       {profile && profile.turnRows.length > 0 ? (
         <ReportTable
           columns={[
@@ -55,7 +88,12 @@ export function DiscoverySignalPanel({ profile }: DiscoverySignalPanelProps) {
             { key: 'ratingEvents', label: 'Ratings', render: (row: { ratingEvents: number }) => row.ratingEvents, align: 'right' },
             { key: 'agreement', label: 'Behavior agree', render: (row: { behaviorAgreement: number }) => `${Math.round(row.behaviorAgreement * 100)}%`, align: 'right' },
             { key: 'momentum', label: 'Confidence lift', render: (row: { confidenceMomentum: number }) => `${Math.round(row.confidenceMomentum * 100)}%`, align: 'right' },
-            { key: 'usefulness', label: 'Usefulness', render: (row: { usefulness: number }) => `${Math.round(row.usefulness * 100)}%`, align: 'right' }
+            { key: 'usefulness', label: 'Usefulness', render: (row: { usefulness: number }) => `${Math.round(row.usefulness * 100)}%`, align: 'right' },
+            { key: 'earlyUsefulRatingCount', label: 'Early useful', render: (row: { earlyUsefulRatingCount: number }) => row.earlyUsefulRatingCount, align: 'right' },
+            { key: 'confirmedPositiveCount', label: 'Confirmed +', render: (row: { confirmedPositiveCount: number }) => row.confirmedPositiveCount, align: 'right' },
+            { key: 'confirmedNegativeCount', label: 'Confirmed -', render: (row: { confirmedNegativeCount: number }) => row.confirmedNegativeCount, align: 'right' },
+            { key: 'contradictedCount', label: 'Contradicted', render: (row: { contradictedCount: number }) => row.contradictedCount, align: 'right' },
+            { key: 'lateConsensusCount', label: 'Late consensus', render: (row: { lateConsensusCount: number }) => row.lateConsensusCount, align: 'right' }
           ]}
           rows={profile.turnRows}
           getRowKey={(row) => String(row.turn)}
