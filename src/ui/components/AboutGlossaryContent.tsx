@@ -1,6 +1,7 @@
+import ReactMarkdown from 'react-markdown';
 import { Badge } from './Badge';
 import {
-  CONCEPT_PRIMER_SECTIONS,
+  CONCEPT_PRIMER_MARKDOWN,
   GLOSSARY_TERMS,
   type GlossaryImplementedStatus,
   type GlossaryScope
@@ -52,15 +53,8 @@ export function AboutGlossaryContent() {
     <div className="stack about-copy">
       <section className="about-copy__section">
         <h3>Concept Primer</h3>
-        <div className="stack">
-          {CONCEPT_PRIMER_SECTIONS.map((section) => (
-            <article key={section.id} className="about-copy__block" id={`primer-${section.id}`}>
-              <h4>{section.title}</h4>
-              {section.paragraphs.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </article>
-          ))}
+        <div className="about-copy__primer prose">
+          <ReactMarkdown>{CONCEPT_PRIMER_MARKDOWN}</ReactMarkdown>
         </div>
       </section>
 

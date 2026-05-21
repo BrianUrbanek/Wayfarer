@@ -1,7 +1,8 @@
-import type { CohortAnchor, Island, IslandId, MaybeRating, Rating } from '../model/types.js';
+import type { CohortAnchor, HiddenTasteCohort, Island, IslandId, MaybeRating, Rating } from '../model/types.js';
 import { ratingsToVector } from '../model/vectors.js';
 import type { SeededRng } from './seededRandom.js';
 import { assertValidAlignment } from './alignmentValidation.js';
+import { scoreHiddenTasteFit } from './hiddenTasteGeneration.js';
 
 function invertRating(rating: Rating): Rating {
   if (rating === 1) {
@@ -72,15 +73,26 @@ export function generateAlignedRatings(
 
 export function materializeCohortRatings(
   cohorts: CohortAnchor[],
-  islands: Island[]
+  islands: Island[],
+  hiddenTasteCohorts: readonly HiddenTasteCohort[] = []
 ): CohortAnchor[] {
   return cohorts.map((cohort) => ({
     ...cohort,
     ratings: Object.fromEntries(
-      islands.map((island) => [
-        island.id,
-        island.hiddenAppealPattern?.[cohort.id] ?? 0
-      ])
+      islands.map((island) => {
+        const hiddenTasteCohort =
+          hiddenTasteCohorts.find((entry) => entry.projectedSeedCohortId === cohort.id && entry.kind === 'seed') ??
+          hiddenTasteCohorts.find((entry) => entry.projectedSeedCohortId === cohort.id) ??
+          hiddenTasteCohorts.find((entry) => entry.sourceSeedCohortId === cohort.id) ??
+          null;
+
+        if (hiddenTasteCohort && island.hiddenAppealVector) {
+          const fit = scoreHiddenTasteFit(hiddenTasteCohort.preferenceVector, island.hiddenAppealVector);
+          return [island.id, fit >= 0.2 ? 1 : fit <= -0.2 ? -1 : 0];
+        }
+
+        return [island.id, island.hiddenAppealPattern?.[cohort.id] ?? 0];
+      })
     ) as Record<IslandId, MaybeRating>
   }));
 }

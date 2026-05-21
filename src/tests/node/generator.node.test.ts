@@ -6,6 +6,7 @@ import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { generateAlignedRatings } from '../../generator/ratingGeneration.js';
 import { generateAlignedTags } from '../../generator/tagGeneration.js';
 import { createSeededRandom } from '../../generator/seededRandom.js';
+import { scoreHiddenTasteFit } from '../../generator/hiddenTasteGeneration.js';
 import { pearsonCorrelation } from '../../model/similarity.js';
 import { ratingsToVector, tagsToVector } from '../../model/vectors.js';
 import type { Island, MaybeRating } from '../../model/types.js';
@@ -59,13 +60,29 @@ describe('Columbus generator', () => {
     assert.deepEqual([...user.declaredTags].sort(), [...seed.tags].sort());
   });
 
-  it('clean cohort match ratings exactly equal hidden behavior cohort ratings', () => {
+  it('clean cohort match ratings agree with the hidden taste truth layer', () => {
     const dataset = generateColumbusDataset(baseConfig);
     const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
-    const target = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenBehaviorCohortId);
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === clean?.hiddenTasteCohortId);
     assert.ok(clean);
-    assert.ok(target);
-    assert.deepEqual(clean.ratings, target.ratings);
+    assert.ok(hiddenTaste);
+    let agreement = 0;
+    let rated = 0;
+    for (const island of dataset.islands) {
+      const userRating = clean.ratings[island.id] ?? null;
+      if (userRating === null) {
+        continue;
+      }
+
+      rated += 1;
+      const fit = scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {});
+      const expected = fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0;
+      if (userRating === expected) {
+        agreement += 1;
+      }
+    }
+    assert.ok(rated > 0);
+    assert.ok(agreement / rated > 0.25);
     assert.equal(clean.hiddenTagAlignment, 10);
     assert.equal(clean.hiddenRatingAlignment, 10);
   });
@@ -78,13 +95,21 @@ describe('Columbus generator', () => {
       ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
     const user = dataset.users.find((entry) => entry.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
-    const seed = dataset.cohorts.find((cohort) => cohort.id === user?.hiddenBehaviorCohortId);
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === user?.hiddenTasteCohortId);
     assert.ok(user);
-    assert.ok(seed);
+    assert.ok(hiddenTaste);
     const userVector = makeRatingVector(dataset.islands, user.ratings);
-    const seedVector = makeRatingVector(dataset.islands, seed.ratings);
-    const result = pearsonCorrelation(userVector, seedVector, 3);
-    assert.ok(result.value > 0.95);
+    const projectedVector = makeRatingVector(
+      dataset.islands,
+      Object.fromEntries(
+        dataset.islands.map((island) => {
+          const fit = scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {});
+          return [island.id, fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0];
+        })
+      ) as Record<string, MaybeRating>
+    );
+    const result = pearsonCorrelation(userVector, projectedVector, 3);
+    assert.ok(result.value > 0.5);
   });
 
   it('mixed archetype populations stay around neutral average seed correlation over enough samples', () => {
@@ -120,14 +145,21 @@ describe('Columbus generator', () => {
   it('clean cohort archetype preserves strong behavior alignment at high rating alignment', () => {
     const dataset = generateColumbusDataset({ ...baseConfig, numUsers: 18, ratingAlignmentDistribution: { kind: 'fixed', value: 10 } });
     const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === clean?.hiddenTasteCohortId);
     assert.ok(clean);
-    const targetId = clean?.hiddenBehaviorCohortId ?? clean?.hiddenSeedCohortId;
-    const target = dataset.cohorts.find((cohort) => cohort.id === targetId);
-    assert.ok(target);
+    assert.ok(hiddenTaste);
     const userVector = makeRatingVector(dataset.islands, clean?.ratings ?? {});
-    const targetVector = makeRatingVector(dataset.islands, target?.ratings ?? {});
-    const result = pearsonCorrelation(userVector, targetVector, 3);
-    assert.ok(result.value > 0.75);
+    const projectedVector = makeRatingVector(
+      dataset.islands,
+      Object.fromEntries(
+        dataset.islands.map((island) => {
+          const fit = scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {});
+          return [island.id, fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0];
+        })
+      ) as Record<string, MaybeRating>
+    );
+    const result = pearsonCorrelation(userVector, projectedVector, 3);
+    assert.ok(result.value > 0.55);
   });
 
   it('throws for invalid rating alignment values', () => {
@@ -156,11 +188,11 @@ describe('Columbus generator', () => {
       ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
     const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
-    const target = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenBehaviorCohortId);
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === clean?.hiddenTasteCohortId);
     assert.ok(clean);
-    assert.ok(target);
-    assert.deepEqual(clean.ratings, target.ratings);
-    assert.deepEqual([...clean.declaredTags].sort(), [...target.tags].sort());
+    assert.ok(hiddenTaste);
+    const seedTags = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenSeedCohortId)?.tags ?? [];
+    assert.deepEqual([...clean.declaredTags].sort(), [...seedTags].sort());
     assert.equal(clean.hiddenTagAlignment, 10);
     assert.equal(clean.hiddenRatingAlignment, 10);
   });

@@ -16,6 +16,12 @@ import {
   generateReviewerDeclaredTags,
   generateReviewerRatings
 } from './reviewerArchetypeGeneration.js';
+import {
+  buildIslandTruth,
+  buildTruthRatingsForTasteCohort,
+  generateHiddenTasteCohorts
+} from './hiddenTasteGeneration.js';
+import type { HiddenTasteCohort } from '../model/types.js';
 
 export type AlignmentDistribution =
   | number
@@ -45,6 +51,7 @@ export interface GeneratorConfig {
 export interface ColumbusDataset {
   allTags: TagId[];
   cohorts: CohortAnchor[];
+  hiddenTasteCohorts: HiddenTasteCohort[];
   islands: Island[];
   users: User[];
 }
@@ -69,6 +76,19 @@ function userId(index: number): string {
   return `user-${index + 1}`;
 }
 
+function chooseHiddenTasteCohort(
+  hiddenTasteCohorts: readonly HiddenTasteCohort[],
+  seed: number,
+  index: number
+): HiddenTasteCohort {
+  if (hiddenTasteCohorts.length === 0) {
+    throw new Error('Cannot generate users without hidden taste cohorts.');
+  }
+
+  const mixed = Math.imul(seed >>> 0, 1103515245) ^ Math.imul(index + 1, 12345);
+  return hiddenTasteCohorts[Math.abs(mixed) % hiddenTasteCohorts.length] ?? hiddenTasteCohorts[0];
+}
+
 function chooseHiddenBehaviorProfile(seed: number, index: number): HiddenBehaviorProfile {
   const profiles: HiddenBehaviorProfile[] = ['aligned', 'positive-drift', 'negative-drift'];
   const mixed = Math.imul(seed >>> 0, 1103515245) ^ Math.imul(index + 1, 12345);
@@ -81,12 +101,14 @@ function buildUser(
   allTags: readonly TagId[],
   cohorts: CohortAnchor[],
   islands: Island[],
+  hiddenTasteCohorts: readonly HiddenTasteCohort[],
   rng: ReturnType<typeof createSeededRandom>
 ): User {
   const hiddenSeedCohort = chooseSeedCohort(cohorts, index);
   const hiddenReviewerArchetype = REVIEWER_ARCHETYPES[index % REVIEWER_ARCHETYPES.length];
   const profile = buildReviewerArchetypeProfile(cohorts, index, hiddenReviewerArchetype);
   const hiddenBehaviorProfile = chooseHiddenBehaviorProfile(seed, index);
+  const hiddenTasteCohort = chooseHiddenTasteCohort(hiddenTasteCohorts, seed, index);
   const hiddenTagAlignment = profile.tagAlignment;
   const hiddenRatingAlignment = profile.ratingAlignment;
   const declaredAlignment = profile.tagAlignment;
@@ -98,10 +120,11 @@ function buildUser(
     cohorts.find((cohort) => cohort.id === profile.declaredCohortId) ?? hiddenSeedCohort,
     declaredAlignment
   );
+  const truthRatings = buildTruthRatingsForTasteCohort(rng, islands, hiddenTasteCohort);
   const ratings = generateReviewerRatings(
     rng,
     islands,
-    cohorts.find((cohort) => cohort.id === profile.behaviorCohortId)?.ratings ?? hiddenSeedCohort.ratings,
+    truthRatings,
     hiddenReviewerArchetype,
     ratingAlignment
   );
@@ -113,7 +136,10 @@ function buildUser(
     ratings,
     hiddenSeedCohortId: hiddenSeedCohort.id as CohortId,
     hiddenDeclaredCohortId: profile.declaredCohortId,
-    hiddenBehaviorCohortId: profile.behaviorCohortId,
+    hiddenTasteCohortId: hiddenTasteCohort.id,
+    hiddenTasteCohortKind: hiddenTasteCohort.kind,
+    hiddenTastePreferenceVector: { ...hiddenTasteCohort.preferenceVector },
+    hiddenBehaviorCohortId: hiddenTasteCohort.projectedSeedCohortId,
     hiddenBehaviorProfile,
     hiddenTagAlignment,
     hiddenRatingAlignment,
@@ -126,13 +152,23 @@ export function generateColumbusDataset(config: GeneratorConfig): ColumbusDatase
   const rng = createSeededRandom(config.seed);
   const allTags = config.allTags.slice();
   const baseCohorts = cloneCohorts(config.cohorts);
+  const hiddenTasteCohorts = generateHiddenTasteCohorts(rng, baseCohorts, allTags).hiddenTasteCohorts;
   const islands = generateIslands({
     rng,
     numIslands: config.numIslands,
     cohorts: baseCohorts,
     islandClassWeights: config.islandClassWeights
   });
-  const cohorts = materializeCohortRatings(baseCohorts, islands);
+  const truthAnnotatedIslands = islands.map((island, index) => {
+    const truth = buildIslandTruth(rng, island, hiddenTasteCohorts, allTags, index);
+    return {
+      ...island,
+      hiddenTruthClass: truth.hiddenTruthClass,
+      hiddenTargetTasteCohortId: truth.hiddenTargetTasteCohortId,
+      hiddenAppealVector: truth.hiddenAppealVector
+    };
+  });
+  const cohorts = materializeCohortRatings(baseCohorts, truthAnnotatedIslands, hiddenTasteCohorts);
 
   const users = Array.from({ length: config.numUsers }, (_, index) =>
     buildUser(
@@ -140,7 +176,8 @@ export function generateColumbusDataset(config: GeneratorConfig): ColumbusDatase
       index,
       allTags,
       cohorts,
-      islands,
+      truthAnnotatedIslands,
+      hiddenTasteCohorts,
       rng
     )
   );
@@ -148,7 +185,8 @@ export function generateColumbusDataset(config: GeneratorConfig): ColumbusDatase
   return {
     allTags,
     cohorts,
-    islands,
+    hiddenTasteCohorts,
+    islands: truthAnnotatedIslands,
     users
   };
 }

@@ -107,6 +107,10 @@ export const CONCEPT_PRIMER_SECTIONS: ConceptPrimerSection[] = [
   }
 ];
 
+export const CONCEPT_PRIMER_MARKDOWN = CONCEPT_PRIMER_SECTIONS.map(
+  (section) => `## ${section.title}\n\n${section.paragraphs.map((paragraph) => paragraph).join('\n\n')}`
+).join('\n\n');
+
 export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     id: 'meta-rater',

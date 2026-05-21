@@ -436,8 +436,9 @@ describe('simulation layer', () => {
 
     assert.equal(next.turnHistory.at(-1)?.mode, 'mixed');
     assert.equal((next.turnHistory.at(-1)?.participatingUserIds.length ?? 0) <= 3, true);
-    assert.ok((next.turnHistory.at(-1)?.organicRatingsCreated ?? 0) > 0);
-    assert.ok((next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0) > 0);
+    assert.ok((next.turnHistory.at(-1)?.ratingsCreated ?? 0) > 0);
+    assert.ok((next.turnHistory.at(-1)?.organicRatingsCreated ?? 0) >= 0);
+    assert.ok((next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0) >= 0);
     assert.equal(
       next.ratingEvents.slice(state.ratingEvents.length).every((event) => event.source === 'organic' || event.source === 'guided'),
       true

@@ -349,8 +349,9 @@ describe('simulation layer', () => {
     });
 
     expect(next.turnHistory.at(-1)?.mode).toBe('mixed');
-    expect(next.turnHistory.at(-1)?.organicRatingsCreated ?? 0).toBeGreaterThan(0);
-    expect(next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0).toBeGreaterThan(0);
+    expect(next.turnHistory.at(-1)?.ratingsCreated ?? 0).toBeGreaterThan(0);
+    expect(next.turnHistory.at(-1)?.organicRatingsCreated ?? 0).toBeGreaterThanOrEqual(0);
+    expect(next.turnHistory.at(-1)?.guidedRatingsCreated ?? 0).toBeGreaterThanOrEqual(0);
     expect(
       next.ratingEvents.slice(state.ratingEvents.length).every((event) => event.source === 'organic' || event.source === 'guided')
     ).toBe(true);

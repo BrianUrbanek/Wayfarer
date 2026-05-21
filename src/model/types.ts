@@ -17,6 +17,8 @@ export type ReviewerArchetype =
 export type Rating = -1 | 0 | 1;
 export type MaybeRating = Rating | null;
 export type HiddenBehaviorProfile = 'aligned' | 'positive-drift' | 'negative-drift';
+export type HiddenTasteCohortKind = 'seed' | 'unseeded';
+export type HiddenTasteTruthClass = 'seed-cohort-match' | 'unseeded-cohort-match' | 'random';
 
 export type IslandClass =
   | 'BROAD_HIT'
@@ -30,6 +32,9 @@ export interface Island {
   label: string;
   hiddenAppealPattern?: Record<CohortId, Rating>;
   hiddenClass?: IslandClass;
+  hiddenTruthClass?: HiddenTasteTruthClass;
+  hiddenTargetTasteCohortId?: CohortId | null;
+  hiddenAppealVector?: Record<TagId, number>;
 }
 
 export interface CohortAnchor {
@@ -48,12 +53,25 @@ export interface User {
   ratings: Record<IslandId, MaybeRating>;
   hiddenSeedCohortId?: CohortId;
   hiddenDeclaredCohortId?: CohortId;
+  hiddenTasteCohortId?: CohortId;
+  hiddenTasteCohortKind?: HiddenTasteCohortKind;
+  hiddenTastePreferenceVector?: Record<TagId, number>;
   hiddenBehaviorCohortId?: CohortId;
   hiddenBehaviorProfile?: HiddenBehaviorProfile;
   hiddenTagAlignment?: number;
   hiddenRatingAlignment?: number;
   hiddenReviewerArchetype?: ReviewerArchetype;
   hiddenReviewerChecksum?: string;
+}
+
+export interface HiddenTasteCohort {
+  id: CohortId;
+  label: string;
+  kind: HiddenTasteCohortKind;
+  sourceSeedCohortId: CohortId;
+  projectedSeedCohortId: CohortId;
+  preferenceVector: Record<TagId, number>;
+  tagSignature: TagId[];
 }
 
 export interface SimilarityResult {

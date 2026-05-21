@@ -22,6 +22,7 @@ import {
   type RoutingRiskProfile,
   type TurnMode
 } from './turnPolicy.js';
+import type { HiddenTasteCohort } from './types.js';
 import type { SupportedDiceExpression } from './dice.js';
 import type {
   CohortAnchor,
@@ -79,6 +80,7 @@ export interface SimulationState {
   users: User[];
   cohorts: CohortAnchor[];
   islands: Island[];
+  hiddenTasteCohorts: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
   observedBehaviorEvents: ObservedBehaviorEvent[];
   confidenceSnapshots: IslandCohortConfidenceSnapshot[];
@@ -97,6 +99,7 @@ export interface SerializedSimulationState {
   latentUsers: User[];
   cohorts: CohortAnchor[];
   islands: Island[];
+  hiddenTasteCohorts?: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
   observedBehaviorEvents?: ObservedBehaviorEvent[];
   confidenceSnapshots?: IslandCohortConfidenceSnapshot[];
@@ -109,6 +112,7 @@ export interface SimulationBootstrapConfig {
   latentUsers: User[];
   cohorts: CohortAnchor[];
   islands: Island[];
+  hiddenTasteCohorts?: HiddenTasteCohort[];
   initialRatingsPerUser: number;
 }
 
@@ -171,6 +175,45 @@ function cloneConfidenceSnapshot(snapshot: IslandCohortConfidenceSnapshot): Isla
 
 function cloneObservedBehaviorEvent(event: ObservedBehaviorEvent): ObservedBehaviorEvent {
   return { ...event };
+}
+
+function cloneHiddenTasteCohort(cohort: HiddenTasteCohort): HiddenTasteCohort {
+  return {
+    ...cohort,
+    tagSignature: cohort.tagSignature.slice(),
+    preferenceVector: { ...cohort.preferenceVector }
+  };
+}
+
+function deriveHiddenTasteCohortsFromUsers(
+  latentUsers: readonly User[],
+  seedCohorts: readonly CohortAnchor[]
+): HiddenTasteCohort[] {
+  const cohortsById = new Map<string, HiddenTasteCohort>();
+
+  for (const user of latentUsers) {
+    const cohortId = user.hiddenTasteCohortId;
+    const preferenceVector = user.hiddenTastePreferenceVector;
+    if (!cohortId || !preferenceVector || cohortsById.has(cohortId)) {
+      continue;
+    }
+
+    const sourceSeedCohortId = user.hiddenSeedCohortId ?? user.hiddenBehaviorCohortId ?? cohortId;
+    const sourceSeedCohort = seedCohorts.find((cohort) => cohort.id === sourceSeedCohortId);
+    cohortsById.set(cohortId, {
+      id: cohortId,
+      label: user.hiddenTasteCohortKind === 'unseeded' ? `Unseeded Hidden ${cohortId}` : sourceSeedCohort?.label ?? cohortId,
+      kind: user.hiddenTasteCohortKind ?? 'seed',
+      sourceSeedCohortId,
+      projectedSeedCohortId: user.hiddenBehaviorCohortId ?? sourceSeedCohortId,
+      preferenceVector: { ...preferenceVector },
+      tagSignature: Object.entries(preferenceVector)
+        .filter(([, value]) => value > 0)
+        .map(([tag]) => tag)
+    });
+  }
+
+  return Array.from(cohortsById.values()).sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function buildConfidenceSnapshots(
@@ -270,6 +313,7 @@ function createRatingEventsForUsers(
   visibleUsers: readonly User[],
   islands: readonly Island[],
   cohorts: readonly CohortAnchor[],
+  _hiddenTasteCohorts: readonly HiddenTasteCohort[] = [],
   participatingUsersPerTurn: number,
   maxRatingsPerUser: number
 ): RatingEvent[] {
@@ -360,6 +404,7 @@ function recomputeState(
   latentUsers: readonly User[],
   cohorts: readonly CohortAnchor[],
   islands: readonly Island[],
+  hiddenTasteCohorts: readonly HiddenTasteCohort[] = [],
   ratingEvents: readonly RatingEvent[],
   turnHistory: readonly SimulationTurnSummary[],
   allTags: readonly TagId[],
@@ -397,7 +442,8 @@ function recomputeState(
     latentUsers: latentUsers.map((user) => ({
       ...user,
       declaredTags: user.declaredTags.slice(),
-      ratings: { ...user.ratings }
+      ratings: { ...user.ratings },
+      hiddenTastePreferenceVector: user.hiddenTastePreferenceVector ? { ...user.hiddenTastePreferenceVector } : undefined
     })),
     users,
     cohorts: cohorts.map((cohort) => ({
@@ -409,6 +455,7 @@ function recomputeState(
       ...island,
       hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined
     })),
+    hiddenTasteCohorts: hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: ratingEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: observedBehaviorEvents
       ? observedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event))
@@ -437,7 +484,8 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
     latentUsers: state.latentUsers.map((user) => ({
       ...user,
       declaredTags: user.declaredTags.slice(),
-      ratings: { ...user.ratings }
+      ratings: { ...user.ratings },
+      hiddenTastePreferenceVector: user.hiddenTastePreferenceVector ? { ...user.hiddenTastePreferenceVector } : undefined
     })),
     cohorts: state.cohorts.map((cohort) => ({
       ...cohort,
@@ -448,6 +496,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       ...island,
       hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined
     })),
+    hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: state.ratingEvents.map((event) => ({
       ...event,
       raterSignalWeights: { ...event.raterSignalWeights }
@@ -468,12 +517,14 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
 export function hydrateSimulationState(snapshot: SerializedSimulationState): SimulationState {
   const normalizedObservedBehaviorEvents = snapshot.observedBehaviorEvents?.map((entry) => ({ ...entry }));
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
+  const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
 
   return recomputeState(
     snapshot.seed,
     snapshot.latentUsers,
     snapshot.cohorts,
     snapshot.islands,
+    normalizedHiddenTasteCohorts ?? deriveHiddenTasteCohortsFromUsers(snapshot.latentUsers, snapshot.cohorts),
     snapshot.ratingEvents,
     snapshot.turnHistory,
     snapshot.allTags,
@@ -484,6 +535,9 @@ export function hydrateSimulationState(snapshot: SerializedSimulationState): Sim
 
 export function createInitialSimulationState(config: SimulationBootstrapConfig): SimulationState {
   const rng = createSeededRandom(config.seed);
+  const hiddenTasteCohorts =
+    config.hiddenTasteCohorts?.map((cohort) => cloneHiddenTasteCohort(cohort)) ??
+    deriveHiddenTasteCohortsFromUsers(config.latentUsers, config.cohorts);
   const initialEvents = createRatingEventsForUsers(
     rng,
     0,
@@ -491,6 +545,7 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     deriveVisibleUsersFromEvents(config.latentUsers, config.islands, []),
     config.islands,
     config.cohorts,
+    hiddenTasteCohorts,
     config.latentUsers.length,
     config.initialRatingsPerUser
   );
@@ -499,6 +554,7 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     config.latentUsers,
     config.cohorts,
     config.islands,
+    hiddenTasteCohorts,
     initialEvents,
     [],
     config.allTags
@@ -510,6 +566,7 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     initialState.latentUsers,
     initialState.cohorts,
     initialState.islands,
+    hiddenTasteCohorts,
     initialState.ratingEvents,
     [initialSummary],
     config.allTags
@@ -798,6 +855,7 @@ export function advancePolicyTurn(
     state.latentUsers,
     state.cohorts,
     state.islands,
+    state.hiddenTasteCohorts,
     nextEvents,
     nextHistory,
     state.allTags,

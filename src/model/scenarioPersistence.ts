@@ -2,7 +2,7 @@ import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import type { AdvancePolicyTurnConfig, IslandCohortConfidenceSnapshot, SimulationState, SimulationTurnSummary, RatingEvent, SerializedSimulationState } from './simulation.js';
 import { hydrateSimulationState, serializeSimulationState } from './simulation.js';
 import type { ScenarioPresetMetadata } from './scenarioPresets.js';
-import type { CohortAnchor, Island, IslandClass, User } from './types.js';
+import type { CohortAnchor, HiddenTasteCohort, Island, IslandClass, User } from './types.js';
 
 export type SavedScenarioKind = 'simulation-state';
 export const SAVED_SCENARIO_VERSION = 1 as const;
@@ -86,6 +86,24 @@ function validateConfidenceSnapshot(value: unknown): value is IslandCohortConfid
   );
 }
 
+function validateHiddenTasteCohort(value: unknown): value is HiddenTasteCohort {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isString(value.id) &&
+    isString(value.label) &&
+    (value.kind === 'seed' || value.kind === 'unseeded') &&
+    isString(value.sourceSeedCohortId) &&
+    isString(value.projectedSeedCohortId) &&
+    isRecord(value.preferenceVector) &&
+    Object.values(value.preferenceVector).every(isNumber) &&
+    Array.isArray(value.tagSignature) &&
+    value.tagSignature.every(isString)
+  );
+}
+
 function validateUser(value: unknown): value is User {
   if (!isRecord(value)) {
     return false;
@@ -100,6 +118,13 @@ function validateUser(value: unknown): value is User {
   }
 
   if (value.hiddenBehaviorProfile !== undefined && !isHiddenBehaviorProfile(value.hiddenBehaviorProfile)) {
+    return false;
+  }
+
+  if (
+    value.hiddenTastePreferenceVector !== undefined &&
+    (!isRecord(value.hiddenTastePreferenceVector) || !Object.values(value.hiddenTastePreferenceVector).every(isNumber))
+  ) {
     return false;
   }
 
@@ -120,6 +145,23 @@ function validateIsland(value: unknown): value is Island {
   }
 
   if (value.hiddenClass !== undefined && !isString(value.hiddenClass)) {
+    return false;
+  }
+
+  if (
+    value.hiddenTruthClass !== undefined &&
+    value.hiddenTruthClass !== 'seed-cohort-match' &&
+    value.hiddenTruthClass !== 'unseeded-cohort-match' &&
+    value.hiddenTruthClass !== 'random'
+  ) {
+    return false;
+  }
+
+  if (value.hiddenTargetTasteCohortId !== undefined && value.hiddenTargetTasteCohortId !== null && !isString(value.hiddenTargetTasteCohortId)) {
+    return false;
+  }
+
+  if (value.hiddenAppealVector !== undefined && (!isRecord(value.hiddenAppealVector) || !Object.values(value.hiddenAppealVector).every(isNumber))) {
     return false;
   }
 
@@ -240,6 +282,12 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (!value.ratingEvents.every(validateRatingEvent) || !value.turnHistory.every(validateTurnSummary)) {
     return false;
+  }
+
+  if (value.hiddenTasteCohorts !== undefined) {
+    if (!Array.isArray(value.hiddenTasteCohorts) || !value.hiddenTasteCohorts.every(validateHiddenTasteCohort)) {
+      return false;
+    }
   }
 
   if (value.observedBehaviorEvents !== undefined) {

@@ -58,6 +58,7 @@ import {
 } from './model/turnPolicy';
 import { buildDataFitnessSummary } from './model/dataFitness';
 import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
+import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
 import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
@@ -229,6 +230,18 @@ function formatRating(value: string | number | null): string {
   }
 
   return String(value);
+}
+
+function summarizeWeightedVector(vector: Record<string, number> | undefined | null, limit = 4): string {
+  if (!vector) {
+    return 'n/a';
+  }
+
+  return Object.entries(vector)
+    .sort((left, right) => Math.abs(right[1]) - Math.abs(left[1]) || right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, limit)
+    .map(([key, value]) => `${key} ${formatSignedDecimal(value, 2)}`)
+    .join(' | ');
 }
 
 function diagnosisTone(type: string): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' {
@@ -572,6 +585,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   );
   const systemHealthSummary = useMemo(() => buildSystemHealthSummary(dataset), [dataset]);
   const confidenceGrowthRows = useMemo(() => buildConfidenceGrowthRows(dataset), [dataset]);
+  const discoverySignalAnalysis = useMemo(() => buildDiscoverySignalAnalysis(dataset), [dataset]);
+  const selectedDiscoverySignalProfile = selectedUser ? discoverySignalAnalysis.byUserId.get(selectedUser.id) ?? null : null;
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
   const effectiveRoutingValues = useMemo(
@@ -1123,6 +1138,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       selectedInferenceDiagnosticsMessage={selectedInferenceDiagnostics?.message}
       selectedInferenceDiagnosticsType={selectedInferenceDiagnostics?.type}
       selectedRaterSignalProfile={selectedRaterSignalProfile}
+      selectedDiscoverySignalProfile={selectedDiscoverySignalProfile}
       declaredOverlapText={declaredOverlapText}
       declaredObservedRelationshipText={declaredObservedRelationshipText}
       behaviorReadText={behaviorReadSummary?.message ?? 'Not enough rating data yet.'}
@@ -1260,10 +1276,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Rater signal</h4>
         <p>
-          Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} · Evidence:{' '}
+          Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} | Evidence:{' '}
           {formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
         </p>
         <p className="muted">Top cohort: {cohortLabels.full(selectedRaterSignalProfile?.topCohortId ?? null)}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Hidden taste truth</h4>
+        <p>Hidden taste cohort: {selectedUser.hiddenTasteCohortId ? cohortLabels.full(selectedUser.hiddenTasteCohortId) : 'none'}</p>
+        <p>Hidden taste kind: {selectedUser.hiddenTasteCohortKind ?? 'n/a'}</p>
+        <p className="muted">Hidden preference vector: {summarizeWeightedVector(selectedUser.hiddenTastePreferenceVector)}</p>
       </section>
       <section className="detail-block">
         <h4>Diagnosis</h4>
@@ -1312,6 +1334,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <h4>Visible ratings</h4>
         <p>User: {formatRating(selectedComparisonUserRating)}</p>
         <p>Cohort: {formatRating(selectedComparisonCohortRating)}</p>
+      </section>
+      <section className="detail-block">
+        <h4>Hidden taste truth</h4>
+        <p>Truth class: {selectedIsland.hiddenTruthClass ?? 'n/a'}</p>
+        <p>Target taste cohort: {selectedIsland.hiddenTargetTasteCohortId ? cohortLabels.full(selectedIsland.hiddenTargetTasteCohortId) : 'none'}</p>
+        <p className="muted">Appeal vector: {summarizeWeightedVector(selectedIsland.hiddenAppealVector)}</p>
       </section>
       <section className="detail-block">
         <h4>Cohort affinity</h4>
@@ -2342,8 +2370,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     helper="Debug and validation only."
                   />
                   <MetricCard
-                    label="Hidden rating alignment"
-                    value={selectedUser.hiddenRatingAlignment ?? 'n/a'}
+                    label="Hidden taste cohort"
+                    value={selectedUser.hiddenTasteCohortId ? cohortLabels.full(selectedUser.hiddenTasteCohortId) : 'none'}
+                    helper="Debug and validation only."
+                  />
+                  <MetricCard
+                    label="Hidden taste kind"
+                    value={selectedUser.hiddenTasteCohortKind ?? 'n/a'}
                     helper="Debug and validation only."
                   />
                   <MetricCard

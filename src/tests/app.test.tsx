@@ -45,6 +45,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Export');
     expect(html).toContain('Import');
     expect(html).toContain('Selected user');
+    expect(html).toContain('Discovery Signal');
     expect(html).toContain('Focus island');
     expect(html).toContain('Top routed island');
     expect(html).toContain('Participating users / turn');
@@ -85,6 +86,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Tag Alignment');
     expect(html).toContain('Rating Alignment');
     expect(html).toContain('Hidden behavior profile');
+    expect(html).toContain('Hidden taste cohort');
+    expect(html).toContain('Hidden taste kind');
     expect(html).toContain('Turn Mode');
     expect(html).toContain('Participation Model');
     expect(html).toContain('Turns to Run');

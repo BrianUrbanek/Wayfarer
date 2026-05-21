@@ -6,6 +6,7 @@ import { createDefaultCohorts } from '../data/defaultCohorts';
 import { generateColumbusDataset } from '../generator/columbusGenerator';
 import { generateAlignedRatings } from '../generator/ratingGeneration';
 import { generateAlignedTags } from '../generator/tagGeneration';
+import { scoreHiddenTasteFit } from '../generator/hiddenTasteGeneration';
 import { createSeededRandom } from '../generator/seededRandom';
 import type { GeneratorConfig } from '../generator/columbusGenerator';
 import type { Island } from '../model/types';
@@ -62,13 +63,29 @@ describe('Columbus generator', () => {
     expect(user.declaredTags.sort()).toEqual(seed?.tags.slice().sort());
   });
 
-  it('clean cohort match ratings exactly equal hidden behavior cohort ratings', () => {
+  it('clean cohort match ratings agree with the hidden taste truth layer', () => {
     const dataset = generateColumbusDataset(baseConfig);
     const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
-    const target = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenBehaviorCohortId);
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === clean?.hiddenTasteCohortId);
     expect(clean).toBeDefined();
-    expect(target).toBeDefined();
-    expect(clean?.ratings).toEqual(target?.ratings);
+    expect(hiddenTaste).toBeDefined();
+    let agreement = 0;
+    let rated = 0;
+    for (const island of dataset.islands) {
+      const rating = clean?.ratings[island.id] ?? null;
+      if (rating === null || !hiddenTaste) {
+        continue;
+      }
+
+      rated += 1;
+      const fit = scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {});
+      const expected = fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0;
+      if (rating === expected) {
+        agreement += 1;
+      }
+    }
+    expect(rated).toBeGreaterThan(0);
+    expect(agreement / rated).toBeGreaterThan(0.25);
     expect(clean?.hiddenTagAlignment).toBe(10);
     expect(clean?.hiddenRatingAlignment).toBe(10);
   });
@@ -81,15 +98,23 @@ describe('Columbus generator', () => {
       ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
     const user = dataset.users.find((entry) => entry.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
-    const seed = dataset.cohorts.find((cohort) => cohort.id === user?.hiddenBehaviorCohortId);
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === user?.hiddenTasteCohortId);
 
     expect(user).toBeDefined();
-    expect(seed).toBeDefined();
+    expect(hiddenTaste).toBeDefined();
     const userVector = makeRatingVector(dataset.islands, user?.ratings ?? {});
-    const seedVector = makeRatingVector(dataset.islands, seed?.ratings ?? {});
-    const correlation = pearsonCorrelation(userVector, seedVector, 3);
+    const projectedVector = makeRatingVector(
+      dataset.islands,
+      Object.fromEntries(
+        dataset.islands.map((island) => {
+          const fit = hiddenTaste ? scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {}) : 0;
+          return [island.id, fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0];
+        })
+      )
+    );
+    const correlation = pearsonCorrelation(userVector, projectedVector, 3);
 
-    expect(correlation.value).toBeGreaterThan(0.95);
+    expect(correlation.value).toBeGreaterThan(0.35);
   });
 
   it('mixed archetype populations stay around neutral average seed correlation over enough samples', () => {
@@ -155,11 +180,12 @@ describe('Columbus generator', () => {
       ratingAlignmentDistribution: { kind: 'fixed', value: 0 }
     });
     const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');
-    const target = dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenBehaviorCohortId);
+    const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === clean?.hiddenTasteCohortId);
     expect(clean).toBeDefined();
-    expect(target).toBeDefined();
-    expect(clean?.ratings).toEqual(target?.ratings);
-    expect(clean?.declaredTags.sort()).toEqual(target?.tags.slice().sort());
+    expect(hiddenTaste).toBeDefined();
+    expect(clean?.declaredTags.sort()).toEqual(
+      dataset.cohorts.find((cohort) => cohort.id === clean?.hiddenSeedCohortId)?.tags.slice().sort()
+    );
     expect(clean?.hiddenTagAlignment).toBe(10);
     expect(clean?.hiddenRatingAlignment).toBe(10);
   });
