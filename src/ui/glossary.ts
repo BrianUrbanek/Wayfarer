@@ -15,6 +15,7 @@ export type GlossaryTermId =
   | 'discovery-routing'
   | 'safe-fit'
   | 'discovery-probe'
+  | 'confidence-snapshot'
   | 'pinned-reference'
   | 'transient-drilldown';
 
@@ -147,19 +148,31 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     id: 'island-confidence',
     term: 'Island Confidence',
     shortDefinition: 'Certainty on island audience-fit estimates.',
-    fullDefinition: 'The certainty attached to audience-fit estimates for islands, ideally at island/cohort granularity. Confidence belongs to island fit estimates, not to players.',
+    fullDefinition:
+      'The certainty attached to audience-fit estimates for islands at island/cohort granularity. Confidence belongs to island fit estimates, not to players, and should be evaluated at explicit update or snapshot boundaries in the durable model.',
     scope: 'analyst-facing',
     implementedStatus: 'implemented',
-    relatedTerms: ['cohort', 'soft-reset', 'rating-event-weight']
+    relatedTerms: ['cohort', 'soft-reset', 'rating-event-weight', 'confidence-snapshot']
   },
   {
     id: 'rating-event-weight',
     term: 'Rating Event Weight',
     shortDefinition: 'How much one rating should move an estimate right now.',
-    fullDefinition: 'A derived weighting concept that applies rater trust to a specific island rating in the context of current uncertainty. It separates evidence strength from like/dislike direction.',
+    fullDefinition:
+      'A derived weighting concept calculated as trust multiplied by uncertainty leverage in current context. Direction stays separate from weight magnitude: a high-weight negative rating is strong negative evidence, not low-value evidence.',
     scope: 'analyst-facing',
     implementedStatus: 'partial',
-    relatedTerms: ['trust', 'island-confidence']
+    relatedTerms: ['trust', 'island-confidence', 'confidence-snapshot']
+  },
+  {
+    id: 'confidence-snapshot',
+    term: 'Confidence Snapshot',
+    shortDefinition: 'Baseline island/cohort confidence at an update boundary.',
+    fullDefinition:
+      'A stored or derived baseline state for an island/cohort read before processing a bounded group of evidence events. In Wayfarer, turns can serve as the snapshot boundary; in production, snapshots could be scheduled, threshold-triggered, or island-local. Rating Event Weight should eventually be calculated against the confidence snapshot for the update window in which the rating was processed.',
+    scope: 'future-facing',
+    implementedStatus: 'future',
+    relatedTerms: ['island-confidence', 'rating-event-weight']
   },
   {
     id: 'observed-behavior',
@@ -288,6 +301,7 @@ export const REQUIRED_GLOSSARY_TERMS: GlossaryTermId[] = [
   'discovery-routing',
   'safe-fit',
   'discovery-probe',
+  'confidence-snapshot',
   'pinned-reference',
   'transient-drilldown'
 ];

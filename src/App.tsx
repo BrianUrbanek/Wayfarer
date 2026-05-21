@@ -17,6 +17,7 @@ import { Tray } from './ui/components/Tray';
 import { AboutGlossaryContent } from './ui/components/AboutGlossaryContent';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
 import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
+import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEvidenceSummary';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -63,6 +64,7 @@ import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
 import type { CohortAffinityEstimate } from './model/affinity';
+import { deriveRatingEventWeightsForIsland } from './model/ratingEventWeight';
 import type { PseudoCohortReport } from './model/pseudoCohorts';
 import { archetypeLabel } from './model/reviewerArchetypes';
 import { recommendIslandsForUser, type IslandRecommendation } from './model/recommendations';
@@ -692,6 +694,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       .sort((left, right) => compareByNumeric(left.estimate.affinity, right.estimate.affinity));
   }, [dataset.cohorts, selectedIslandAffinityReport]);
 
+
+  const confidenceRadarData = useMemo(() => {
+    if (!selectedIslandAffinityReport) {
+      return [];
+    }
+
+    return selectedIslandAffinityReport.estimates.map((estimate) => ({
+      cohortId: estimate.cohortId,
+      confidence: estimate.confidence,
+      label: cohortLabels.full(estimate.cohortId)
+    }));
+  }, [cohortLabels, selectedIslandAffinityReport]);
+
+  const selectedIslandEventWeightRows = useMemo(() => {
+    if (!selectedIsland) {
+      return [];
+    }
+
+    return deriveRatingEventWeightsForIsland(selectedIsland.id, dataset.ratingEvents, selectedIslandAffinityReport ?? undefined);
+  }, [dataset.ratingEvents, selectedIsland, selectedIslandAffinityReport]);
+
   const selectedAffinityDetail =
     drawerState?.type === 'affinity'
       ? dataset.islandAffinityReports.get(drawerState.islandId)?.estimates.find((estimate) => estimate.cohortId === drawerState.cohortId) ??
@@ -1222,6 +1245,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           emptyDescription="Select a different island or take more turns to accumulate weighted evidence."
         />
       </section>
+      <SelectedIslandEvidenceSummary
+        confidenceRadarData={confidenceRadarData}
+        ratingEventWeightRows={selectedIslandEventWeightRows}
+      />
     </div>
   ) : null;
 
