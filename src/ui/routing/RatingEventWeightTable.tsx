@@ -1,7 +1,11 @@
 import type { RatingEventWeightRow } from '../../model/ratingEventWeight.js';
 
+export interface RatingEventWeightPresentationRow extends RatingEventWeightRow {
+  cohortLabel?: string;
+}
+
 interface RatingEventWeightTableProps {
-  rows: readonly RatingEventWeightRow[];
+  rows: readonly RatingEventWeightPresentationRow[];
 }
 
 function toSigned(value: number, digits = 3): string {
@@ -43,7 +47,7 @@ export function RatingEventWeightTable({ rows }: RatingEventWeightTableProps) {
                 <tr key={`${row.eventId}-${row.cohortId}`}>
                   <td>{row.userId}</td>
                   <td className="report-table__cell--right">{toSigned(row.rating, 2)}</td>
-                  <td>{row.cohortId}</td>
+                  <td>{row.cohortLabel ?? row.cohortId}</td>
                   <td className="report-table__cell--right">{toUnit(row.trustWeight)}</td>
                   <td className="report-table__cell--right">{toUnit(row.currentContextConfidence)}</td>
                   <td className="report-table__cell--right">{toUnit(row.uncertaintyLeverage)}</td>

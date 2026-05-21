@@ -2509,3 +2509,87 @@ select {
   z-index: 40;
 }
 
+.island-confidence-radar {
+  display: grid;
+  gap: 10px;
+}
+
+.island-confidence-radar__helper {
+  margin: 0;
+}
+
+.island-confidence-radar__layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.island-confidence-radar__svg {
+  width: 100%;
+  height: auto;
+  max-width: 240px;
+}
+
+.island-confidence-radar__ring {
+  fill: rgba(141, 164, 255, 0.03);
+  stroke: rgba(141, 164, 255, 0.3);
+  stroke-width: 1;
+}
+
+.island-confidence-radar__axis {
+  stroke: rgba(174, 185, 218, 0.34);
+  stroke-width: 1;
+}
+
+.island-confidence-radar__shape {
+  fill: rgba(103, 215, 199, 0.2);
+  stroke: rgba(103, 215, 199, 0.84);
+  stroke-width: 2;
+}
+
+.island-confidence-radar__point {
+  fill: #b4fff3;
+  stroke: rgba(7, 11, 20, 0.9);
+  stroke-width: 1.5;
+}
+
+.island-confidence-radar__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.island-confidence-radar__legend li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(141, 164, 255, 0.16);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rating-event-weight-table {
+  display: grid;
+  gap: 10px;
+}
+
+.rating-event-weight-table__helper {
+  margin: 0;
+}
+
+.rating-event-weight-table__wrap {
+  max-height: 340px;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .island-confidence-radar__layout {
+    grid-template-columns: 1fr;
+  }
+}
+

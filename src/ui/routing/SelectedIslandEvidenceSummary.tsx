@@ -1,6 +1,6 @@
 import type { RatingEventWeightRow } from '../../model/ratingEventWeight.js';
 import { IslandConfidenceRadar, type IslandConfidenceRadarDatum } from './IslandConfidenceRadar';
-import { RatingEventWeightTable } from './RatingEventWeightTable';
+import { RatingEventWeightTable, type RatingEventWeightPresentationRow } from './RatingEventWeightTable';
 
 interface SelectedIslandEvidenceSummaryProps {
   confidenceRadarData: readonly IslandConfidenceRadarDatum[];
@@ -11,6 +11,14 @@ export function SelectedIslandEvidenceSummary({
   confidenceRadarData,
   ratingEventWeightRows
 }: SelectedIslandEvidenceSummaryProps) {
+  const labeledRows: RatingEventWeightPresentationRow[] = ratingEventWeightRows.map((row) => {
+    const match = confidenceRadarData.find((entry) => entry.cohortId === row.cohortId);
+    return {
+      ...row,
+      cohortLabel: match?.label ?? row.cohortId
+    };
+  });
+
   return (
     <section className="detail-block">
       <div className="section-heading">
@@ -25,7 +33,7 @@ export function SelectedIslandEvidenceSummary({
       </div>
       <div className="stack">
         <IslandConfidenceRadar data={confidenceRadarData} />
-        <RatingEventWeightTable rows={ratingEventWeightRows} />
+        <RatingEventWeightTable rows={labeledRows} />
       </div>
     </section>
   );

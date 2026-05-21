@@ -34,7 +34,7 @@ describe('rating event weight UI prep components', () => {
             currentContextConfidence: 0.25,
             uncertaintyLeverage: 0.75,
             eventWeight: 0.375,
-            directionalContribution: -0.2625
+            directionalContribution: -0.375
           }
         ]}
       />
