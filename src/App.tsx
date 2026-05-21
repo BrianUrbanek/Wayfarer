@@ -157,6 +157,7 @@ function buildSimulationStateFromControls(controls: ScenarioPresetControls) {
     latentUsers: latentDataset.users,
     cohorts: latentDataset.cohorts,
     islands: latentDataset.islands,
+    hiddenTasteCohorts: latentDataset.hiddenTasteCohorts,
     initialRatingsPerUser: controls.bootstrapRatingsPerUser
   });
 }
@@ -3415,6 +3416,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </main>
   );
 }
+
 
 
 

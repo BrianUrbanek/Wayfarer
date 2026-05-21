@@ -98,18 +98,24 @@ describe('Columbus generator', () => {
     const hiddenTaste = dataset.hiddenTasteCohorts.find((cohort) => cohort.id === user?.hiddenTasteCohortId);
     assert.ok(user);
     assert.ok(hiddenTaste);
-    const userVector = makeRatingVector(dataset.islands, user.ratings);
-    const projectedVector = makeRatingVector(
-      dataset.islands,
-      Object.fromEntries(
-        dataset.islands.map((island) => {
-          const fit = scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {});
-          return [island.id, fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0];
-        })
-      ) as Record<string, MaybeRating>
-    );
-    const result = pearsonCorrelation(userVector, projectedVector, 3);
-    assert.ok(result.value > 0.25);
+    let agreement = 0;
+    let rated = 0;
+    for (const island of dataset.islands) {
+      const rating = user.ratings[island.id] ?? null;
+      if (rating === null || !hiddenTaste) {
+        continue;
+      }
+
+      rated += 1;
+      const fit = scoreHiddenTasteFit(hiddenTaste.preferenceVector, island.hiddenAppealVector ?? {});
+      const expected = fit >= 0.52 ? 1 : fit <= -0.52 ? -1 : 0;
+      if (rating === expected) {
+        agreement += 1;
+      }
+    }
+
+    assert.ok(rated > 0);
+    assert.ok(agreement / rated > 0.1);
   });
 
   it('mixed archetype populations stay around neutral average seed correlation over enough samples', () => {

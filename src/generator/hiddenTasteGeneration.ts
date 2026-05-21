@@ -31,6 +31,46 @@ function randomDiscreteAppealValue(rng: SeededRng): -1 | 0 | 1 {
   return values[rng.int(values.length)] ?? 0;
 }
 
+function sumAppealValues(appealVector: Record<TagId, number>, tags: readonly TagId[]): number {
+  return tags.reduce((sum, tag) => sum + (appealVector[tag] ?? 0), 0);
+}
+
+function clampRandomPortionTowardZero(
+  rng: SeededRng,
+  appealVector: Record<TagId, number>,
+  adjustableTags: readonly TagId[],
+  minSum = -2,
+  maxSum = 2
+): Record<TagId, number> {
+  const nextVector = { ...appealVector };
+  const mutableTags = adjustableTags.slice();
+  let sum = sumAppealValues(nextVector, mutableTags);
+
+  while (sum > maxSum) {
+    const positiveTags = mutableTags.filter((tag) => nextVector[tag] === 1);
+    if (positiveTags.length === 0) {
+      break;
+    }
+
+    const selected = positiveTags[rng.int(positiveTags.length)] ?? positiveTags[0];
+    nextVector[selected] = 0;
+    sum -= 1;
+  }
+
+  while (sum < minSum) {
+    const negativeTags = mutableTags.filter((tag) => nextVector[tag] === -1);
+    if (negativeTags.length === 0) {
+      break;
+    }
+
+    const selected = negativeTags[rng.int(negativeTags.length)] ?? negativeTags[0];
+    nextVector[selected] = 0;
+    sum += 1;
+  }
+
+  return nextVector;
+}
+
 function vectorDot(left: Record<TagId, number>, right: Record<TagId, number>): number {
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
   let sum = 0;
@@ -79,21 +119,6 @@ function sampleTags(rng: SeededRng, tags: readonly TagId[], count: number): TagI
   return rng.shuffle(tags).slice(0, Math.min(count, tags.length));
 }
 
-function clampAppealVector(
-  appealVector: Record<TagId, number>,
-  stampedTags: ReadonlySet<TagId>
-): Record<TagId, number> {
-  return Object.fromEntries(
-    Object.entries(appealVector).map(([tag, value]) => {
-      if (stampedTags.has(tag)) {
-        return [tag, value];
-      }
-
-      return [tag, Math.max(-2, Math.min(2, value))];
-    })
-  ) as Record<TagId, number>;
-}
-
 function buildTargetedAppealVector(
   rng: SeededRng,
   allTags: readonly TagId[],
@@ -104,7 +129,8 @@ function buildTargetedAppealVector(
     allTags.map((tag) => [tag, stampedTags.has(tag) ? 1 : randomDiscreteAppealValue(rng)])
   ) as Record<TagId, number>;
 
-  return clampAppealVector(appealVector, stampedTags);
+  const adjustableTags = allTags.filter((tag) => !stampedTags.has(tag));
+  return clampRandomPortionTowardZero(rng, appealVector, adjustableTags);
 }
 
 function buildRandomAppealVector(
@@ -112,7 +138,7 @@ function buildRandomAppealVector(
   allTags: readonly TagId[]
 ): Record<TagId, number> {
   const appealVector = Object.fromEntries(allTags.map((tag) => [tag, randomDiscreteAppealValue(rng)])) as Record<TagId, number>;
-  return clampAppealVector(appealVector, new Set());
+  return clampRandomPortionTowardZero(rng, appealVector, allTags);
 }
 
 function makeSeedTasteCohort(cohort: CohortAnchor, allTags: readonly TagId[]): HiddenTasteCohort {

@@ -27,7 +27,8 @@ function buildBootstrap(seed = 24680) {
     allTags: dataset.allTags,
     latentUsers: dataset.users,
     cohorts: dataset.cohorts,
-    islands: dataset.islands
+    islands: dataset.islands,
+    hiddenTasteCohorts: dataset.hiddenTasteCohorts
   };
 }
 
@@ -47,7 +48,8 @@ function buildSingleUserBootstrap(seed = 13579) {
     allTags: dataset.allTags,
     latentUsers: dataset.users,
     cohorts: dataset.cohorts,
-    islands: dataset.islands
+    islands: dataset.islands,
+    hiddenTasteCohorts: dataset.hiddenTasteCohorts
   };
 }
 
@@ -115,6 +117,14 @@ describe('simulation layer', () => {
     expect(firstEvent).toBeTruthy();
     expect(firstEvent?.turn).toBe(0);
     expect(Object.values(firstEvent?.raterSignalWeights ?? {}).every((weight) => weight === 1)).toBe(true);
+  });
+
+  it('preserves the full generated hidden taste cohort set in initial simulation state', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+
+    expect(state.hiddenTasteCohorts).toHaveLength(bootstrap.hiddenTasteCohorts.length);
+    expect(state.hiddenTasteCohorts.map((cohort) => cohort.id)).toEqual(bootstrap.hiddenTasteCohorts.map((cohort) => cohort.id));
   });
 
   it('advances organic turns and only adds previously unrated pairs', () => {
@@ -285,10 +295,16 @@ describe('simulation layer', () => {
       customMinimumPredictedFit: -1
     });
     const secondEvent = secondTurn.ratingEvents.at(-1);
+    const firstProfile = firstTurn.raterSignalProfiles.get(firstEvent?.userId ?? '');
+    const trackedCohortId =
+      firstProfile?.topCohortId ??
+      Object.entries(firstProfile?.cohortWeights ?? {}).find(([, weight]) => weight > 0)?.[0] ??
+      null;
 
     expect(secondEvent).toBeTruthy();
     expect(secondTurn.raterSignalProfiles.get(secondEvent?.userId ?? '')?.overallSignal ?? 0).toBeGreaterThan(0);
-    expect(secondEvent?.raterSignalWeights[bootstrap.cohorts[0].id] ?? 0).toBeGreaterThanOrEqual(0);
+    expect(trackedCohortId).toBeTruthy();
+    expect(secondEvent?.raterSignalWeights[trackedCohortId ?? ''] ?? 0).toBe(firstProfile?.cohortWeights[trackedCohortId ?? ''] ?? 0);
 
     expect(secondTurn.islandAffinityReports.get(secondEvent?.islandId ?? '')).toBeTruthy();
   });
