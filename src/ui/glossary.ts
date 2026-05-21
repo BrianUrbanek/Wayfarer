@@ -169,9 +169,9 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Confidence Snapshot',
     shortDefinition: 'Baseline island/cohort confidence at an update boundary.',
     fullDefinition:
-      'A stored or derived baseline state for an island/cohort read before processing a bounded group of evidence events. In Wayfarer, turns can serve as the snapshot boundary; in production, snapshots could be scheduled, threshold-triggered, or island-local. Rating Event Weight should eventually be calculated against the confidence snapshot for the update window in which the rating was processed.',
-    scope: 'future-facing',
-    implementedStatus: 'future',
+      'A stored baseline state for an island/cohort read at a turn boundary. Wayfarer currently stores post-turn confidence snapshots in simulation state and exports so growth can be inspected after import. Pre-turn event-weight snapshots remain future work and can still use the same boundary model later.',
+    scope: 'analyst-facing',
+    implementedStatus: 'partial',
     relatedTerms: ['island-confidence', 'rating-event-weight']
   },
   {

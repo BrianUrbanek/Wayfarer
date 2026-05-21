@@ -9,6 +9,8 @@ import {
   advancePolicyTurn,
   createInitialSimulationState,
   deriveVisibleUsersFromEvents,
+  hydrateSimulationState,
+  serializeSimulationState,
   type RatingEvent
 } from '../../model/simulation.js';
 
@@ -70,6 +72,8 @@ describe('simulation layer', () => {
 
     assert.equal(state.currentTurn, 0);
     assert.equal(state.ratingEvents.length, 0);
+    assert.equal(state.confidenceSnapshots.length, state.islands.length * state.cohorts.length);
+    assert.equal(state.confidenceSnapshots.every((snapshot) => snapshot.turn === 0), true);
     assert.equal(
       state.users.every((user) => Object.values(user.ratings).every((rating) => rating === null)),
       true
@@ -121,6 +125,12 @@ describe('simulation layer', () => {
       assert.equal(before?.ratings[event.islandId] ?? null, null);
       assert.equal(after?.ratings[event.islandId] ?? null, event.rating);
     }
+
+    const turnZeroSnapshots = next.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0);
+    const turnOneSnapshots = next.confidenceSnapshots.filter((snapshot) => snapshot.turn === 1);
+
+    assert.equal(turnZeroSnapshots.length, state.islands.length * state.cohorts.length);
+    assert.equal(turnOneSnapshots.length, state.islands.length * state.cohorts.length);
   });
 
   it('keeps organic turn events marked as organic', () => {
@@ -249,6 +259,7 @@ describe('simulation layer', () => {
     assert.equal(secondTurn.currentTurn, 2);
     assert.ok(secondTurn.ratingEvents.length > firstTurn.ratingEvents.length);
     assert.equal(secondTurn.turnHistory.length, 3);
+    assert.equal(secondTurn.confidenceSnapshots.filter((snapshot) => snapshot.turn === 2).length, bootstrap.islands.length * bootstrap.cohorts.length);
   });
 
   it('derives rater signal profiles and island affinity reports from sparse turns', () => {
@@ -272,6 +283,21 @@ describe('simulation layer', () => {
 
     assert.equal(next.raterSignalProfiles.size, next.users.length);
     assert.equal(next.islandAffinityReports.size, next.islands.length);
+  });
+
+  it('round-trips confidence snapshots through serialization and hydrates legacy saves without them', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 2 });
+    const serialized = serializeSimulationState(state);
+    const restored = hydrateSimulationState(serialized);
+    const legacyRestored = hydrateSimulationState({
+      ...serialized,
+      confidenceSnapshots: undefined
+    });
+
+    assert.equal(serialized.confidenceSnapshots?.length, state.confidenceSnapshots.length);
+    assert.deepEqual(restored.confidenceSnapshots, state.confidenceSnapshots);
+    assert.deepEqual(legacyRestored.confidenceSnapshots, state.confidenceSnapshots);
   });
 
   it('lags affinity weighting behind same-turn signal updates', () => {

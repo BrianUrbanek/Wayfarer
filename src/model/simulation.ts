@@ -44,6 +44,16 @@ export interface RatingEvent {
   readonly raterSignalWeights: Record<CohortId, number>;
 }
 
+export interface IslandCohortConfidenceSnapshot {
+  turn: number;
+  islandId: IslandId;
+  cohortId: CohortId;
+  affinity: number;
+  confidence: number;
+  effectiveWeight: number;
+  rawCount: number;
+}
+
 export interface SimulationTurnSummary {
   turn: number;
   mode: 'organic' | 'guided' | 'mixed';
@@ -66,6 +76,7 @@ export interface SimulationState {
   cohorts: CohortAnchor[];
   islands: Island[];
   ratingEvents: RatingEvent[];
+  confidenceSnapshots: IslandCohortConfidenceSnapshot[];
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>;
   raterSignalProfiles: ReadonlyMap<UserId, RaterSignalProfile>;
   islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>;
@@ -82,6 +93,7 @@ export interface SerializedSimulationState {
   cohorts: CohortAnchor[];
   islands: Island[];
   ratingEvents: RatingEvent[];
+  confidenceSnapshots?: IslandCohortConfidenceSnapshot[];
   turnHistory: SimulationTurnSummary[];
 }
 
@@ -145,6 +157,46 @@ function buildSignalWeightSnapshot(
 
 function buildBootstrapSignalWeightSnapshot(cohorts: readonly CohortAnchor[]): Record<CohortId, number> {
   return Object.fromEntries(cohorts.map((cohort) => [cohort.id, 1])) as Record<CohortId, number>;
+}
+
+function cloneConfidenceSnapshot(snapshot: IslandCohortConfidenceSnapshot): IslandCohortConfidenceSnapshot {
+  return { ...snapshot };
+}
+
+function buildConfidenceSnapshots(
+  latentUsers: readonly User[],
+  cohorts: readonly CohortAnchor[],
+  islands: readonly Island[],
+  ratingEvents: readonly RatingEvent[],
+  turnHistory: readonly SimulationTurnSummary[],
+  allTags: readonly TagId[]
+): IslandCohortConfidenceSnapshot[] {
+  const uniqueTurns = Array.from(new Set(turnHistory.map((summary) => summary.turn))).sort((left, right) => left - right);
+  const snapshots: IslandCohortConfidenceSnapshot[] = [];
+
+  for (const turn of uniqueTurns) {
+    const turnEvents = ratingEvents.filter((event) => event.turn <= turn);
+    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents);
+    const inferenceByUserId = computeInferenceMap(visibleUsers, cohorts, islands, allTags);
+    const signalAnalysis = buildRaterSignalProfiles(visibleUsers, inferenceByUserId, cohorts);
+    const affinityAnalysis = buildIslandAffinityReports(turnEvents, signalAnalysis.byUserId, cohorts, islands);
+
+    for (const report of affinityAnalysis.allReports) {
+      for (const estimate of report.estimates) {
+        snapshots.push({
+          turn,
+          islandId: report.islandId,
+          cohortId: estimate.cohortId,
+          affinity: estimate.affinity,
+          confidence: estimate.confidence,
+          effectiveWeight: estimate.effectiveWeight,
+          rawCount: estimate.rawCount
+        });
+      }
+    }
+  }
+
+  return snapshots;
 }
 
 export function deriveVisibleUsersFromEvents(
@@ -300,7 +352,8 @@ function recomputeState(
   islands: readonly Island[],
   ratingEvents: readonly RatingEvent[],
   turnHistory: readonly SimulationTurnSummary[],
-  allTags: readonly TagId[]
+  allTags: readonly TagId[],
+  confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
   const users = deriveVisibleUsersFromEvents(latentUsers, islands, ratingEvents);
   const inferenceByUserId = computeInferenceMap(
@@ -355,7 +408,10 @@ function recomputeState(
       ...summary,
       participatingUserIds: summary.participatingUserIds.slice(),
       newlyRatedIslandIds: summary.newlyRatedIslandIds.slice()
-    }))
+    })),
+    confidenceSnapshots: confidenceSnapshots
+      ? confidenceSnapshots.map((snapshot) => cloneConfidenceSnapshot(snapshot))
+      : buildConfidenceSnapshots(latentUsers, cohorts, islands, ratingEvents, turnHistory, allTags)
   };
 }
 
@@ -382,6 +438,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       ...event,
       raterSignalWeights: { ...event.raterSignalWeights }
     })),
+    confidenceSnapshots: state.confidenceSnapshots.map((snapshot) => ({ ...snapshot })),
     turnHistory: state.turnHistory.map((summary) => ({
       ...summary,
       participatingUserIds: summary.participatingUserIds.slice(),
@@ -394,6 +451,8 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
 }
 
 export function hydrateSimulationState(snapshot: SerializedSimulationState): SimulationState {
+  const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
+
   return recomputeState(
     snapshot.seed,
     snapshot.latentUsers,
@@ -401,7 +460,8 @@ export function hydrateSimulationState(snapshot: SerializedSimulationState): Sim
     snapshot.islands,
     snapshot.ratingEvents,
     snapshot.turnHistory,
-    snapshot.allTags
+    snapshot.allTags,
+    normalizedSnapshots
   );
 }
 

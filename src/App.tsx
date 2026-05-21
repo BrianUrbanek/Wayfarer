@@ -57,7 +57,9 @@ import {
   type TurnMode
 } from './model/turnPolicy';
 import { buildDataFitnessSummary } from './model/dataFitness';
+import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
 import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
+import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { DEFAULT_TAGS } from './data/defaultTags';
@@ -568,6 +570,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     [dataset.users.length, inferenceTypes, dataset.pseudoCohortAnalysis.allReports.length]
   );
   const systemHealthSummary = useMemo(() => buildSystemHealthSummary(dataset), [dataset]);
+  const confidenceGrowthRows = useMemo(() => buildConfidenceGrowthRows(dataset), [dataset]);
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
   const effectiveRoutingValues = useMemo(
@@ -2198,7 +2201,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           summary={systemHealthSummary}
           showConfidenceSeries={showConfidenceSeries}
           onToggleSeries={(key) => setShowConfidenceSeries((current) => ({ ...current, [key]: !current[key] }))}
-        />
+        />,
+        <ConfidenceGrowthPanel key="confidence-growth" rows={confidenceGrowthRows} />
       ]
     },
     recovery: {

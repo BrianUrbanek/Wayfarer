@@ -1,5 +1,5 @@
 import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
-import type { AdvancePolicyTurnConfig, SimulationState, SimulationTurnSummary, RatingEvent, SerializedSimulationState } from './simulation.js';
+import type { AdvancePolicyTurnConfig, IslandCohortConfidenceSnapshot, SimulationState, SimulationTurnSummary, RatingEvent, SerializedSimulationState } from './simulation.js';
 import { hydrateSimulationState, serializeSimulationState } from './simulation.js';
 import type { ScenarioPresetMetadata } from './scenarioPresets.js';
 import type { CohortAnchor, Island, IslandClass, User } from './types.js';
@@ -64,6 +64,22 @@ function isMaybeRating(value: unknown): value is -1 | 0 | 1 | null {
 
 function isRatingWeights(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every(isNumber);
+}
+
+function validateConfidenceSnapshot(value: unknown): value is IslandCohortConfidenceSnapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isNumber(value.turn) &&
+    isString(value.islandId) &&
+    isString(value.cohortId) &&
+    isNumber(value.affinity) &&
+    isNumber(value.confidence) &&
+    isNumber(value.effectiveWeight) &&
+    isNumber(value.rawCount)
+  );
 }
 
 function validateUser(value: unknown): value is User {
@@ -194,6 +210,12 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (!value.ratingEvents.every(validateRatingEvent) || !value.turnHistory.every(validateTurnSummary)) {
     return false;
+  }
+
+  if (value.confidenceSnapshots !== undefined) {
+    if (!Array.isArray(value.confidenceSnapshots) || !value.confidenceSnapshots.every(validateConfidenceSnapshot)) {
+      return false;
+    }
   }
 
   return true;
