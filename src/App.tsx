@@ -18,6 +18,7 @@ import { AboutGlossaryContent } from './ui/components/AboutGlossaryContent';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
 import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
 import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEvidenceSummary';
+import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -44,7 +45,6 @@ import {
 } from './ui/dashboardGuidance';
 import {
   DEFAULT_TURN_POLICY,
-  describeRoutingRiskProfile,
   getTurnModeVisibility,
   PARTICIPATION_MODEL_LABELS,
   RATING_COUNT_MODEL_LABELS,
@@ -64,6 +64,7 @@ import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
 import type { CohortAffinityEstimate } from './model/affinity';
+import { buildUserDeprioritizationAnalysis } from './model/deprioritization';
 import { deriveRatingEventWeightsForIsland } from './model/ratingEventWeight';
 import type { PseudoCohortReport } from './model/pseudoCohorts';
 import { archetypeLabel } from './model/reviewerArchetypes';
@@ -601,6 +602,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     ).recommendations;
   }, [dataset.islandAffinityReports, dataset.islands, dataset.raterSignalProfiles, routingOptions, selectedUser]);
 
+  const selectedUserDeprioritization = useMemo(() => {
+    if (!selectedUser) {
+      return [];
+    }
+
+    return buildUserDeprioritizationAnalysis(
+      selectedUser,
+      dataset.islandAffinityReports,
+      selectedRaterSignalProfile ?? undefined,
+      dataset.islands,
+      { topLimit: routingOptions.topLimit }
+    ).rows;
+  }, [dataset.islandAffinityReports, dataset.islands, routingOptions.topLimit, selectedRaterSignalProfile, selectedUser]);
+
   const eligibleRecommendationUsers = useMemo(() => {
     return dataset.users.filter((user) => {
       const recommendations = recommendIslandsForUser(
@@ -940,32 +955,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   ];
 
 
-  const recommendationColumns: ReportTableColumn<IslandRecommendation>[] = [
-    {
-      key: 'island',
-      label: 'Island',
-      render: (row) => (
-        <div className="table-cell-stack">
-          <strong>{dataset.islands.find((island) => island.id === row.islandId)?.label ?? row.islandId}</strong>
-          <span className="muted">{row.explanation}</span>
-        </div>
-      )
-    },
-    {
-      key: 'kind',
-      label: 'Kind',
-      render: (row) => <Badge tone={row.recommendationKind === 'SAFE_FIT' ? 'success' : 'warning'}>{row.recommendationKind === 'SAFE_FIT' ? 'Safe fit' : 'Discovery probe'}</Badge>,
-      align: 'center'
-    },
-    {
-      key: 'fit',
-      label: 'Predicted fit',
-      render: (row) => <ProgressBar value={(row.predictedFit + 1) / 2} label={formatSignedDecimal(row.predictedFit)} tone={row.predictedFit >= 0 ? 'success' : 'danger'} />
-    },
-    { key: 'support', label: 'Support', render: (row) => formatPercent(row.affinitySupport), align: 'right' },
-    { key: 'discovery', label: 'Discovery', render: (row) => formatPercent(row.discoveryValue), align: 'right' },
-    { key: 'score', label: 'Score', render: (row) => formatDecimal(row.recommendationScore), align: 'right' }
-  ];  const selectedReviewerReport = drawerState?.type === 'reviewer'
+  const selectedReviewerReport = drawerState?.type === 'reviewer'
     ? reviewerReportRows.find((report) => report.userId === drawerState.userId) ?? null
     : null;
 
@@ -1130,45 +1120,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     />
   ) : null;
   const discoveryRoutingSummary = selectedUser ? (
-    <div className="stack">
-      <div className="metric-grid metric-grid--compact">
-        <MetricCard
-          label="Routing mode"
-          value={visibleTurnModeLabel}
-          helper="Recommendations only route unrated islands, then the next turn updates the event log."
-          tone={turnMode === 'guided' ? 'accent' : 'neutral'}
-        />
-        <MetricCard
-          label="Routing profile"
-          value={ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}
-          helper={describeRoutingRiskProfile(routingRiskProfile, DEFAULT_TURN_POLICY.customRoutingValues)}
-        />
-        <MetricCard
-          label="Exploration weight"
-          value={formatDecimal(effectiveRoutingValues.explorationWeight, 2)}
-          helper="How much discovery value can influence the final route score."
-        />
-        <MetricCard
-          label="Minimum predicted fit"
-          value={formatDecimal(effectiveRoutingValues.minimumPredictedFit, 2)}
-          helper="Safety gate for guided routing."
-        />
-        <MetricCard
-          label="Guided recommendations / user"
-          value={guidedRecommendationsPerUser}
-          helper="How many unrated islands each participating user can receive per guided turn."
-        />
-      </div>
-
-      <ReportTable
-        columns={recommendationColumns}
-        rows={selectedUserRecommendations}
-        getRowKey={(row) => row.islandId}
-        onRowClick={(row) => setDrawerState({ type: 'recommendation', userId: selectedUser.id, islandId: row.islandId })}
-        emptyTitle="No unrated recommendations"
-        emptyDescription="The current user has no unrated islands that clear the minimum predicted fit."
-      />
-    </div>
+    <DiscoveryRoutingSummary
+      selectedUserLabel={selectedUser.label}
+      routingModeLabel={visibleTurnModeLabel}
+      routingProfileLabel={ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}
+      explorationWeight={effectiveRoutingValues.explorationWeight}
+      minimumPredictedFit={effectiveRoutingValues.minimumPredictedFit}
+      guidedRecommendationsPerUser={guidedRecommendationsPerUser}
+      recommendations={selectedUserRecommendations}
+      deprioritizationRows={selectedUserDeprioritization}
+      islandLabelForId={(islandId) => dataset.islands.find((island) => island.id === islandId)?.label ?? islandId}
+      onInspectRecommendation={(row) => setDrawerState({ type: 'recommendation', userId: selectedUser.id, islandId: row.islandId })}
+    />
   ) : (
     <EmptyState title="Select a user" description="Discovery routing appears once a user is selected." />
   );

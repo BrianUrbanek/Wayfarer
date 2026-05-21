@@ -15,6 +15,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Rater trust profile (internal)');
     expect(html).toContain('Cohort-local island affinity');
     expect(html).toContain('Discovery Routing');
+    expect(html).toContain('Deprioritized for selected user');
     expect(html).toContain('Reviewer Archetype Recovery');
     expect(html).toContain('Turn Summary');
     expect(html).toContain('Novice');
