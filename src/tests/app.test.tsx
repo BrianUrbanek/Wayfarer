@@ -12,7 +12,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Scenario setup');
     expect(html).toContain('Population Summary');
     expect(html).toContain('Selected User Summary');
-    expect(html).toContain('Rater signal profile');
+    expect(html).toContain('Rater trust profile (internal)');
     expect(html).toContain('Cohort-local island affinity');
     expect(html).toContain('Discovery Routing');
     expect(html).toContain('Reviewer Archetype Recovery');

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRaterSignalProfiles } from '../../model/raterSignal.js';
+import { buildRaterSignalProfiles, buildRaterTrustProfiles } from '../../model/raterSignal.js';
 import { computeInference } from '../../model/inference.js';
 import type { CohortAnchor, Island, MaybeRating, User } from '../../model/types.js';
 
@@ -150,5 +150,21 @@ describe('rater signal profiles', () => {
     assert.ok(profile);
     assert.equal(profile.cohortWeights[cohortA.id], 0);
     assert.ok((profile.cohortWeights[cohortB.id] ?? 0) > 0);
+  });
+
+  it('maps trust adapter values 1:1 from signal profiles', () => {
+    const user = buildUser('user-trust', 'Trust User', cohortA.tags, { ...cohortA.ratings }, cohortA.id, 10, 10);
+    const inference = computeInference(user, fixture.cohorts, fixture.allTags, fixture.islands);
+    const signal = buildRaterSignalProfiles([user], new Map([[user.id, inference]]), fixture.cohorts).byUserId.get(user.id);
+    const trust = buildRaterTrustProfiles([user], new Map([[user.id, inference]]), fixture.cohorts).byUserId.get(user.id);
+
+    assert.ok(signal);
+    assert.ok(trust);
+    assert.equal(trust.overallTrust, signal.overallSignal);
+    assert.equal(trust.trustEvidence, signal.signalEvidence);
+    assert.equal(trust.topTrustedCohortId, signal.topCohortId);
+    assert.deepEqual(trust.cohortTrustWeights, signal.cohortWeights);
+    assert.deepEqual(trust.cohortEvidence, signal.cohortEvidence);
+    assert.deepEqual(trust.cohortSimilarities, signal.cohortSimilarities);
   });
 });
