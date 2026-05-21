@@ -90,7 +90,7 @@ export function buildPrimarySignalSummary(inference: InferenceAnalysis): UserSig
   return {
     kind: 'weak',
     titleKey: 'weak',
-    message: 'Weak signal: this profile should contribute lightly until more evidence accumulates.',
+    message: 'Weak behavior read: this profile should contribute lightly until more evidence accumulates.',
     showSecondaryInverse: false
   };
 }
