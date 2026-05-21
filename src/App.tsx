@@ -58,6 +58,7 @@ import {
 } from './model/turnPolicy';
 import { buildDataFitnessSummary } from './model/dataFitness';
 import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
+import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
 import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
@@ -619,6 +620,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     ).rows;
   }, [dataset.islandAffinityReports, dataset.islands, routingOptions.topLimit, selectedRaterSignalProfile, selectedUser]);
 
+  const observedBehaviorAnalysis = useMemo(() => buildObservedBehaviorAnalysis(dataset.observedBehaviorEvents), [dataset.observedBehaviorEvents]);
+
   const eligibleRecommendationUsers = useMemo(() => {
     return dataset.users.filter((user) => {
       const recommendations = recommendIslandsForUser(
@@ -732,6 +735,22 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
     return deriveRatingEventWeightsForIsland(selectedIsland.id, dataset.ratingEvents, selectedIslandAffinityReport ?? undefined);
   }, [dataset.ratingEvents, selectedIsland, selectedIslandAffinityReport]);
+
+  const selectedIslandObservedBehaviorRows = useMemo(() => {
+    if (!selectedIsland) {
+      return [];
+    }
+
+    return buildObservedBehaviorRowsForIsland(selectedIsland.id, dataset.observedBehaviorEvents);
+  }, [dataset.observedBehaviorEvents, selectedIsland]);
+
+  const selectedIslandObservedBehaviorSummary = useMemo(() => {
+    if (!selectedIsland) {
+      return null;
+    }
+
+    return observedBehaviorAnalysis.byIslandId.get(selectedIsland.id) ?? null;
+  }, [observedBehaviorAnalysis.byIslandId, selectedIsland]);
 
   const selectedAffinityDetail =
     drawerState?.type === 'affinity'
@@ -1214,6 +1233,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <SelectedIslandEvidenceSummary
         confidenceRadarData={confidenceRadarData}
         ratingEventWeightRows={selectedIslandEventWeightRows}
+        observedBehaviorRows={selectedIslandObservedBehaviorRows}
+        observedBehaviorSummary={selectedIslandObservedBehaviorSummary}
+        islandLabel={selectedIsland.label}
       />
     </div>
   ) : null;
@@ -1272,6 +1294,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Debug</h4>
         <p>Hidden seed: {selectedUser.hiddenSeedCohortId ? cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}</p>
+        <p>Hidden behavior profile: {selectedUser.hiddenBehaviorProfile ?? 'n/a'}</p>
         <p>Tag alignment: {selectedUser.hiddenTagAlignment ?? 'n/a'}</p>
         <p>Rating alignment: {selectedUser.hiddenRatingAlignment ?? 'n/a'}</p>
       </section>
@@ -2109,6 +2132,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       { id: 'turn-summary', label: 'Turn Summary' },
       { id: 'population-summary', label: 'Population Summary' },
       { id: 'system-health', label: 'System Health' },
+      { id: 'confidence-growth', label: 'Confidence Growth' },
       { id: 'selected-user-summary', label: 'Selected User Summary' },
       { id: 'reviewer-archetype-recovery', label: 'Reviewer Archetype Recovery' },
       { id: 'discovery-routing', label: 'Recommended Unrated Islands' },
@@ -2310,6 +2334,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   <MetricCard
                     label="Hidden tag alignment"
                     value={selectedUser.hiddenTagAlignment ?? 'n/a'}
+                    helper="Debug and validation only."
+                  />
+                  <MetricCard
+                    label="Hidden behavior profile"
+                    value={selectedUser.hiddenBehaviorProfile ?? 'n/a'}
                     helper="Debug and validation only."
                   />
                   <MetricCard

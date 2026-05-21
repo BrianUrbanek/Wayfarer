@@ -16,6 +16,7 @@ export type ReviewerArchetype =
 
 export type Rating = -1 | 0 | 1;
 export type MaybeRating = Rating | null;
+export type HiddenBehaviorProfile = 'aligned' | 'positive-drift' | 'negative-drift';
 
 export type IslandClass =
   | 'BROAD_HIT'
@@ -48,6 +49,7 @@ export interface User {
   hiddenSeedCohortId?: CohortId;
   hiddenDeclaredCohortId?: CohortId;
   hiddenBehaviorCohortId?: CohortId;
+  hiddenBehaviorProfile?: HiddenBehaviorProfile;
   hiddenTagAlignment?: number;
   hiddenRatingAlignment?: number;
   hiddenReviewerArchetype?: ReviewerArchetype;

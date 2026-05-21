@@ -66,6 +66,10 @@ function isRatingWeights(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every(isNumber);
 }
 
+function isHiddenBehaviorProfile(value: unknown): value is 'aligned' | 'positive-drift' | 'negative-drift' {
+  return value === 'aligned' || value === 'positive-drift' || value === 'negative-drift';
+}
+
 function validateConfidenceSnapshot(value: unknown): value is IslandCohortConfidenceSnapshot {
   if (!isRecord(value)) {
     return false;
@@ -92,6 +96,10 @@ function validateUser(value: unknown): value is User {
   }
 
   if (!Object.values(value.ratings).every(isMaybeRating)) {
+    return false;
+  }
+
+  if (value.hiddenBehaviorProfile !== undefined && !isHiddenBehaviorProfile(value.hiddenBehaviorProfile)) {
     return false;
   }
 
@@ -160,6 +168,28 @@ function validateRatingEvent(value: unknown): value is RatingEvent {
   return true;
 }
 
+function validateObservedBehaviorEvent(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isString(value.id) &&
+    isNumber(value.turn) &&
+    isString(value.userId) &&
+    isString(value.islandId) &&
+    (value.kind === 'qualified-play' ||
+      value.kind === 'completion' ||
+      value.kind === 'replay' ||
+      value.kind === 'return' ||
+      value.kind === 'bounce' ||
+      value.kind === 'abandon') &&
+    isNumber(value.value) &&
+    isString(value.sourceRatingEventId) &&
+    (value.sourceRatingEventSource === undefined || isString(value.sourceRatingEventSource))
+  );
+}
+
 function validateTurnSummary(value: unknown): value is SimulationTurnSummary {
   if (!isRecord(value)) {
     return false;
@@ -210,6 +240,12 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (!value.ratingEvents.every(validateRatingEvent) || !value.turnHistory.every(validateTurnSummary)) {
     return false;
+  }
+
+  if (value.observedBehaviorEvents !== undefined) {
+    if (!Array.isArray(value.observedBehaviorEvents) || !value.observedBehaviorEvents.every(validateObservedBehaviorEvent)) {
+      return false;
+    }
   }
 
   if (value.confidenceSnapshots !== undefined) {

@@ -2,6 +2,10 @@ import { analyzePseudoCohorts, type PseudoCohortAnalysis } from './pseudoCohorts
 import { analyzeReviewerArchetypes, type ReviewerArchetypeAnalysis } from './reviewerArchetypes.js';
 import { computeInference } from './inference.js';
 import { buildIslandAffinityReports, type IslandAffinityReport } from './affinity.js';
+import {
+  buildObservedBehaviorEvents,
+  type ObservedBehaviorEvent
+} from './observedBehavior.js';
 import { buildRaterSignalProfiles, type RaterSignalProfile } from './raterSignal.js';
 import {
   recommendIslandsForUser,
@@ -76,6 +80,7 @@ export interface SimulationState {
   cohorts: CohortAnchor[];
   islands: Island[];
   ratingEvents: RatingEvent[];
+  observedBehaviorEvents: ObservedBehaviorEvent[];
   confidenceSnapshots: IslandCohortConfidenceSnapshot[];
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>;
   raterSignalProfiles: ReadonlyMap<UserId, RaterSignalProfile>;
@@ -93,6 +98,7 @@ export interface SerializedSimulationState {
   cohorts: CohortAnchor[];
   islands: Island[];
   ratingEvents: RatingEvent[];
+  observedBehaviorEvents?: ObservedBehaviorEvent[];
   confidenceSnapshots?: IslandCohortConfidenceSnapshot[];
   turnHistory: SimulationTurnSummary[];
 }
@@ -161,6 +167,10 @@ function buildBootstrapSignalWeightSnapshot(cohorts: readonly CohortAnchor[]): R
 
 function cloneConfidenceSnapshot(snapshot: IslandCohortConfidenceSnapshot): IslandCohortConfidenceSnapshot {
   return { ...snapshot };
+}
+
+function cloneObservedBehaviorEvent(event: ObservedBehaviorEvent): ObservedBehaviorEvent {
+  return { ...event };
 }
 
 function buildConfidenceSnapshots(
@@ -353,6 +363,7 @@ function recomputeState(
   ratingEvents: readonly RatingEvent[],
   turnHistory: readonly SimulationTurnSummary[],
   allTags: readonly TagId[],
+  observedBehaviorEvents?: readonly ObservedBehaviorEvent[],
   confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
   const users = deriveVisibleUsersFromEvents(latentUsers, islands, ratingEvents);
@@ -399,6 +410,9 @@ function recomputeState(
       hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined
     })),
     ratingEvents: ratingEvents.map((event) => ({ ...event })),
+    observedBehaviorEvents: observedBehaviorEvents
+      ? observedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event))
+      : buildObservedBehaviorEvents(ratingEvents, latentUsers, seed),
     inferenceByUserId,
     raterSignalProfiles: raterSignalAnalysis.byUserId,
     islandAffinityReports: islandAffinityAnalysis.byIslandId,
@@ -438,6 +452,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       ...event,
       raterSignalWeights: { ...event.raterSignalWeights }
     })),
+    observedBehaviorEvents: state.observedBehaviorEvents.map((event) => ({ ...event })),
     confidenceSnapshots: state.confidenceSnapshots.map((snapshot) => ({ ...snapshot })),
     turnHistory: state.turnHistory.map((summary) => ({
       ...summary,
@@ -451,6 +466,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
 }
 
 export function hydrateSimulationState(snapshot: SerializedSimulationState): SimulationState {
+  const normalizedObservedBehaviorEvents = snapshot.observedBehaviorEvents?.map((entry) => ({ ...entry }));
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
 
   return recomputeState(
@@ -461,6 +477,7 @@ export function hydrateSimulationState(snapshot: SerializedSimulationState): Sim
     snapshot.ratingEvents,
     snapshot.turnHistory,
     snapshot.allTags,
+    normalizedObservedBehaviorEvents,
     normalizedSnapshots
   );
 }
@@ -754,6 +771,9 @@ export function advancePolicyTurn(
         );
   const newEvents = organicEvents.concat(guided.events);
   const nextEvents = state.ratingEvents.concat(newEvents);
+  const nextObservedBehaviorEvents = state.observedBehaviorEvents.concat(
+    buildObservedBehaviorEvents(newEvents, state.latentUsers, state.seed)
+  );
   const nextHistory = state.turnHistory.slice();
   const participatingUserIds = Array.from(new Set(selectedUsers.map((user) => user.id))).sort();
 
@@ -780,6 +800,7 @@ export function advancePolicyTurn(
     state.islands,
     nextEvents,
     nextHistory,
-    state.allTags
+    state.allTags,
+    nextObservedBehaviorEvents
   );
 }

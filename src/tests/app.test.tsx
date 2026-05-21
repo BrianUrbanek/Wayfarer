@@ -84,6 +84,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Bootstrap Ratings / User');
     expect(html).toContain('Tag Alignment');
     expect(html).toContain('Rating Alignment');
+    expect(html).toContain('Hidden behavior profile');
     expect(html).toContain('Turn Mode');
     expect(html).toContain('Participation Model');
     expect(html).toContain('Turns to Run');

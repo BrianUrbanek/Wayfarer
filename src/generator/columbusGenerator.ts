@@ -1,6 +1,7 @@
 import type {
   CohortAnchor,
   CohortId,
+  HiddenBehaviorProfile,
   Island,
   IslandClass,
   TagId,
@@ -68,7 +69,14 @@ function userId(index: number): string {
   return `user-${index + 1}`;
 }
 
+function chooseHiddenBehaviorProfile(seed: number, index: number): HiddenBehaviorProfile {
+  const profiles: HiddenBehaviorProfile[] = ['aligned', 'positive-drift', 'negative-drift'];
+  const mixed = Math.imul(seed >>> 0, 1103515245) ^ Math.imul(index + 1, 12345);
+  return profiles[Math.abs(mixed) % profiles.length];
+}
+
 function buildUser(
+  seed: number,
   index: number,
   allTags: readonly TagId[],
   cohorts: CohortAnchor[],
@@ -78,6 +86,7 @@ function buildUser(
   const hiddenSeedCohort = chooseSeedCohort(cohorts, index);
   const hiddenReviewerArchetype = REVIEWER_ARCHETYPES[index % REVIEWER_ARCHETYPES.length];
   const profile = buildReviewerArchetypeProfile(cohorts, index, hiddenReviewerArchetype);
+  const hiddenBehaviorProfile = chooseHiddenBehaviorProfile(seed, index);
   const hiddenTagAlignment = profile.tagAlignment;
   const hiddenRatingAlignment = profile.ratingAlignment;
   const declaredAlignment = profile.tagAlignment;
@@ -105,6 +114,7 @@ function buildUser(
     hiddenSeedCohortId: hiddenSeedCohort.id as CohortId,
     hiddenDeclaredCohortId: profile.declaredCohortId,
     hiddenBehaviorCohortId: profile.behaviorCohortId,
+    hiddenBehaviorProfile,
     hiddenTagAlignment,
     hiddenRatingAlignment,
     hiddenReviewerArchetype,
@@ -126,6 +136,7 @@ export function generateColumbusDataset(config: GeneratorConfig): ColumbusDatase
 
   const users = Array.from({ length: config.numUsers }, (_, index) =>
     buildUser(
+      config.seed,
       index,
       allTags,
       cohorts,

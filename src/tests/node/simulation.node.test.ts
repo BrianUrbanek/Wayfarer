@@ -290,14 +290,25 @@ describe('simulation layer', () => {
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 2 });
     const serialized = serializeSimulationState(state);
     const restored = hydrateSimulationState(serialized);
+    const legacyWithoutBehavior = {
+      ...serialized,
+      latentUsers: serialized.latentUsers.map((user) => ({
+        ...user,
+        hiddenBehaviorProfile: undefined
+      })),
+      observedBehaviorEvents: undefined
+    };
     const legacyRestored = hydrateSimulationState({
       ...serialized,
       confidenceSnapshots: undefined
     });
+    const fallbackRestored = hydrateSimulationState(legacyWithoutBehavior);
 
     assert.equal(serialized.confidenceSnapshots?.length, state.confidenceSnapshots.length);
+    assert.equal(serialized.observedBehaviorEvents?.length, state.observedBehaviorEvents.length);
     assert.deepEqual(restored.confidenceSnapshots, state.confidenceSnapshots);
     assert.deepEqual(legacyRestored.confidenceSnapshots, state.confidenceSnapshots);
+    assert.deepEqual(fallbackRestored.observedBehaviorEvents, state.observedBehaviorEvents);
   });
 
   it('lags affinity weighting behind same-turn signal updates', () => {

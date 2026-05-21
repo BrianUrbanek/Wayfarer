@@ -21,6 +21,31 @@ describe('selected island evidence summary', () => {
             directionalContribution: 0.36
           }
         ]}
+        observedBehaviorRows={[
+          {
+            eventId: 'behavior:evt-1',
+            turn: 2,
+            userId: 'user-1',
+            islandId: 'island-1',
+            kind: 'completion',
+            value: 1,
+            sourceRatingEventId: 'evt-1',
+            sourceRatingEventSource: 'organic'
+          }
+        ]}
+        observedBehaviorSummary={{
+          islandId: 'island-1',
+          totalEvents: 1,
+          counts: {
+            qualifiedPlay: 0,
+            completion: 1,
+            replay: 0,
+            return: 0,
+            bounce: 0,
+            abandon: 0
+          }
+        }}
+        islandLabel="Island 1"
       />
     );
 
@@ -29,5 +54,8 @@ describe('selected island evidence summary', () => {
     expect(html).toContain('Historical confidence snapshots are not implemented yet');
     expect(html).toContain('Island confidence by cohort');
     expect(html).toContain('Rating Event Weight');
+    expect(html).toContain('Observed behavior');
+    expect(html).toContain('generated from rating events');
+    expect(html).toContain('Behavior events');
   });
 });

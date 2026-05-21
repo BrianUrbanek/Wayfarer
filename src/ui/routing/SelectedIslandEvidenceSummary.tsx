@@ -1,15 +1,23 @@
 import type { RatingEventWeightRow } from '../../model/ratingEventWeight.js';
 import { IslandConfidenceRadar, type IslandConfidenceRadarDatum } from './IslandConfidenceRadar';
+import { ObservedBehaviorEvidencePanel } from './ObservedBehaviorEvidencePanel';
 import { RatingEventWeightTable, type RatingEventWeightPresentationRow } from './RatingEventWeightTable';
+import type { ObservedBehaviorIslandSummary, ObservedBehaviorRow } from '../../model/observedBehavior';
 
 interface SelectedIslandEvidenceSummaryProps {
   confidenceRadarData: readonly IslandConfidenceRadarDatum[];
   ratingEventWeightRows: readonly RatingEventWeightRow[];
+  observedBehaviorRows: readonly ObservedBehaviorRow[];
+  observedBehaviorSummary: ObservedBehaviorIslandSummary | null;
+  islandLabel: string;
 }
 
 export function SelectedIslandEvidenceSummary({
   confidenceRadarData,
-  ratingEventWeightRows
+  ratingEventWeightRows,
+  observedBehaviorRows,
+  observedBehaviorSummary,
+  islandLabel
 }: SelectedIslandEvidenceSummaryProps) {
   const labeledRows: RatingEventWeightPresentationRow[] = ratingEventWeightRows.map((row) => {
     const match = confidenceRadarData.find((entry) => entry.cohortId === row.cohortId);
@@ -34,6 +42,11 @@ export function SelectedIslandEvidenceSummary({
       <div className="stack">
         <IslandConfidenceRadar data={confidenceRadarData} />
         <RatingEventWeightTable rows={labeledRows} />
+        <ObservedBehaviorEvidencePanel
+          islandLabel={islandLabel}
+          behaviorSummary={observedBehaviorSummary}
+          behaviorRows={observedBehaviorRows}
+        />
       </div>
     </section>
   );
