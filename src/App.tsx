@@ -17,6 +17,7 @@ import { Tray } from './ui/components/Tray';
 import { AboutGlossaryContent } from './ui/components/AboutGlossaryContent';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
 import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
+import { SelectedIslandTruthComparison } from './ui/routing/SelectedIslandTruthComparison';
 import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEvidenceSummary';
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { DistributionList } from './ui/components/DistributionList';
@@ -60,6 +61,7 @@ import { buildDataFitnessSummary } from './model/dataFitness';
 import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
 import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
+import { buildIslandTruthComparison } from './model/islandTruthComparison';
 import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
@@ -570,6 +572,22 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, cohortLabels.full);
   const selectedRaterSignalProfile = selectedUser ? dataset.raterSignalProfiles.get(selectedUser.id) ?? null : null;
   const selectedIslandAffinityReport = selectedIsland ? dataset.islandAffinityReports.get(selectedIsland.id) ?? null : null;
+  const cohortLabelById = useMemo(
+    () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohortLabels.full(cohort.id)])),
+    [dataset.cohorts, cohortLabels]
+  );
+  const selectedIslandTruthComparison = useMemo(() => {
+    if (!selectedIsland) {
+      return null;
+    }
+
+    return buildIslandTruthComparison({
+      island: selectedIsland,
+      affinityReport: selectedIslandAffinityReport,
+      hiddenTasteCohorts: dataset.hiddenTasteCohorts,
+      cohortLabelById
+    });
+  }, [cohortLabelById, dataset.hiddenTasteCohorts, selectedIsland, selectedIslandAffinityReport]);
   const selectedIslandRatingCount = selectedIslandAffinityReport?.estimates[0]?.rawCount ?? 0;
   const selectedIslandEffectiveWeight =
     selectedIslandAffinityReport?.topPositive?.effectiveWeight ??
@@ -1370,12 +1388,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <p>User: {formatRating(selectedComparisonUserRating)}</p>
         <p>Cohort: {formatRating(selectedComparisonCohortRating)}</p>
       </section>
-      <section className="detail-block">
-        <h4>Hidden taste truth</h4>
-        <p>Truth class: {selectedIsland.hiddenTruthClass ?? 'n/a'}</p>
-        <p>Target taste cohort: {selectedIsland.hiddenTargetTasteCohortId ? cohortLabels.full(selectedIsland.hiddenTargetTasteCohortId) : 'none'}</p>
-        <p className="muted">Appeal vector: {summarizeWeightedVector(selectedIsland.hiddenAppealVector)}</p>
-      </section>
+      {selectedIslandTruthComparison ? <SelectedIslandTruthComparison report={selectedIslandTruthComparison} /> : null}
       <section className="detail-block">
         <h4>Cohort affinity</h4>
         <ReportTable

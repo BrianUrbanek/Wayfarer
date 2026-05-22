@@ -2211,6 +2211,33 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.island-truth-comparison {
+  display: grid;
+  gap: 12px;
+}
+
+.island-truth-comparison__title-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.island-truth-comparison__summary,
+.island-truth-comparison__hint {
+  margin: 0;
+}
+
+.truth-comparison-modal {
+  width: min(980px, calc(100vw - 40px));
+}
+
+.truth-comparison-modal__body {
+  gap: 14px;
+}
+
+.truth-comparison-modal .report-table-wrap {
+  max-height: 38vh;
+}
+
 .report-table__row--clickable {
   cursor: pointer;
 }
