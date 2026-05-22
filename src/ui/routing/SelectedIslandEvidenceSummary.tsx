@@ -45,8 +45,9 @@ export function SelectedIslandEvidenceSummary({
           Confidence shows how certain each island/cohort read is, while directional affinity remains the separate fit-polarity read.
         </p>
         <p className="muted">
-          Rating Event Weight uses current-context trust proxy multiplied by current-context leverage (1 - confidence). Historical
-          confidence snapshots are not implemented yet, so leverage is computed from current confidence.
+          Rating Event Weight is shown as a current-context diagnostic: trust proxy multiplied by current uncertainty leverage
+          projected from the island/cohort rating state. Historical snapshots exist for turn-boundary analysis, but this table
+          intentionally shows the current selected-island context.
         </p>
       </div>
       <div className="stack">

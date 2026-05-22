@@ -54,7 +54,7 @@ describe('selected island evidence summary', () => {
 
     expect(html).toContain('Selected island evidence');
     expect(html).toContain('Confidence shows how certain');
-    expect(html).toContain('Historical confidence snapshots are not implemented yet');
+    expect(html).toContain('Historical snapshots exist for turn-boundary analysis');
     expect(html).toContain('Island confidence by cohort');
     expect(html).toContain('Island / Cohort Rating Timeline');
     expect(html).toContain('Island Evidence Constellation');
