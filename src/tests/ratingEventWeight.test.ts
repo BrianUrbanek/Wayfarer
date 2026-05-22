@@ -12,6 +12,7 @@ describe('rating event weight helper', () => {
 
   const baseEvent = {
     id: 'e-1',
+    turn: 0,
     userId: 'u-1',
     islandId: 'i-1',
     rating: 1 as const,
@@ -47,3 +48,4 @@ describe('rating event weight helper', () => {
     expect(second).toEqual(first);
   });
 });
+

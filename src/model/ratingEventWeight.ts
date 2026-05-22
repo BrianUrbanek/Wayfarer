@@ -3,6 +3,7 @@ import type { IslandAffinityReport } from './affinity.js';
 
 export interface RatingEventWeightInputEvent {
   id: string;
+  turn: number;
   userId: UserId;
   islandId: IslandId;
   rating: Rating;
