@@ -232,6 +232,28 @@ function validateObservedBehaviorEvent(value: unknown): boolean {
   );
 }
 
+function validateIslandCohortRatingSnapshot(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isNumber(value.turn) &&
+    isString(value.islandId) &&
+    isString(value.cohortId) &&
+    isNumber(value.rating) &&
+    isNumber(value.ratingDeviation) &&
+    isNumber(value.volatility) &&
+    isNumber(value.affinity) &&
+    isNumber(value.confidence) &&
+    isNumber(value.uncertainty) &&
+    isNumber(value.effectiveWeight) &&
+    isNumber(value.evidenceCount) &&
+    isNumber(value.lastUpdatedTurn) &&
+    value.version === 1
+  );
+}
+
 function validateTurnSummary(value: unknown): value is SimulationTurnSummary {
   if (!isRecord(value)) {
     return false;
@@ -292,6 +314,12 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (value.observedBehaviorEvents !== undefined) {
     if (!Array.isArray(value.observedBehaviorEvents) || !value.observedBehaviorEvents.every(validateObservedBehaviorEvent)) {
+      return false;
+    }
+  }
+
+  if (value.islandCohortRatingSnapshots !== undefined) {
+    if (!Array.isArray(value.islandCohortRatingSnapshots) || !value.islandCohortRatingSnapshots.every(validateIslandCohortRatingSnapshot)) {
       return false;
     }
   }

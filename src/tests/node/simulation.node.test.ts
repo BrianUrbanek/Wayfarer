@@ -73,7 +73,9 @@ describe('simulation layer', () => {
     assert.equal(state.currentTurn, 0);
     assert.equal(state.ratingEvents.length, 0);
     assert.equal(state.confidenceSnapshots.length, state.islands.length * state.cohorts.length);
+    assert.equal(state.islandCohortRatingSnapshots.length, state.islands.length * state.cohorts.length);
     assert.equal(state.confidenceSnapshots.every((snapshot) => snapshot.turn === 0), true);
+    assert.equal(state.islandCohortRatingSnapshots.every((snapshot) => snapshot.turn === 0), true);
     assert.equal(
       state.users.every((user) => Object.values(user.ratings).every((rating) => rating === null)),
       true
@@ -131,6 +133,7 @@ describe('simulation layer', () => {
 
     assert.equal(turnZeroSnapshots.length, state.islands.length * state.cohorts.length);
     assert.equal(turnOneSnapshots.length, state.islands.length * state.cohorts.length);
+    assert.equal(next.islandCohortRatingSnapshots.length, next.islands.length * next.cohorts.length * 2);
   });
 
   it('keeps organic turn events marked as organic', () => {
@@ -375,8 +378,8 @@ describe('simulation layer', () => {
       ?.estimates.find((entry) => entry.cohortId === trackedCohortId);
     const secondContribution = secondEstimate?.contributions.find((entry) => entry.userId === secondEvent.userId);
 
-    assert.ok((secondContribution?.raterSignal ?? 0) >= 0);
-    assert.ok((secondContribution?.weightedContribution ?? 0) >= 0);
+    assert.ok((secondContribution?.raterSignal ?? 0) > 0);
+    assert.ok((secondEstimate?.effectiveWeight ?? 0) > 0);
   });
 
   it('routes guided turns from pre-turn recommendations and marks events as guided', () => {

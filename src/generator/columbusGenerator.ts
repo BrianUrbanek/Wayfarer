@@ -108,7 +108,12 @@ function buildUser(
   const hiddenReviewerArchetype = REVIEWER_ARCHETYPES[index % REVIEWER_ARCHETYPES.length];
   const profile = buildReviewerArchetypeProfile(cohorts, index, hiddenReviewerArchetype);
   const hiddenBehaviorProfile = chooseHiddenBehaviorProfile(seed, index);
-  const hiddenTasteCohort = chooseHiddenTasteCohort(hiddenTasteCohorts, seed, index);
+  const hiddenTasteCohort =
+    hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH'
+      ? hiddenTasteCohorts.find(
+          (entry) => entry.kind === 'seed' && entry.id === hiddenSeedCohort.id
+        ) ?? chooseHiddenTasteCohort(hiddenTasteCohorts, seed, index)
+      : chooseHiddenTasteCohort(hiddenTasteCohorts, seed, index);
   const hiddenTagAlignment = profile.tagAlignment;
   const hiddenRatingAlignment = profile.ratingAlignment;
   const declaredAlignment = profile.tagAlignment;

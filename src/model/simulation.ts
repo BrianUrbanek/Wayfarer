@@ -3,6 +3,10 @@ import { analyzeReviewerArchetypes, type ReviewerArchetypeAnalysis } from './rev
 import { computeInference } from './inference.js';
 import { buildIslandAffinityReports, type IslandAffinityReport } from './affinity.js';
 import {
+  buildIslandCohortRatingSnapshots,
+  type IslandCohortRatingState
+} from './islandCohortRating.js';
+import {
   buildObservedBehaviorEvents,
   type ObservedBehaviorEvent
 } from './observedBehavior.js';
@@ -83,6 +87,7 @@ export interface SimulationState {
   hiddenTasteCohorts: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
   observedBehaviorEvents: ObservedBehaviorEvent[];
+  islandCohortRatingSnapshots: IslandCohortRatingState[];
   confidenceSnapshots: IslandCohortConfidenceSnapshot[];
   inferenceByUserId: ReadonlyMap<UserId, ReturnType<typeof computeInference>>;
   raterSignalProfiles: ReadonlyMap<UserId, RaterSignalProfile>;
@@ -102,6 +107,7 @@ export interface SerializedSimulationState {
   hiddenTasteCohorts?: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
   observedBehaviorEvents?: ObservedBehaviorEvent[];
+  islandCohortRatingSnapshots?: IslandCohortRatingState[];
   confidenceSnapshots?: IslandCohortConfidenceSnapshot[];
   turnHistory: SimulationTurnSummary[];
 }
@@ -175,6 +181,10 @@ function cloneConfidenceSnapshot(snapshot: IslandCohortConfidenceSnapshot): Isla
 
 function cloneObservedBehaviorEvent(event: ObservedBehaviorEvent): ObservedBehaviorEvent {
   return { ...event };
+}
+
+function cloneIslandCohortRatingSnapshot(snapshot: IslandCohortRatingState): IslandCohortRatingState {
+  return { ...snapshot };
 }
 
 function cloneIsland(island: Island): Island {
@@ -417,6 +427,7 @@ function recomputeState(
   turnHistory: readonly SimulationTurnSummary[],
   allTags: readonly TagId[],
   observedBehaviorEvents?: readonly ObservedBehaviorEvent[],
+  islandCohortRatingSnapshots?: readonly IslandCohortRatingState[],
   confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
   const users = deriveVisibleUsersFromEvents(latentUsers, islands, ratingEvents);
@@ -427,11 +438,27 @@ function recomputeState(
     allTags
   );
   const raterSignalAnalysis = buildRaterSignalProfiles(users, inferenceByUserId, cohorts);
+  const derivedIslandCohortRatingSnapshots =
+    islandCohortRatingSnapshots ??
+    buildIslandCohortRatingSnapshots({
+      islands,
+      cohorts,
+      ratingEvents,
+      turnHistory,
+      observedBehaviorEvents,
+      signalProfiles: raterSignalAnalysis.byUserId
+    });
   const islandAffinityAnalysis = buildIslandAffinityReports(
     ratingEvents,
     raterSignalAnalysis.byUserId,
     cohorts,
     islands
+    ,
+    {
+      ratingSnapshots: derivedIslandCohortRatingSnapshots,
+      turnHistory,
+      observedBehaviorEvents
+    }
   );
   const pseudoCohortAnalysis = analyzePseudoCohorts(users, inferenceByUserId);
   const reviewerArchetypeAnalysis = analyzeReviewerArchetypes(
@@ -465,6 +492,7 @@ function recomputeState(
     observedBehaviorEvents: observedBehaviorEvents
       ? observedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event))
       : buildObservedBehaviorEvents(ratingEvents, latentUsers, seed),
+    islandCohortRatingSnapshots: derivedIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     inferenceByUserId,
     raterSignalProfiles: raterSignalAnalysis.byUserId,
     islandAffinityReports: islandAffinityAnalysis.byIslandId,
@@ -504,6 +532,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       raterSignalWeights: { ...event.raterSignalWeights }
     })),
     observedBehaviorEvents: state.observedBehaviorEvents.map((event) => ({ ...event })),
+    islandCohortRatingSnapshots: state.islandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     confidenceSnapshots: state.confidenceSnapshots.map((snapshot) => ({ ...snapshot })),
     turnHistory: state.turnHistory.map((summary) => ({
       ...summary,
@@ -518,6 +547,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
 
 export function hydrateSimulationState(snapshot: SerializedSimulationState): SimulationState {
   const normalizedObservedBehaviorEvents = snapshot.observedBehaviorEvents?.map((entry) => ({ ...entry }));
+  const normalizedIslandCohortRatingSnapshots = snapshot.islandCohortRatingSnapshots?.map((entry) => cloneIslandCohortRatingSnapshot(entry));
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
   const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
 
@@ -531,6 +561,7 @@ export function hydrateSimulationState(snapshot: SerializedSimulationState): Sim
     snapshot.turnHistory,
     snapshot.allTags,
     normalizedObservedBehaviorEvents,
+    normalizedIslandCohortRatingSnapshots,
     normalizedSnapshots
   );
 }
@@ -861,6 +892,7 @@ export function advancePolicyTurn(
     nextEvents,
     nextHistory,
     state.allTags,
-    nextObservedBehaviorEvents
+    nextObservedBehaviorEvents,
+    undefined
   );
 }

@@ -1,3 +1,4 @@
+import { buildIslandCohortRatingSnapshots, indexIslandCohortRatingSnapshots, type IslandCohortRatingState } from './islandCohortRating.js';
 import type { CohortAnchor, CohortId, Island, IslandId, Rating, UserId } from './types.js';
 import type { RaterSignalProfile } from './raterSignal.js';
 
@@ -11,16 +12,23 @@ export interface AffinityContribution {
 export interface CohortAffinityEstimate {
   islandId: IslandId;
   cohortId: CohortId;
+  rating?: number;
+  ratingDeviation?: number;
+  volatility?: number;
   observedMean: number;
   affinity: number;
   confidence: number;
+  uncertainty?: number;
   disagreement: number;
   rawCount: number;
   effectiveWeight: number;
+  evidenceCount?: number;
   positiveCount: number;
   neutralCount: number;
   negativeCount: number;
   contributions: AffinityContribution[];
+  lastUpdatedTurn?: number;
+  version?: 1;
 }
 
 export interface IslandAffinityReport {
@@ -36,18 +44,33 @@ export interface IslandAffinityAnalysis {
 }
 
 export interface AffinityRatingEvent {
+  id?: string;
+  turn?: number;
   userId: UserId;
   islandId: IslandId;
   rating: Rating;
+  source?: 'organic' | 'guided';
   raterSignalWeights?: Readonly<Record<CohortId, number>>;
 }
 
 export interface BuildAffinityOptions {
   priorWeight?: number;
   confidenceK?: number;
+  ratingSnapshots?: readonly IslandCohortRatingState[];
+  turnHistory?: readonly { turn: number }[];
+  observedBehaviorEvents?: readonly {
+    id: string;
+    turn: number;
+    userId: UserId;
+    islandId: IslandId;
+    kind: 'qualified-play' | 'completion' | 'replay' | 'return' | 'bounce' | 'abandon';
+    value: number;
+    sourceRatingEventId: string;
+    sourceRatingEventSource?: 'organic' | 'guided';
+  }[];
 }
 
-const DEFAULT_OPTIONS: Required<BuildAffinityOptions> = {
+const DEFAULT_OPTIONS = {
   priorWeight: 4,
   confidenceK: 4
 };
@@ -58,22 +81,6 @@ function clamp01(value: number): number {
   }
 
   return Math.max(0, Math.min(1, value));
-}
-
-function sampleConfidence(effectiveWeight: number, k: number): number {
-  if (effectiveWeight <= 0) {
-    return 0;
-  }
-
-  return effectiveWeight / (effectiveWeight + Math.max(0, k));
-}
-
-function shrinkMean(observedMean: number, effectiveWeight: number, priorWeight: number): number {
-  if (effectiveWeight <= 0) {
-    return 0;
-  }
-
-  return (effectiveWeight * observedMean) / (priorWeight + effectiveWeight);
 }
 
 interface Accumulator {
@@ -128,16 +135,23 @@ function buildEmptyEstimate(islandId: IslandId, cohortId: CohortId): CohortAffin
   return {
     islandId,
     cohortId,
+    rating: 0,
+    ratingDeviation: 1,
+    volatility: 0.08,
     observedMean: 0,
     affinity: 0,
     confidence: 0,
+    uncertainty: 1,
     disagreement: 0,
     rawCount: 0,
     effectiveWeight: 0,
+    evidenceCount: 0,
     positiveCount: 0,
     neutralCount: 0,
     negativeCount: 0,
-    contributions: []
+    contributions: [],
+    lastUpdatedTurn: -1,
+    version: 1
   };
 }
 
@@ -152,6 +166,31 @@ export function buildIslandAffinityReports(
     ...DEFAULT_OPTIONS,
     ...options
   };
+
+  const normalizedRatingEvents = ratingEvents.map((event, index) => ({
+    id: event.id ?? `affinity-event-${index}`,
+    turn: event.turn ?? 0,
+    userId: event.userId,
+    islandId: event.islandId,
+    rating: event.rating,
+    source: event.source ?? 'organic',
+    raterSignalWeights: event.raterSignalWeights ?? {}
+  }));
+  const snapshotSource =
+    mergedOptions.ratingSnapshots ??
+    buildIslandCohortRatingSnapshots({
+      islands,
+      cohorts,
+      ratingEvents: normalizedRatingEvents,
+      turnHistory:
+        mergedOptions.turnHistory ??
+        Array.from(new Set(normalizedRatingEvents.map((event) => event.turn)))
+          .sort((left, right) => left - right)
+          .map((turn) => ({ turn })),
+      observedBehaviorEvents: mergedOptions.observedBehaviorEvents,
+      signalProfiles
+    });
+  const latestSnapshotsByIslandId = indexIslandCohortRatingSnapshots(snapshotSource);
 
   const countsByIslandId = new Map<IslandId, IslandCounts>();
   const accumulatorsByIslandId = new Map<IslandId, Map<CohortId, Accumulator>>();
@@ -215,11 +254,13 @@ export function buildIslandAffinityReports(
   const allReports = islands.map<IslandAffinityReport>((island) => {
     const islandCounts = countsByIslandId.get(island.id) ?? createIslandCounts();
     const cohortAccumulators = accumulatorsByIslandId.get(island.id) ?? new Map();
+    const latestSnapshotsByCohortId = latestSnapshotsByIslandId.get(island.id) ?? new Map();
     const estimates = cohorts.map<CohortAffinityEstimate>((cohort) => {
       const accumulator = cohortAccumulators.get(cohort.id);
+      const snapshot = latestSnapshotsByCohortId.get(cohort.id);
       const estimate = buildEmptyEstimate(island.id, cohort.id);
 
-      if (!accumulator) {
+      if (!accumulator || !snapshot) {
         return {
           ...estimate,
           rawCount: islandCounts.rawCount,
@@ -230,8 +271,9 @@ export function buildIslandAffinityReports(
       }
 
       const observedMean = accumulator.effectiveWeight > 0 ? accumulator.weightedSum / accumulator.effectiveWeight : 0;
-      const affinity = shrinkMean(observedMean, accumulator.effectiveWeight, mergedOptions.priorWeight);
-      const confidence = sampleConfidence(accumulator.effectiveWeight, mergedOptions.confidenceK);
+      const affinity = snapshot.affinity;
+      const confidence = snapshot.confidence;
+      const uncertainty = snapshot.uncertainty;
       const deviation = accumulator.contributions.reduce((sum: number, contribution: AffinityContribution) => {
         return (
           sum +
@@ -243,18 +285,25 @@ export function buildIslandAffinityReports(
 
       return {
         ...estimate,
+        rating: snapshot.rating,
+        ratingDeviation: snapshot.ratingDeviation,
+        volatility: snapshot.volatility,
         observedMean,
         affinity,
         confidence,
+        uncertainty,
         disagreement,
         rawCount: islandCounts.rawCount,
-        effectiveWeight: accumulator.effectiveWeight,
+        effectiveWeight: snapshot.effectiveWeight,
+        evidenceCount: snapshot.evidenceCount,
         positiveCount: islandCounts.positiveCount,
         neutralCount: islandCounts.neutralCount,
         negativeCount: islandCounts.negativeCount,
         contributions: accumulator.contributions
           .slice()
-          .sort((left: AffinityContribution, right: AffinityContribution) => Math.abs(right.weightedContribution) - Math.abs(left.weightedContribution))
+          .sort((left: AffinityContribution, right: AffinityContribution) => Math.abs(right.weightedContribution) - Math.abs(left.weightedContribution)),
+        lastUpdatedTurn: snapshot.lastUpdatedTurn,
+        version: snapshot.version
       };
     });
 

@@ -69,6 +69,10 @@ describe('scenario persistence', () => {
     assert.equal(scenario.turnsToRun, 5);
     assert.equal(scenario.simulationState.ratingEvents.length, state.ratingEvents.length);
     assert.equal(
+      scenario.simulationState.islandCohortRatingSnapshots?.length,
+      state.islandCohortRatingSnapshots.length
+    );
+    assert.equal(
       typeof scenario.simulationState.ratingEvents[0]?.raterSignalWeights[bootstrap.cohorts[0].id],
       'number'
     );
@@ -140,6 +144,7 @@ describe('scenario persistence', () => {
           cohorts: [],
           islands: [],
           ratingEvents: [],
+          islandCohortRatingSnapshots: [],
           turnHistory: []
         }
       })

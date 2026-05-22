@@ -106,6 +106,7 @@ describe('simulation layer', () => {
 
     expect(state.currentTurn).toBe(0);
     expect(state.ratingEvents).toHaveLength(0);
+    expect(state.islandCohortRatingSnapshots).toHaveLength(state.islands.length * state.cohorts.length);
     expect(state.users.every((user) => Object.values(user.ratings).every((rating) => rating === null))).toBe(true);
   });
 
@@ -229,6 +230,7 @@ describe('simulation layer', () => {
     expect(secondTurn.currentTurn).toBe(2);
     expect(secondTurn.ratingEvents.length).toBeGreaterThan(firstTurn.ratingEvents.length);
     expect(secondTurn.turnHistory).toHaveLength(3);
+    expect(secondTurn.islandCohortRatingSnapshots).toHaveLength(secondTurn.islands.length * secondTurn.cohorts.length * 3);
   });
 
   it('derives rater signal profiles and island affinity reports from sparse turns', () => {

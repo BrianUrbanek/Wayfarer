@@ -4,6 +4,7 @@ export type GlossaryTermId =
   | 'trust'
   | 'discovery-signal'
   | 'island-confidence'
+  | 'island-cohort-rating-state'
   | 'rating-event-weight'
   | 'observed-behavior'
   | 'soft-reset'
@@ -41,7 +42,7 @@ The system is not limited to UGC worlds, even if islands are the current concret
 
 ## Trust, Discovery Signal, and Confidence
 
-Trust belongs to raters. It answers whether a person\'s ratings can be used as evidence. Discovery Signal belongs to the player-facing contribution layer. It answers whether a player has been useful over time. Confidence belongs to the island/cohort estimate itself. It answers how certain we are about fit right now.
+Trust belongs to raters. It answers whether a person\'s ratings can be used as evidence. Discovery Signal belongs to the player-facing contribution layer. It answers whether a player has been useful over time. Confidence belongs to the island/cohort estimate itself. It answers how certain we are about fit right now, and in the current prototype it is projected from the island/cohort rating state rather than treated as a separate model.
 
 These three ideas are related but not interchangeable. Trust weights evidence. Discovery Signal is retrospective usefulness. Confidence is the current uncertainty attached to an island/cohort read.
 
@@ -97,30 +98,40 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Island Confidence',
     shortDefinition: 'Certainty on island audience-fit estimates.',
     fullDefinition:
-      'The certainty attached to audience-fit estimates for islands at island/cohort granularity. Confidence belongs to island fit estimates, not to players, and should be evaluated at explicit update or snapshot boundaries in the durable model.',
+      'The certainty attached to audience-fit estimates for islands at island/cohort granularity. Confidence belongs to island fit estimates, not to players, and in the current model it is projected from island/cohort rating deviation at explicit update or snapshot boundaries.',
     scope: 'analyst-facing',
     implementedStatus: 'implemented',
-    relatedTerms: ['cohort', 'soft-reset', 'rating-event-weight', 'confidence-snapshot']
+    relatedTerms: ['cohort', 'soft-reset', 'rating-event-weight', 'confidence-snapshot', 'island-cohort-rating-state']
+  },
+  {
+    id: 'island-cohort-rating-state',
+    term: 'Island/Cohort Rating State',
+    shortDefinition: 'Glicko-shaped fit, uncertainty, and freshness for an island/cohort pair.',
+    fullDefinition:
+      'The durable island/cohort estimate used by Wayfarer to track fit, rating deviation, and volatility over turn/update boundaries. It is Glicko-inspired rather than a literal canonical Glicko-2 implementation, and it projects into confidence, uncertainty, and event weight for reports.',
+    scope: 'internal',
+    implementedStatus: 'partial',
+    relatedTerms: ['island-confidence', 'rating-event-weight', 'soft-reset', 'confidence-snapshot']
   },
   {
     id: 'rating-event-weight',
     term: 'Rating Event Weight',
     shortDefinition: 'How much one rating should move an estimate right now.',
     fullDefinition:
-      'A derived weighting concept calculated as trust multiplied by uncertainty leverage in current context. Direction stays separate from weight magnitude: a high-weight negative rating is strong negative evidence, not low-value evidence.',
+      'A derived weighting concept calculated as trust multiplied by uncertainty leverage projected from the current island/cohort rating state. Direction stays separate from weight magnitude: a high-weight negative rating is strong negative evidence, not low-value evidence.',
     scope: 'analyst-facing',
     implementedStatus: 'partial',
-    relatedTerms: ['trust', 'island-confidence', 'confidence-snapshot']
+    relatedTerms: ['trust', 'island-confidence', 'island-cohort-rating-state', 'confidence-snapshot']
   },
   {
     id: 'confidence-snapshot',
     term: 'Confidence Snapshot',
     shortDefinition: 'Baseline island/cohort confidence at an update boundary.',
     fullDefinition:
-      'A stored baseline state for an island/cohort read at a turn boundary. Wayfarer currently stores post-turn confidence snapshots in simulation state and exports so growth can be inspected after import. Pre-turn event-weight snapshots remain future work and can still use the same boundary model later.',
+      'A stored baseline state for an island/cohort read at a turn boundary. Wayfarer currently stores post-turn island/cohort confidence snapshots in simulation state and exports so growth can be inspected after import. Pre-turn event-weight snapshots remain future work and can still use the same boundary model later.',
     scope: 'analyst-facing',
     implementedStatus: 'partial',
-    relatedTerms: ['island-confidence', 'rating-event-weight']
+    relatedTerms: ['island-confidence', 'rating-event-weight', 'island-cohort-rating-state']
   },
   {
     id: 'observed-behavior',

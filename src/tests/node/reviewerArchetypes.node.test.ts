@@ -207,8 +207,8 @@ function buildHiddenFixture() {
           rating: rating as Rating,
           source:
             user.hiddenReviewerArchetype === 'EARLY_SCOUT' || user.hiddenReviewerArchetype === 'LATE_CONSENSUS_FOLLOWER'
-              ? 'guided'
-              : 'organic'
+              ? ('guided' as const)
+              : ('organic' as const)
         }));
   });
 
