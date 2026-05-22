@@ -452,8 +452,7 @@ function recomputeState(
     ratingEvents,
     raterSignalAnalysis.byUserId,
     cohorts,
-    islands
-    ,
+    islands,
     {
       ratingSnapshots: derivedIslandCohortRatingSnapshots,
       turnHistory,

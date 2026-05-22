@@ -5,6 +5,10 @@ export type GlossaryTermId =
   | 'discovery-signal'
   | 'island-confidence'
   | 'island-cohort-rating-state'
+  | 'glicko-shaped'
+  | 'rating-deviation'
+  | 'volatility'
+  | 'rating-period'
   | 'rating-event-weight'
   | 'observed-behavior'
   | 'soft-reset'
@@ -98,40 +102,80 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Island Confidence',
     shortDefinition: 'Certainty on island audience-fit estimates.',
     fullDefinition:
-      'The certainty attached to audience-fit estimates for islands at island/cohort granularity. Confidence belongs to island fit estimates, not to players, and in the current model it is projected from island/cohort rating deviation at explicit update or snapshot boundaries.',
+      'The certainty attached to audience-fit estimates for islands at island/cohort granularity. Confidence belongs to island fit estimates, not to players, and in the current model it is projected from island/cohort rating deviation at explicit rating-period or update-boundary snapshots.',
     scope: 'analyst-facing',
     implementedStatus: 'implemented',
-    relatedTerms: ['cohort', 'soft-reset', 'rating-event-weight', 'confidence-snapshot', 'island-cohort-rating-state']
+    relatedTerms: ['cohort', 'soft-reset', 'rating-event-weight', 'confidence-snapshot', 'island-cohort-rating-state', 'rating-deviation', 'rating-period']
   },
   {
     id: 'island-cohort-rating-state',
     term: 'Island/Cohort Rating State',
-    shortDefinition: 'Glicko-shaped fit, uncertainty, and freshness for an island/cohort pair.',
+    shortDefinition: 'Glicko-shaped fit, RD analogue, and freshness for an island/cohort pair.',
     fullDefinition:
-      'The durable island/cohort estimate used by Wayfarer to track fit, rating deviation, and volatility over turn/update boundaries. It is Glicko-inspired rather than a literal canonical Glicko-2 implementation, and it projects into confidence, uncertainty, and event weight for reports.',
+      'The durable island/cohort estimate used by Wayfarer to track fit, rating deviation, and volatility over rating periods or turn/update boundaries. It is Glicko-inspired rather than a literal canonical Glicko-2 implementation, and it projects into confidence, uncertainty, and event weight for reports.',
     scope: 'internal',
     implementedStatus: 'partial',
-    relatedTerms: ['island-confidence', 'rating-event-weight', 'soft-reset', 'confidence-snapshot']
+    relatedTerms: ['island-confidence', 'rating-event-weight', 'soft-reset', 'confidence-snapshot', 'rating-deviation', 'volatility', 'glicko-shaped', 'rating-period']
+  },
+  {
+    id: 'glicko-shaped',
+    term: 'Glicko-inspired / Glicko-shaped',
+    shortDefinition: 'A Wayfarer-friendly rating substrate shaped like Glicko, not canonical Glicko-2.',
+    fullDefinition:
+      'A rating-and-uncertainty substrate that borrows Glicko concepts such as rating deviation and volatility without claiming a literal canonical Glicko-2 implementation. In Wayfarer, the shape is adapted to island/cohort fit rather than head-to-head competition.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['island-cohort-rating-state', 'rating-deviation', 'volatility', 'rating-period']
+  },
+  {
+    id: 'rating-deviation',
+    term: 'Rating Deviation / RD',
+    shortDefinition: 'Uncertainty width around an island/cohort fit estimate.',
+    fullDefinition:
+      'The uncertainty width around an island/cohort fit estimate. Lower RD means the read is more mature and should move less from new evidence; higher RD means the read is less certain and should move more. RD is an analogue, not a claim of canonical Glicko-2 implementation.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['glicko-shaped', 'island-cohort-rating-state', 'island-confidence', 'rating-period', 'volatility']
+  },
+  {
+    id: 'volatility',
+    term: 'Volatility',
+    shortDefinition: 'Freshness or instability analogue for an island/cohort read.',
+    fullDefinition:
+      'A freshness or instability analogue that tracks how erratic an island/cohort read appears over time. Consistent evidence should keep volatility lower and stable, while surprising or contradictory evidence may raise it. It is an analogue used for Wayfarer\'s Glicko-shaped substrate, not canonical Glicko-2 volatility.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['glicko-shaped', 'rating-deviation', 'island-cohort-rating-state', 'soft-reset', 'rating-period']
+  },
+  {
+    id: 'rating-period',
+    term: 'Rating Period / Update Boundary',
+    shortDefinition: 'The turn boundary where island/cohort estimates update.',
+    fullDefinition:
+      'The update boundary at which Wayfarer applies accumulated evidence to an island/cohort fit read. Turns currently serve as the prototype rating period, but the same shape can later support other boundary types such as scheduled or threshold-triggered updates.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['island-cohort-rating-state', 'confidence-snapshot', 'rating-deviation', 'volatility']
   },
   {
     id: 'rating-event-weight',
     term: 'Rating Event Weight',
     shortDefinition: 'How much one rating should move an estimate right now.',
     fullDefinition:
-      'A derived weighting concept calculated as trust multiplied by uncertainty leverage projected from the current island/cohort rating state. Direction stays separate from weight magnitude: a high-weight negative rating is strong negative evidence, not low-value evidence.',
+      'A derived weighting concept calculated as trust multiplied by uncertainty leverage projected from the current island/cohort rating state. Direction stays separate from weight magnitude: a high-weight negative rating is strong negative evidence, not low-value evidence. Uncertainty leverage comes from the RD analogue projected through the island/cohort rating state, not from a separate heuristic.',
     scope: 'analyst-facing',
     implementedStatus: 'partial',
-    relatedTerms: ['trust', 'island-confidence', 'island-cohort-rating-state', 'confidence-snapshot']
+    relatedTerms: ['trust', 'island-confidence', 'island-cohort-rating-state', 'confidence-snapshot', 'rating-deviation']
   },
   {
     id: 'confidence-snapshot',
     term: 'Confidence Snapshot',
     shortDefinition: 'Baseline island/cohort confidence at an update boundary.',
     fullDefinition:
-      'A stored baseline state for an island/cohort read at a turn boundary. Wayfarer currently stores post-turn island/cohort confidence snapshots in simulation state and exports so growth can be inspected after import. Pre-turn event-weight snapshots remain future work and can still use the same boundary model later.',
+      'A stored baseline state for an island/cohort read at a rating-period or update boundary. Wayfarer currently stores post-turn island/cohort confidence snapshots in simulation state and exports so growth can be inspected after import. Pre-turn event-weight snapshots remain future work and can still use the same boundary model later.',
     scope: 'analyst-facing',
     implementedStatus: 'partial',
-    relatedTerms: ['island-confidence', 'rating-event-weight', 'island-cohort-rating-state']
+    relatedTerms: ['island-confidence', 'rating-event-weight', 'island-cohort-rating-state', 'rating-period']
   },
   {
     id: 'observed-behavior',
@@ -250,6 +294,10 @@ export const REQUIRED_GLOSSARY_TERMS: GlossaryTermId[] = [
   'discovery-signal',
   'island-confidence',
   'rating-event-weight',
+  'glicko-shaped',
+  'rating-deviation',
+  'volatility',
+  'rating-period',
   'observed-behavior',
   'soft-reset',
   'cohort',
