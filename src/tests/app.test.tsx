@@ -17,6 +17,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Discovery Routing');
     expect(html).toContain('Deprioritized for selected user');
     expect(html).toContain('Confidence Growth');
+    expect(html).toContain('Turn Recap');
     expect(html).toContain('Reviewer Archetype Recovery');
     expect(html).toContain('Turn Summary');
     expect(html).toContain('Novice');

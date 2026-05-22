@@ -64,8 +64,10 @@ import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
 import { buildIslandTruthComparison } from './model/islandTruthComparison';
 import { buildHiddenCohortRecoveryReport } from './model/hiddenCohortRecovery';
+import { buildTurnRecapReport } from './model/turnRecap';
 import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
+import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
 import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { DEFAULT_TAGS } from './data/defaultTags';
@@ -637,6 +639,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const systemHealthSummary = useMemo(() => buildSystemHealthSummary(dataset), [dataset]);
   const confidenceGrowthRows = useMemo(() => buildConfidenceGrowthRows(dataset), [dataset]);
   const discoverySignalAnalysis = useMemo(() => buildDiscoverySignalAnalysis(dataset), [dataset]);
+  const islandLabelById = useMemo(() => new Map(dataset.islands.map((island) => [island.id, island.label] as const)), [dataset.islands]);
+  const cohortDisplayLabelById = useMemo(
+    () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohort.label] as const)),
+    [dataset.cohorts]
+  );
   const selectedDiscoverySignalProfile = selectedUser ? discoverySignalAnalysis.byUserId.get(selectedUser.id) ?? null : null;
 
   const selectedInferenceDiagnostics = selectedInference?.diagnosis;
@@ -738,6 +745,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const visibleTurnModeLabel = TURN_MODE_LABELS[turnMode];
   const selectedDeclaredCohort =
     selectedInference?.declaredTop.cohortId ? dataset.cohorts.find((cohort) => cohort.id === selectedInference.declaredTop.cohortId) ?? null : null;
+  const turnRecapReport = useMemo(
+    () =>
+      buildTurnRecapReport({
+        turnHistory: dataset.turnHistory,
+        islandCohortRatingSnapshots: dataset.islandCohortRatingSnapshots,
+        islands: dataset.islands,
+        cohorts: dataset.cohorts,
+        islandLabelById,
+        cohortLabelById: cohortDisplayLabelById
+      }),
+    [cohortDisplayLabelById, dataset.cohorts, dataset.islandCohortRatingSnapshots, dataset.islands, dataset.turnHistory, islandLabelById]
+  );
   const declaredTagOverlap = selectedUser && selectedDeclaredCohort ? computeDeclaredTagOverlap(selectedUser.declaredTags, selectedDeclaredCohort) : null;
   const declaredDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.declaredDistribution, cohortLabels.full, 4) : [];
   const behaviorDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.behaviorDistribution, cohortLabels.full, 4) : [];
@@ -2283,6 +2302,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       { id: 'population-summary', label: 'Population Summary' },
       { id: 'system-health', label: 'System Health' },
       { id: 'confidence-growth', label: 'Confidence Growth' },
+      { id: 'turn-recap', label: 'Turn Recap' },
       { id: 'selected-user-summary', label: 'Selected User Summary' },
       { id: 'reviewer-archetype-recovery', label: 'Reviewer Archetype Recovery' },
       { id: 'discovery-routing', label: 'Recommended Unrated Islands' },
@@ -2353,6 +2373,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             ))}
           </div> : null}
         </Panel>,
+        <TurnRecapPanel key="turn-recap" id="turn-recap" report={turnRecapReport} />,
         <Panel key="population-summary" id="population-summary" title="Population Summary" className="panel--full" collapsible>
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />

@@ -2248,8 +2248,22 @@ select {
   gap: 10px;
 }
 
+.turn-recap {
+  display: grid;
+  gap: 12px;
+}
+
+.turn-recap__title-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .hidden-cohort-recovery__summary,
 .hidden-cohort-recovery__hint {
+  margin: 0;
+}
+
+.turn-recap__summary {
   margin: 0;
 }
 
@@ -2257,11 +2271,28 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.turn-recap__metrics,
+.turn-recap-modal__metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.turn-recap__highlights {
+  margin-top: 0;
+}
+
 .hidden-cohort-recovery-modal {
   width: min(1040px, calc(100vw - 32px));
 }
 
+.turn-recap-modal {
+  width: min(1080px, calc(100vw - 32px));
+}
+
 .hidden-cohort-recovery-modal__body {
+  gap: 14px;
+}
+
+.turn-recap-modal__body {
   gap: 14px;
 }
 
@@ -2269,8 +2300,16 @@ select {
   max-height: 34vh;
 }
 
+.turn-recap-modal .report-table-wrap {
+  max-height: 32vh;
+}
+
 .hidden-cohort-recovery__table .report-table {
   min-width: 980px;
+}
+
+.turn-recap__table .report-table {
+  min-width: 860px;
 }
 
 .report-table__row--clickable {
