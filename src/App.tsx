@@ -111,6 +111,12 @@ type SelectionModalKind = 'user' | 'island' | 'cohort' | 'pseudo' | null;
 type PinnedDrilldownKind = 'user' | 'island' | 'cohort' | null;
 
 type ScenarioExecutionSeedMode = 'random' | 'fixed';
+interface TurnTimingRow {
+  turn: number;
+  durationMs: number;
+  ratingsCreated: number;
+  mode: 'organic' | 'guided' | 'mixed';
+}
 
 type DrawerState =
   | { type: 'user'; id: string }
@@ -423,6 +429,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const showDebugInitial = initialGuidanceMode !== 'novice';
   const [showDebug, setShowDebug] = useState(showDebugInitial);
   const [showAbout, setShowAbout] = useState(false);
+  const [showTimingLog, setShowTimingLog] = useState(false);
+  const [turnTimingLog, setTurnTimingLog] = useState<TurnTimingRow[]>([]);
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
   const [dashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
@@ -1904,6 +1912,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       const initialState = buildSimulationStateFromControls(resolvedControls);
       setSimulationState(initialState);
+      setTurnTimingLog([]);
       setExecutionProgress(0.25);
       await new Promise((resolve) => setTimeout(resolve, 32));
 
@@ -1914,8 +1923,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           return;
         }
 
+        const startTime = performance.now();
         setExecutionStatus(`Advancing turn ${index + 1} of ${turnsToRun}.`);
         nextState = advanceCurrentTurn(nextState);
+        const endTime = performance.now();
+        const latestTurn = nextState.turnHistory[nextState.turnHistory.length - 1];
+        if (latestTurn) {
+          setTurnTimingLog((rows) =>
+            rows.concat({
+              turn: latestTurn.turn,
+              durationMs: endTime - startTime,
+              ratingsCreated: latestTurn.ratingsCreated,
+              mode: latestTurn.mode
+            })
+          );
+        }
         setSimulationState(nextState);
         setExecutionProgress(0.25 + ((index + 1) / Math.max(turnsToRun, 1)) * 0.7);
         await new Promise((resolve) => setTimeout(resolve, 32));
@@ -1947,7 +1969,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
   const takeSingleTurn = () => {
     setSimulationState((state) => {
+      const startTime = performance.now();
       const nextState = advanceCurrentTurn(state);
+      const endTime = performance.now();
+      const latestTurn = nextState.turnHistory[nextState.turnHistory.length - 1];
+      if (latestTurn) {
+        setTurnTimingLog((rows) =>
+          rows.concat({
+            turn: latestTurn.turn,
+            durationMs: endTime - startTime,
+            ratingsCreated: latestTurn.ratingsCreated,
+            mode: latestTurn.mode
+          })
+        );
+      }
       setRecentAction({
         kind: 'turn-advanced',
         scenarioLabel: currentScenarioLabel,
@@ -1965,7 +2000,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       let next = state;
 
       for (let index = 0; index < turnsToRun; index += 1) {
+        const startTime = performance.now();
         next = advanceCurrentTurn(next);
+        const endTime = performance.now();
+        const latestTurn = next.turnHistory[next.turnHistory.length - 1];
+        if (latestTurn) {
+          setTurnTimingLog((rows) =>
+            rows.concat({
+              turn: latestTurn.turn,
+              durationMs: endTime - startTime,
+              ratingsCreated: latestTurn.ratingsCreated,
+              mode: latestTurn.mode
+            })
+          );
+        }
       }
 
       setRecentAction({
@@ -1989,6 +2037,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setExecutionStatus('');
     setExecutionProgress(0);
     setIsExecutingScenario(false);
+    setTurnTimingLog([]);
     resetControlPolicy();
     const defaultBootstrap = buildDataset({
       seed: INITIAL_SCENARIO_PRESET.generatorConfig.seed,
@@ -2142,6 +2191,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const advanceCurrentTurn = (state: SimulationState) => {
     return advancePolicyTurn(state, currentTurnPolicy);
   };
+  const timingTotalMs = useMemo(() => turnTimingLog.reduce((sum, row) => sum + row.durationMs, 0), [turnTimingLog]);
+  const timingAverageMs = turnTimingLog.length > 0 ? timingTotalMs / turnTimingLog.length : 0;
+  const slowestTimingRow = useMemo(
+    () =>
+      turnTimingLog.reduce<TurnTimingRow | null>(
+        (slowest, row) => (!slowest || row.durationMs > slowest.durationMs ? row : slowest),
+        null
+      ),
+    [turnTimingLog]
+  );
 
   const stageTopRecommendation = selectedUserRecommendations[0] ?? null;
   const participationDisplay =
@@ -3020,6 +3079,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 <button type="button" className="button" onClick={takeBatchTurns} disabled={isExecutingScenario}>
                   Take {turnsToRun} Turns
                 </button>
+                <button type="button" className="button button--ghost" onClick={() => setShowTimingLog(true)}>
+                  Timing log
+                </button>
               </div>
               <div className="stage-panel__action-group">
                 {openSelectionButton('user', 'Choose user', 'button button--ghost', isExecutingScenario)}
@@ -3313,6 +3375,44 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <Modal open={showAbout} title="Concept Primer / Glossary" placement="top" onClose={() => setShowAbout(false)}>
         <AboutGlossaryContent />
+      </Modal>
+      <Modal open={showTimingLog} title="Turn timing log" onClose={() => setShowTimingLog(false)}>
+        {turnTimingLog.length === 0 ? (
+          <EmptyState title="No turn timings recorded yet." description="Advance turns to capture per-turn wall-clock timings." />
+        ) : (
+          <div className="detail-stack">
+            <div className="metric-grid metric-grid--compact">
+              <MetricCard label="Total time" value={`${timingTotalMs.toFixed(2)} ms`} />
+              <MetricCard label="Average ms/turn" value={`${timingAverageMs.toFixed(2)} ms`} />
+              <MetricCard
+                label="Slowest turn"
+                value={slowestTimingRow ? `Turn ${slowestTimingRow.turn} (${slowestTimingRow.durationMs.toFixed(2)} ms)` : 'n/a'}
+              />
+            </div>
+            <div className="report-table-wrap">
+              <table className="report-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Turn</th>
+                    <th scope="col" className="report-table__cell--right">Duration</th>
+                    <th scope="col" className="report-table__cell--right">Ratings created</th>
+                    <th scope="col">Mode</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {turnTimingLog.map((row) => (
+                    <tr key={`timing-${row.turn}`}>
+                      <td>{row.turn}</td>
+                      <td className="report-table__cell--right">{row.durationMs.toFixed(2)} ms</td>
+                      <td className="report-table__cell--right">{row.ratingsCreated}</td>
+                      <td>{row.mode}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <SelectionModal

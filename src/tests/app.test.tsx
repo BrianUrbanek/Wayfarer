@@ -42,6 +42,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Show debug');
     expect(html).toContain('Execute Scenario');
     expect(html).toContain('Take 1 Turn');
+    expect(html).toContain('Timing log');
     expect(html).toContain('Export');
     expect(html).toContain('Import');
     expect(html).toContain('Selected user');
