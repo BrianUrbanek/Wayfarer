@@ -20,6 +20,7 @@ import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
 import { SelectedIslandTruthComparison } from './ui/routing/SelectedIslandTruthComparison';
 import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEvidenceSummary';
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
+import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -62,6 +63,7 @@ import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
 import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
 import { buildIslandTruthComparison } from './model/islandTruthComparison';
+import { buildHiddenCohortRecoveryReport } from './model/hiddenCohortRecovery';
 import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
@@ -588,6 +590,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       cohortLabelById
     });
   }, [cohortLabelById, dataset.hiddenTasteCohorts, selectedIsland, selectedIslandAffinityReport]);
+  const hiddenCohortRecoveryReport = useMemo(
+    () =>
+      buildHiddenCohortRecoveryReport({
+        hiddenTasteCohorts: dataset.hiddenTasteCohorts,
+        users: dataset.users,
+        islands: dataset.islands,
+        ratingEvents: dataset.ratingEvents,
+        observedBehaviorEvents: dataset.observedBehaviorEvents,
+        islandAffinityReports: dataset.islandAffinityReports,
+        cohortLabelById
+      }),
+    [
+      cohortLabelById,
+      dataset.hiddenTasteCohorts,
+      dataset.islandAffinityReports,
+      dataset.islands,
+      dataset.observedBehaviorEvents,
+      dataset.ratingEvents,
+      dataset.users
+    ]
+  );
   const selectedIslandRatingCount = selectedIslandAffinityReport?.estimates[0]?.rawCount ?? 0;
   const selectedIslandEffectiveWeight =
     selectedIslandAffinityReport?.topPositive?.effectiveWeight ??
@@ -2362,6 +2385,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <Panel key="selected-user" id="selected-user-summary" title="Selected User Summary" className="panel--wide" collapsible>
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>,
+        <HiddenCohortRecoveryPanel key="hidden-cohort-recovery" id="hidden-cohort-recovery" report={hiddenCohortRecoveryReport} />,
         <Panel key="reviewer-archetype" id="reviewer-archetype-recovery" title="Reviewer Archetype Recovery" className="panel--wide" collapsible>
           {reviewerArchetypeSummary}
         </Panel>
