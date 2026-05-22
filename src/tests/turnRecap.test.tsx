@@ -50,6 +50,39 @@ function makeReport(overrides: Partial<TurnRecapReport> = {}): TurnRecapReport {
         score: 0.3
       }
     ],
+    meaningfulRows: [
+      {
+        islandId: 'island-1',
+        islandLabel: 'Island 1',
+        cohortId: 'cohort-a',
+        cohortLabel: 'Action',
+        comparisonAvailable: true,
+        currentTurn: 1,
+        previousTurn: 0,
+        currentAffinity: 0.3,
+        previousAffinity: 0.1,
+        affinityDelta: 0.2,
+        currentConfidence: 0.7,
+        previousConfidence: 0.4,
+        confidenceDelta: 0.3,
+        currentRatingDeviation: 0.25,
+        previousRatingDeviation: 0.55,
+        ratingDeviationDelta: -0.3,
+        currentVolatility: 0.05,
+        previousVolatility: 0.08,
+        volatilityDelta: -0.03,
+        currentEffectiveWeight: 3,
+        previousEffectiveWeight: 1,
+        effectiveWeightDelta: 2,
+        currentEvidenceCount: 3,
+        previousEvidenceCount: 1,
+        evidenceCountDelta: 2,
+        moverKind: 'affinity',
+        moverLabel: 'Affinity',
+        moverDirectionLabel: 'up +0.200',
+        score: 0.3
+      }
+    ],
     highlightRows: [
       {
         islandId: 'island-1',
@@ -117,6 +150,7 @@ describe('turn recap panel', () => {
           hasComparison: false,
           meaningfulMoverCount: 0,
           highlightRows: [],
+          meaningfulRows: [],
           rows: []
         })}
       />

@@ -50,7 +50,7 @@ const islandLabelById = new Map(islands.map((island) => [island.id, island.label
 const cohortLabelById = new Map(cohorts.map((cohort) => [cohort.id, cohort.label] as const));
 
 describe('turn recap helper', () => {
-  it('prioritizes seeded and unseeded recovery ahead of noisy overfit headlines when evidence exists', () => {
+  it('highlights the largest turn-over-turn mover', () => {
     const report = buildTurnRecapReport({
       turnHistory: [
         makeTurnSummary(0, 0, 0, 0, 'organic'),
@@ -73,7 +73,7 @@ describe('turn recap helper', () => {
     assert.equal(report.highlightRows[0]?.cohortLabel, 'Action');
   });
 
-  it('keeps possible overfit out of the headline when hidden cohort rows are the stronger story', () => {
+  it('keeps the headline on turn recap movers instead of unrelated audit language', () => {
     const report = buildTurnRecapReport({
       turnHistory: [
         makeTurnSummary(0, 0, 0, 0, 'organic'),
@@ -136,6 +136,31 @@ describe('turn recap helper', () => {
 
     assert.equal(report.highlightRows[0]?.islandLabel, 'Island 1');
     assert.equal(report.highlightRows[1]?.islandLabel, 'Island 2');
+  });
+
+  it('limits modal mover groups to meaningful rows only', () => {
+    const report = buildTurnRecapReport({
+      turnHistory: [
+        makeTurnSummary(0, 1, 1, 0, 'organic'),
+        makeTurnSummary(1, 1, 1, 0, 'organic')
+      ],
+      islandCohortRatingSnapshots: [
+        makeSnapshot({ turn: 0, islandId: 'island-1', cohortId: 'cohort-a', affinity: 0.1, confidence: 0.4, ratingDeviation: 0.6, volatility: 0.08, effectiveWeight: 1, evidenceCount: 1 }),
+        makeSnapshot({ turn: 1, islandId: 'island-1', cohortId: 'cohort-a', affinity: 0.12, confidence: 0.41, ratingDeviation: 0.59, volatility: 0.08, effectiveWeight: 1.02, evidenceCount: 1 }),
+        makeSnapshot({ turn: 0, islandId: 'island-1', cohortId: 'cohort-b', affinity: -0.1, confidence: 0.3, ratingDeviation: 0.7, volatility: 0.08, effectiveWeight: 1, evidenceCount: 1 }),
+        makeSnapshot({ turn: 1, islandId: 'island-1', cohortId: 'cohort-b', affinity: 0.3, confidence: 0.6, ratingDeviation: 0.4, volatility: 0.06, effectiveWeight: 2, evidenceCount: 2 })
+      ],
+      islands,
+      cohorts,
+      islandLabelById,
+      cohortLabelById
+    });
+
+    assert.equal(report.meaningfulMoverCount, 1);
+    assert.equal(report.highlightRows.length, 1);
+    assert.equal(report.meaningfulRows.length, 1);
+    assert.equal(report.meaningfulRows[0]?.cohortLabel, 'Story');
+    assert.equal(report.rows[0]?.cohortLabel, 'Action');
   });
 
   it('marks bootstrap turns without a previous boundary as bootstrap', () => {

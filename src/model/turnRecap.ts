@@ -52,6 +52,7 @@ export interface TurnRecapReport {
   guidedRatingsCreated: number;
   meaningfulMoverCount: number;
   rows: TurnRecapRow[];
+  meaningfulRows: TurnRecapRow[];
   highlightRows: TurnRecapRow[];
   hasComparison: boolean;
 }
@@ -346,7 +347,8 @@ export function buildTurnRecapReport(input: BuildTurnRecapReportInput): TurnReca
     input.islandLabelById,
     input.cohortLabelById
   );
-  const highlightRows = rows.filter((row) => row.score >= MEANINGFUL_SCORE_THRESHOLD).slice(0, 3);
+  const meaningfulRows = rows.filter((row) => row.score >= MEANINGFUL_SCORE_THRESHOLD);
+  const highlightRows = meaningfulRows.slice(0, 3);
   const status = summarizeHeadline(rows, hasComparison);
   const ratingsCreated = currentTurnSummary?.ratingsCreated ?? 0;
   const organicRatingsCreated = currentTurnSummary?.organicRatingsCreated ?? 0;
@@ -360,8 +362,7 @@ export function buildTurnRecapReport(input: BuildTurnRecapReportInput): TurnReca
     guidedRatingsCreated,
     highlightRows
   );
-  const moverScores = rows.map((row) => row.score).filter((score) => score >= MEANINGFUL_SCORE_THRESHOLD);
-  const meaningfulMoverCount = moverScores.length;
+  const meaningfulMoverCount = meaningfulRows.length;
 
   return {
     status,
@@ -378,6 +379,7 @@ export function buildTurnRecapReport(input: BuildTurnRecapReportInput): TurnReca
     guidedRatingsCreated,
     meaningfulMoverCount,
     rows: rows.sort(compareByLabel),
+    meaningfulRows,
     highlightRows,
     hasComparison
   };

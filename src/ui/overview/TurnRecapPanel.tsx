@@ -135,6 +135,18 @@ function groupRowsByKind(rows: readonly TurnRecapRow[]): Record<TurnRecapMoverKi
   };
 }
 
+function sortMeaningfulRows(rows: readonly TurnRecapRow[]): TurnRecapRow[] {
+  return rows
+    .slice()
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.islandLabel.localeCompare(right.islandLabel) ||
+        left.cohortLabel.localeCompare(right.cohortLabel) ||
+        `${left.islandId}:${left.cohortId}`.localeCompare(`${right.islandId}:${right.cohortId}`)
+    );
+}
+
 function groupLabel(kind: TurnRecapMoverKind): string {
   switch (kind) {
     case 'affinity':
@@ -172,19 +184,19 @@ function renderModalContent(report: TurnRecapReport): JSX.Element {
     );
   }
 
-  const grouped = groupRowsByKind(report.rows);
+  const meaningfulRows = groupRowsByKind(report.meaningfulRows);
 
   return (
     <>
       {(['affinity', 'certainty', 'rating-deviation', 'volatility', 'evidence'] as const).map((kind) => (
         <section className="detail-block" key={kind}>
           <h4>{groupLabel(kind)}</h4>
-          {grouped[kind].length === 0 ? (
+          {meaningfulRows[kind].length === 0 ? (
             <EmptyState title={`No ${groupLabel(kind).toLowerCase()}`} description="No mover of this type stood out in the latest turn." />
           ) : (
             <ReportTable
               columns={columns}
-              rows={grouped[kind]}
+              rows={sortMeaningfulRows(meaningfulRows[kind])}
               getRowKey={(row) => `${row.islandId}:${row.cohortId}`}
               emptyTitle={`No ${groupLabel(kind).toLowerCase()}`}
               emptyDescription="No mover of this type stood out in the latest turn."
