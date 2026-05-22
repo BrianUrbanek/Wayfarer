@@ -60,6 +60,7 @@ import {
 } from './model/turnPolicy';
 import { buildDataFitnessSummary } from './model/dataFitness';
 import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
+import { buildGoldenDemoReport, renderGoldenDemoReportMarkdown } from './analysis/goldenDemoReport';
 import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
 import { buildIslandTruthComparison } from './model/islandTruthComparison';
@@ -130,6 +131,7 @@ type DrawerState =
   | { type: 'pseudo'; key: string }
   | { type: 'reviewer'; userId: string }
   | { type: 'reviewer-recovery' }
+  | { type: 'golden-demo-report' }
   | { type: 'recommendation'; userId: string; islandId: string }
   | { type: 'affinity'; islandId: string; cohortId: string }
   | null;
@@ -1859,6 +1861,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     });
   };
 
+  const openGoldenDemoReport = () => {
+    if (!goldenDemoReport) {
+      return;
+    }
+
+    setDrawerState({ type: 'golden-demo-report' });
+    setScenarioError('');
+    setScenarioMessage('Opened Golden Demo report preview');
+  };
+
   const importScenarioFromFile = async (file: File) => {
     const result = parseSavedWayfarerScenario(await file.text());
 
@@ -2233,6 +2245,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const activeScenarioPreset = useMemo(
     () => resolveScenarioPresetFromControls(currentScenarioControls),
     [currentScenarioControls]
+  );
+  const goldenDemoReport = useMemo(
+    () =>
+      activeScenarioPreset?.id === 'golden-demo'
+        ? buildGoldenDemoReport({
+            state: simulationState,
+            scenario: activeScenarioPreset
+          })
+        : null,
+    [activeScenarioPreset, simulationState]
   );
   const activeScenarioPresetMetadata = activeScenarioPreset ? scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
   const scenarioPresetDisplay =
@@ -2841,6 +2863,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               <div className="control-strip__action-group control-strip__action-group--compact">
                 <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson} disabled={isExecutingScenario}>
                   Export
+                </button>
+                <button type="button" className="button button--ghost" onClick={openGoldenDemoReport} disabled={!goldenDemoReport}>
+                  Golden Demo report
                 </button>
                 <button type="button" className="button button--ghost" onClick={openScenarioFilePicker} disabled={isExecutingScenario}>
                   Import
@@ -3586,6 +3611,34 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         onClose={() => setDrawerState(null)}
       >
         {reviewerDrawerContent}
+      </Drawer>
+
+      <Drawer
+        open={drawerState?.type === 'golden-demo-report'}
+        title="Golden Demo report"
+        onClose={() => setDrawerState(null)}
+      >
+        {goldenDemoReport ? (
+          <div className="detail-stack">
+            <section className="detail-block">
+              <h4>{goldenDemoReport.title}</h4>
+              <p className="muted">
+                {goldenDemoReport.scenario.label} · seed {goldenDemoReport.scenario.seed}
+              </p>
+            </section>
+            <section className="detail-block">
+              <h4>Report preview</h4>
+              <pre className="report-markdown-preview" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
+                {renderGoldenDemoReportMarkdown(goldenDemoReport)}
+              </pre>
+            </section>
+          </div>
+        ) : (
+          <EmptyState
+            title="Golden Demo only"
+            description="Select the Golden Demo preset to generate the presentation-friendly report preview."
+          />
+        )}
       </Drawer>
 
       <ReviewerArchetypeRecoveryModal
