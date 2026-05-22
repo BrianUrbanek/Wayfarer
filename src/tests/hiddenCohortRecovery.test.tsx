@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import type { CohortAffinityEstimate, IslandAffinityReport } from '../model/affinity';
-import { buildHiddenCohortRecoveryReport } from '../model/hiddenCohortRecovery';
+import { buildHiddenCohortRecoveryReport, pickHiddenCohortRecoveryHeadline } from '../model/hiddenCohortRecovery';
 import { HiddenCohortRecoveryPanel, HiddenCohortRecoveryModal } from '../ui/recovery/HiddenCohortRecoveryPanel';
 import type { HiddenTasteCohort, Island, Rating, User } from '../model/types';
 import type { ObservedBehaviorEvent } from '../model/observedBehavior';
@@ -362,8 +362,198 @@ describe('hidden cohort recovery', () => {
     });
 
     expect(report.possibleOverfitCount).toBe(1);
-    expect(report.status).toBe('possible-overfit');
+    expect(report.status).toBe('unresolved');
     expect(report.randomIslandRows[0].status).toBe('possible-overfit');
+  });
+
+  it('keeps unseeded recovery ahead of random overfit when both exist, and only uses overfit when no stronger hidden-cohort story exists', () => {
+    const hiddenTasteCohorts: HiddenTasteCohort[] = [
+      {
+        id: 'hidden-seed-1',
+        label: 'Hidden Action',
+        kind: 'seed',
+        sourceSeedCohortId: 'cohort-action',
+        projectedSeedCohortId: 'cohort-action',
+        preferenceVector: { 'tag-action': 1 },
+        tagSignature: ['tag-action']
+      },
+      {
+        id: 'hidden-unseeded-1',
+        label: 'Hidden Social',
+        kind: 'unseeded',
+        sourceSeedCohortId: 'cohort-story',
+        projectedSeedCohortId: 'cohort-story',
+        preferenceVector: { 'tag-story': 1 },
+        tagSignature: ['tag-story']
+      }
+    ];
+
+    const overfitReport = buildHiddenCohortRecoveryReport({
+      hiddenTasteCohorts,
+      users: [
+        makeUser({ id: 'user-1', label: 'User 1', hiddenTasteCohortId: 'hidden-seed-1', hiddenTasteCohortKind: 'seed' }),
+        makeUser({ id: 'user-2', label: 'User 2', hiddenTasteCohortId: 'hidden-unseeded-1', hiddenTasteCohortKind: 'unseeded' })
+      ],
+      islands: [
+        makeIsland({
+          id: 'island-unseeded',
+          label: 'Island Unseeded',
+          hiddenTruthClass: 'unseeded-cohort-match',
+          hiddenTargetTasteCohortId: 'hidden-unseeded-1'
+        }),
+        makeIsland({
+          id: 'island-random',
+          label: 'Island Random',
+          hiddenTruthClass: 'random',
+          hiddenAppealVector: { 'tag-random': 0.2 }
+        })
+      ],
+      ratingEvents: [
+        {
+          id: 'event-1',
+          turn: 1,
+          userId: 'user-2',
+          islandId: 'island-unseeded',
+          rating: 1 as Rating,
+          source: 'organic',
+          raterSignalWeights: { 'cohort-story': 1 }
+        },
+        {
+          id: 'event-2',
+          turn: 1,
+          userId: 'user-1',
+          islandId: 'island-random',
+          rating: 1 as Rating,
+          source: 'organic',
+          raterSignalWeights: { 'cohort-action': 1 }
+        }
+      ],
+      observedBehaviorEvents: [],
+      islandAffinityReports: new Map<string, IslandAffinityReport>([
+        [
+          'island-unseeded',
+          {
+            islandId: 'island-unseeded',
+            estimates: [
+              makeEstimate({
+                cohortId: 'cohort-story',
+                affinity: 0.29,
+                confidence: 0.65,
+                ratingDeviation: 0.34,
+                volatility: 0.07,
+                effectiveWeight: 2.4,
+                evidenceCount: 3,
+                observedMean: 0.3,
+                rawCount: 3,
+                lastUpdatedTurn: 2
+              })
+            ],
+            topPositive: null,
+            topNegative: null
+          }
+        ],
+        [
+          'island-random',
+          {
+            islandId: 'island-random',
+            estimates: [
+              makeEstimate({
+                cohortId: 'cohort-action',
+                affinity: 0.51,
+                confidence: 0.74,
+                ratingDeviation: 0.26,
+                volatility: 0.08,
+                effectiveWeight: 3.2,
+                evidenceCount: 4,
+                observedMean: 0.51,
+                rawCount: 4,
+                lastUpdatedTurn: 2
+              })
+            ],
+            topPositive: null,
+            topNegative: null
+          }
+        ]
+      ]),
+      cohortLabelById: cohortLabels
+    });
+
+    expect(overfitReport.status).toBe('unseeded-recovered');
+    expect(overfitReport.possibleOverfitCount).toBe(1);
+
+    expect(
+      pickHiddenCohortRecoveryHeadline({
+        seedRecoveredCount: 0,
+        seedEmergingCount: 0,
+        unseededRecoveredCount: 0,
+        unseededEmergingCount: 0,
+        unresolvedCount: 0,
+        randomCorrectlyUncertainCount: 0,
+        possibleOverfitCount: 1
+      })
+    ).toBe('possible-overfit');
+
+    const unresolvedReport = buildHiddenCohortRecoveryReport({
+      hiddenTasteCohorts: [
+        {
+          id: 'hidden-seed-1',
+          label: 'Hidden Action',
+          kind: 'seed',
+          sourceSeedCohortId: 'cohort-action',
+          projectedSeedCohortId: 'cohort-action',
+          preferenceVector: { 'tag-action': 1 },
+          tagSignature: ['tag-action']
+        }
+      ],
+      users: [makeUser({ id: 'user-1', label: 'User 1', hiddenTasteCohortId: 'hidden-seed-1', hiddenTasteCohortKind: 'seed' })],
+      islands: [
+        makeIsland({
+          id: 'island-random-only',
+          label: 'Island Random Only',
+          hiddenTruthClass: 'random',
+          hiddenAppealVector: { 'tag-random': 0.2 }
+        })
+      ],
+      ratingEvents: [
+        {
+          id: 'event-3',
+          turn: 1,
+          userId: 'user-1',
+          islandId: 'island-random-only',
+          rating: 1 as Rating,
+          source: 'organic',
+          raterSignalWeights: { 'cohort-action': 1 }
+        }
+      ],
+      observedBehaviorEvents: [],
+      islandAffinityReports: new Map<string, IslandAffinityReport>([
+        [
+          'island-random-only',
+          {
+            islandId: 'island-random-only',
+            estimates: [
+              makeEstimate({
+                cohortId: 'cohort-action',
+                affinity: 0.08,
+                confidence: 0.22,
+                ratingDeviation: 0.82,
+                volatility: 0.08,
+                effectiveWeight: 0.5,
+                evidenceCount: 1,
+                observedMean: 0.08,
+                rawCount: 1,
+                lastUpdatedTurn: 2
+              })
+            ],
+            topPositive: null,
+            topNegative: null
+          }
+        ]
+      ]),
+      cohortLabelById: cohortLabels
+    });
+
+    expect(unresolvedReport.status).toBe('unresolved');
   });
 
   it('renders a compact summary card without the proof table and a modal with recovery detail', () => {

@@ -72,6 +72,16 @@ export interface HiddenCohortRecoveryReport {
   randomIslandRows: HiddenCohortRecoveryRandomIslandRow[];
 }
 
+export interface HiddenCohortRecoveryHeadlineInput {
+  seedRecoveredCount: number;
+  seedEmergingCount: number;
+  unseededRecoveredCount: number;
+  unseededEmergingCount: number;
+  unresolvedCount: number;
+  randomCorrectlyUncertainCount: number;
+  possibleOverfitCount: number;
+}
+
 export interface BuildHiddenCohortRecoveryReportInput {
   hiddenTasteCohorts: readonly HiddenTasteCohort[];
   users: readonly User[];
@@ -326,16 +336,7 @@ function summarizeRandomIsland(
   };
 }
 
-function summarizeHeadline(
-  report: Omit<
-    HiddenCohortRecoveryReport,
-    'status' | 'statusLabel' | 'statusTone' | 'summarySentence' | 'caveatCopy' | 'rows' | 'randomIslandRows'
-  >
-): HiddenCohortRecoveryStatus {
-  if (report.possibleOverfitCount > 0) {
-    return 'possible-overfit';
-  }
-
+function summarizeHeadline(report: HiddenCohortRecoveryHeadlineInput): HiddenCohortRecoveryStatus {
   if (report.unseededRecoveredCount > 0) {
     return 'unseeded-recovered';
   }
@@ -356,11 +357,21 @@ function summarizeHeadline(
     return 'unresolved';
   }
 
+  if (report.possibleOverfitCount > 0) {
+    return 'possible-overfit';
+  }
+
   if (report.randomCorrectlyUncertainCount > 0) {
     return 'random-correctly-uncertain';
   }
 
   return 'unresolved';
+}
+
+export function pickHiddenCohortRecoveryHeadline(
+  report: HiddenCohortRecoveryHeadlineInput
+): HiddenCohortRecoveryStatus {
+  return summarizeHeadline(report);
 }
 
 export function buildHiddenCohortRecoveryReport(
