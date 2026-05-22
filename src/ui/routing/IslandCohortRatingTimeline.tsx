@@ -21,12 +21,12 @@ function formatPercent(value: number): string {
   return `${Math.round(clamp01(value) * 100)}%`;
 }
 
-function trendLabel(previous: IslandRatingTimelineRow | undefined, latest: IslandRatingTimelineRow): string {
-  if (!previous) {
+function runTrendLabel(first: IslandRatingTimelineRow | undefined, latest: IslandRatingTimelineRow): string {
+  if (!first) {
     return 'new';
   }
 
-  const delta = latest.affinity - previous.affinity;
+  const delta = latest.affinity - first.affinity;
   if (Math.abs(delta) < 0.02) {
     return 'flat';
   }
@@ -90,7 +90,6 @@ export function IslandCohortRatingTimeline({ rows, cohortLabelById }: IslandCoho
 
   const activeLabel = activeCohortId ? cohortLabelById.get(activeCohortId) ?? activeCohortId : 'No cohort selected';
   const activeState = activeCohortId ? cohortStateById.get(activeCohortId) ?? { latest: null, previous: null } : { latest: null, previous: null };
-  const activePrevious = activeState.previous;
   const activeLatest = activeState.latest;
 
   const chart = useMemo(() => {
@@ -106,12 +105,8 @@ export function IslandCohortRatingTimeline({ rows, cohortLabelById }: IslandCoho
     const turns = activeRowSeries.map((row) => row.turn);
     const minTurn = Math.min(...turns);
     const maxTurn = Math.max(...turns);
-    const affinities = activeRowSeries.map((row) => row.affinity);
-    const minAffinity = Math.min(...affinities);
-    const maxAffinity = Math.max(...affinities);
-    const yPad = Math.max(0.05, (maxAffinity - minAffinity) * 0.18);
-    const minY = Math.max(-1, minAffinity - yPad);
-    const maxY = Math.min(1, maxAffinity + yPad);
+    const minY = -1;
+    const maxY = 1;
     const turnRange = Math.max(1, maxTurn - minTurn);
     const yRange = Math.max(0.001, maxY - minY);
     const xForTurn = (turn: number) => padding.left + ((turn - minTurn) / turnRange) * plotWidth;
@@ -126,6 +121,7 @@ export function IslandCohortRatingTimeline({ rows, cohortLabelById }: IslandCoho
     const meanConfidence = activeRowSeries.reduce((sum, row) => sum + row.confidence, 0) / activeRowSeries.length;
     const meanEffectiveWeight = activeRowSeries.reduce((sum, row) => sum + row.effectiveWeight, 0) / activeRowSeries.length;
     const latest = activeRowSeries[activeRowSeries.length - 1];
+    const first = activeRowSeries[0];
     return {
       width,
       height,
@@ -136,7 +132,8 @@ export function IslandCohortRatingTimeline({ rows, cohortLabelById }: IslandCoho
       path,
       meanConfidence,
       meanEffectiveWeight,
-      latest
+      latest,
+      first
     };
   }, [activeRowSeries]);
 
@@ -191,8 +188,8 @@ export function IslandCohortRatingTimeline({ rows, cohortLabelById }: IslandCoho
               <strong>{activeLatest ? activeLatest.ratingDeviation.toFixed(3) : 'n/a'}</strong>
             </div>
             <div>
-              <div className="island-rating-timeline__summary-label">Trend</div>
-              <strong>{activeLatest ? trendLabel(activePrevious ?? undefined, activeLatest) : 'no data'}</strong>
+              <div className="island-rating-timeline__summary-label">Run trend</div>
+              <strong>{chart?.first && chart.latest ? runTrendLabel(chart.first, chart.latest) : 'no data'}</strong>
             </div>
           </div>
 

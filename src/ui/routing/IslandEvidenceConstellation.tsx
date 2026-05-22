@@ -23,11 +23,10 @@ export function IslandEvidenceConstellationView({ data }: IslandEvidenceConstell
   return (
     <div className="card island-evidence-constellation">
       <div className="card__title-row">
-        <strong>Island Evidence Constellation</strong>
+        <strong>Island Evidence Distribution</strong>
       </div>
       <p className="muted island-evidence-constellation__helper">
-        Experimental analyst evidence-shape view. Center = selected island. Spokes = visible cohort anchors. Points = rating events.
-        Radius uses existing Rating Event Weight when available, otherwise a visualization-only proxy. No-clear-cohort points are shown explicitly so totals reconcile.
+        Experimental analyst evidence-shape read. Rows group selected-island rating events by strongest visible cohort interpretation. No clear cohort captures rating events without a positive primary cohort signal. Positive, neutral, and negative counts come from rating polarity. Radius uses existing Rating Event Weight when available, otherwise a visualization-only proxy.
       </p>
       {totalPoints === 0 ? (
         <p className="muted">No rating evidence events are available for this island yet.</p>
@@ -65,7 +64,7 @@ export function IslandEvidenceConstellationView({ data }: IslandEvidenceConstell
           </div>
           <div className="island-evidence-constellation__legend">
             <p className="muted">
-              Color and shape encode rating polarity. Strongest primary cohort is chosen by total primary weight across points, not by a new similarity model.
+              This is an experimental analyst evidence-shape read, not a score. Strongest primary cohort is chosen by total primary weight across points, not by a new similarity model.
             </p>
           </div>
           <div className="report-table-wrap island-evidence-constellation__wrap">
