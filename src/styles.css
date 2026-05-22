@@ -164,6 +164,47 @@ select {
   box-shadow: 0 0 0 3px rgba(141, 164, 255, 0.18);
 }
 
+.about-copy__jump {
+  display: grid;
+  gap: 8px;
+  max-width: 320px;
+  margin: 14px 0 18px;
+}
+
+.about-copy__jump-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.about-copy__jump-select {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(141, 164, 255, 0.18);
+  background: rgba(14, 19, 32, 0.96);
+  color: var(--text);
+  padding: 0.82rem 0.95rem;
+  outline: none;
+}
+
+.about-copy__jump-select:focus {
+  border-color: rgba(141, 164, 255, 0.72);
+  box-shadow: 0 0 0 3px rgba(141, 164, 255, 0.18);
+}
+
+.about-copy__glossary-row {
+  outline: none;
+}
+
+.about-copy__glossary-row--active > td {
+  background: rgba(141, 164, 255, 0.08);
+}
+
+.about-copy__glossary-row:focus-visible > td {
+  background: rgba(141, 164, 255, 0.12);
+}
+
 .control--wide {
   grid-column: span 2;
 }

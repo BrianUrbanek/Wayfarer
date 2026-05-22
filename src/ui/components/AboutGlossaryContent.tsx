@@ -1,3 +1,4 @@
+import { useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Badge } from './Badge';
 import {
@@ -49,6 +50,23 @@ function statusLabel(status: GlossaryImplementedStatus): string {
 }
 
 export function AboutGlossaryContent() {
+  const [selectedTermId, setSelectedTermId] = useState<string>('');
+  const termRefs = useRef<Partial<Record<string, HTMLTableRowElement | null>>>({});
+
+  const glossaryOptions = useMemo(() => GLOSSARY_TERMS, []);
+
+  const handleJumpToDefinition = (nextTermId: string) => {
+    setSelectedTermId(nextTermId);
+
+    const target = termRefs.current[nextTermId];
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.focus();
+  };
+
   return (
     <div className="stack about-copy">
       <section className="about-copy__section">
@@ -61,6 +79,24 @@ export function AboutGlossaryContent() {
       <section className="about-copy__section" aria-label="Glossary">
         <h3>Glossary</h3>
         <p className="muted">Typed semantic checksum for core Wayfarer terms.</p>
+        <div className="about-copy__jump glossary-jump">
+          <label htmlFor="glossary-jump" className="about-copy__jump-label">
+            Jump to definition
+          </label>
+          <select
+            id="glossary-jump"
+            className="about-copy__jump-select"
+            value={selectedTermId}
+            onChange={(event) => handleJumpToDefinition(event.target.value)}
+          >
+            <option value="">Select a term...</option>
+            {glossaryOptions.map((term) => (
+              <option key={term.id} value={term.id}>
+                {term.term}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="report-table-wrap about-copy__glossary-wrap">
           <table className="report-table about-copy__glossary" aria-label="Wayfarer glossary">
             <thead>
@@ -73,7 +109,16 @@ export function AboutGlossaryContent() {
             </thead>
             <tbody>
               {GLOSSARY_TERMS.map((term) => (
-                <tr key={term.id} id={`glossary-${term.id}`}>
+                <tr
+                  key={term.id}
+                  id={term.id}
+                  ref={(node) => {
+                    termRefs.current[term.id] = node;
+                  }}
+                  tabIndex={-1}
+                  aria-label={term.term}
+                  className={selectedTermId === term.id ? 'about-copy__glossary-row about-copy__glossary-row--active' : 'about-copy__glossary-row'}
+                >
                   <td>
                     <div className="table-cell-stack">
                       <strong>{term.term}</strong>

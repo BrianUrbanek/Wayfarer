@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { AboutGlossaryContent } from '../ui/components/AboutGlossaryContent';
+import { GLOSSARY_TERMS } from '../ui/glossary';
 
 describe('about glossary content', () => {
-  it('renders markdown primer content and glossary rows', () => {
+  it('renders the jump control with generated glossary options and stable anchors', () => {
     const html = renderToString(<AboutGlossaryContent />);
 
-    expect(html).toContain('Concept Primer');
-    expect(html).toContain('Content Discovery Under Uncertainty');
-    expect(html).toContain('Trust belongs to raters');
-    expect(html).toContain('The generator also has hidden truth layers');
-    expect(html).toContain('Glossary');
-    expect(html).toContain('rating-event-weight');
-    expect(html).toContain('confidence-snapshot');
+    expect(html).toContain('Jump to definition');
+    expect(html).toContain('id="glossary-jump"');
+    expect(html).toContain('Select a term...');
+
+    for (const term of GLOSSARY_TERMS) {
+      expect(html).toContain(`<option value="${term.id}">${term.term}</option>`);
+      expect(html).toContain(`id="${term.id}"`);
+    }
   });
 });
