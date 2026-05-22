@@ -47,7 +47,8 @@ export function IslandConfidenceRadar({ title = 'Island confidence by cohort', d
         <strong>{title}</strong>
       </div>
       <p className="muted island-confidence-radar__helper">
-        Confidence indicates certainty for each island/cohort read. It does not indicate whether the fit is positive or negative.
+        Confidence indicates certainty for each island/cohort read at the current selected-island context. It is separate from
+        the directional affinity surface, which shows whether the fit itself is positive or negative.
       </p>
       {data.length === 0 ? (
         <p className="muted">No cohort confidence data available.</p>

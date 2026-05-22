@@ -1046,7 +1046,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </div>
       </div>
 
-      <div className="metric-grid metric-grid--compact">
+      <div className="metric-grid metric-grid--compact selected-island__summary-grid">
         <MetricCard label="Generated archetypes" value={reviewerArchetypeAnalysis.recoverySummary.totalUsers} tone="accent" />
         <MetricCard label="Matches" value={reviewerArchetypeAnalysis.recoverySummary.matchCount} tone="success" />
         <MetricCard label="Partial" value={reviewerArchetypeAnalysis.recoverySummary.partialCount} tone="accent" />

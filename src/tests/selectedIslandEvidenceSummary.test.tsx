@@ -34,7 +34,7 @@ describe('selected island evidence summary', () => {
           }
         ]}
         timelineRows={[{ turn: 0, cohortId: 'cohort-action', affinity: 0.2, confidence: 0.5, ratingDeviation: 0.5, uncertainty: 0.5, volatility: 0.08, effectiveWeight: 1, evidenceCount: 1 }]}
-        constellation={{ points: [{ eventId: 'evt-1', turn: 2, userId: 'user-1', rating: 1, primaryCohortId: 'cohort-action', secondaryCohortId: null, primaryWeight: 0.6, secondaryWeight: 0, ambiguity: 0, spokeCohortId: 'cohort-action', angleJitter: 0, radiusValue: 0.36, sizeValue: 0.6, opacityValue: 1, directionalContribution: 0.36, weightProxyLabel: 'x' }], spokes: [{ cohortId: 'cohort-action', cohortLabel: 'Action', pointCount: 1, totalPrimaryWeight: 0.6 }], usesRatingEventWeightRows: true }}
+        constellation={{ points: [{ eventId: 'evt-1', turn: 2, userId: 'user-1', rating: 1, primaryCohortId: 'cohort-action', secondaryCohortId: null, primaryWeight: 0.6, secondaryWeight: 0, ambiguity: 0, spokeCohortId: 'cohort-action', angleJitter: 0, radiusValue: 0.36, sizeValue: 0.6, opacityValue: 1, directionalContribution: 0.36, weightProxyLabel: 'x' }], spokes: [{ cohortId: 'cohort-action', cohortLabel: 'Action', pointCount: 1, totalPrimaryWeight: 0.6, totalRadiusValue: 0.36 }], usesRatingEventWeightRows: true }}
         cohortLabelById={new Map([['cohort-action', 'Action']])}
         observedBehaviorSummary={{
           islandId: 'island-1',
@@ -53,8 +53,7 @@ describe('selected island evidence summary', () => {
     );
 
     expect(html).toContain('Selected island evidence');
-    expect(html).toContain('Confidence shows how certain');
-    expect(html).toContain('Historical snapshots exist for turn-boundary analysis');
+    expect(html).toContain('Current confidence and directional affinity are separate reads');
     expect(html).toContain('Island confidence by cohort');
     expect(html).toContain('Island / Cohort Rating Timeline');
     expect(html).toContain('Island Evidence Constellation');

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import type { CohortId } from '../../model/types.js';
 import type { IslandRatingTimelineRow } from '../../model/islandEvidenceVisualization.js';
 
@@ -11,68 +12,250 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+function formatSigned(value: number, digits = 3): string {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(digits)}`;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(clamp01(value) * 100)}%`;
+}
+
+function trendLabel(previous: IslandRatingTimelineRow | undefined, latest: IslandRatingTimelineRow): string {
+  if (!previous) {
+    return 'new';
+  }
+
+  const delta = latest.affinity - previous.affinity;
+  if (Math.abs(delta) < 0.02) {
+    return 'flat';
+  }
+
+  return delta > 0 ? `up ${formatSigned(delta)}` : `down ${formatSigned(delta)}`;
+}
+
+function buildLinePath(points: readonly { x: number; y: number }[]): string {
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+}
+
 export function IslandCohortRatingTimeline({ rows, cohortLabelById }: IslandCohortRatingTimelineProps) {
-  const turns = Array.from(new Set(rows.map((row) => row.turn))).sort((a, b) => a - b);
   const cohorts = Array.from(cohortLabelById.keys());
-  const width = 640;
-  const height = 220;
-  const margin = { top: 18, right: 18, bottom: 24, left: 32 };
-  const chartWidth = width - margin.left - margin.right;
-  const chartHeight = height - margin.top - margin.bottom;
-  const xForTurn = (turn: number) => {
-    if (turns.length <= 1) return margin.left + chartWidth / 2;
-    const minTurn = turns[0] ?? 0;
-    const maxTurn = turns[turns.length - 1] ?? 1;
-    return margin.left + ((turn - minTurn) / Math.max(1, maxTurn - minTurn)) * chartWidth;
-  };
-  const yForAffinity = (value: number) => margin.top + (1 - (clamp01((value + 1) / 2))) * chartHeight;
+  const [activeCohortId, setActiveCohortId] = useState<CohortId | null>(cohorts[0] ?? null);
+
+  useEffect(() => {
+    if (cohorts.length === 0) {
+      if (activeCohortId !== null) {
+        setActiveCohortId(null);
+      }
+      return;
+    }
+
+    if (!activeCohortId || !cohorts.includes(activeCohortId)) {
+      setActiveCohortId(cohorts[0] ?? null);
+    }
+  }, [activeCohortId, cohorts]);
+
+  const cohortStateById = useMemo(() => {
+    const map = new Map<CohortId, { latest: IslandRatingTimelineRow | null; previous: IslandRatingTimelineRow | null }>();
+    for (const row of rows) {
+      const current = map.get(row.cohortId);
+      if (current) {
+        current.previous = current.latest;
+        current.latest = row;
+      } else {
+        map.set(row.cohortId, { latest: row, previous: null });
+      }
+    }
+    return map;
+  }, [rows]);
+
+  const displayRows = cohorts.map((cohortId) => {
+    const state = cohortStateById.get(cohortId) ?? { latest: null, previous: null };
+    return {
+      cohortId,
+      label: cohortLabelById.get(cohortId) ?? cohortId,
+      latest: state.latest,
+      previous: state.previous
+    };
+  });
+
+  const activeRowSeries = useMemo(() => {
+    if (!activeCohortId) {
+      return [];
+    }
+    return rows
+      .filter((row) => row.cohortId === activeCohortId)
+      .sort((left, right) => left.turn - right.turn);
+  }, [activeCohortId, rows]);
+
+  const activeLabel = activeCohortId ? cohortLabelById.get(activeCohortId) ?? activeCohortId : 'No cohort selected';
+  const activeState = activeCohortId ? cohortStateById.get(activeCohortId) ?? { latest: null, previous: null } : { latest: null, previous: null };
+  const activePrevious = activeState.previous;
+  const activeLatest = activeState.latest;
+
+  const chart = useMemo(() => {
+    if (activeRowSeries.length === 0) {
+      return null;
+    }
+
+    const width = 760;
+    const height = 240;
+    const padding = { left: 52, right: 24, top: 18, bottom: 30 };
+    const plotWidth = width - padding.left - padding.right;
+    const plotHeight = height - padding.top - padding.bottom;
+    const turns = activeRowSeries.map((row) => row.turn);
+    const minTurn = Math.min(...turns);
+    const maxTurn = Math.max(...turns);
+    const affinities = activeRowSeries.map((row) => row.affinity);
+    const minAffinity = Math.min(...affinities);
+    const maxAffinity = Math.max(...affinities);
+    const yPad = Math.max(0.05, (maxAffinity - minAffinity) * 0.18);
+    const minY = Math.max(-1, minAffinity - yPad);
+    const maxY = Math.min(1, maxAffinity + yPad);
+    const turnRange = Math.max(1, maxTurn - minTurn);
+    const yRange = Math.max(0.001, maxY - minY);
+    const xForTurn = (turn: number) => padding.left + ((turn - minTurn) / turnRange) * plotWidth;
+    const yForAffinity = (affinity: number) => padding.top + (1 - (affinity - minY) / yRange) * plotHeight;
+
+    const points = activeRowSeries.map((row) => ({
+      row,
+      x: xForTurn(row.turn),
+      y: yForAffinity(row.affinity)
+    }));
+    const path = buildLinePath(points);
+    const meanConfidence = activeRowSeries.reduce((sum, row) => sum + row.confidence, 0) / activeRowSeries.length;
+    const meanEffectiveWeight = activeRowSeries.reduce((sum, row) => sum + row.effectiveWeight, 0) / activeRowSeries.length;
+    const latest = activeRowSeries[activeRowSeries.length - 1];
+    return {
+      width,
+      height,
+      padding,
+      minY,
+      maxY,
+      points,
+      path,
+      meanConfidence,
+      meanEffectiveWeight,
+      latest
+    };
+  }, [activeRowSeries]);
 
   return (
     <div className="card island-rating-timeline">
-      <div className="card__title-row"><strong>Island / Cohort Rating Timeline</strong></div>
+      <div className="card__title-row">
+        <strong>Island / Cohort Rating Timeline</strong>
+      </div>
       <p className="muted island-rating-timeline__helper">
-        Turn-by-turn projection from island/cohort rating snapshots. Affinity is the primary trace; confidence/RD/uncertainty/volatility stay visible in the table.
+        Single-cohort trend view. Click a cohort key to swap the chart series. The chart defaults to one visible cohort at a time so the turn-boundary read stays legible. Affinity is signed fit, not confidence.
       </p>
       {rows.length === 0 ? (
         <p className="muted">No island/cohort rating snapshots available for this island yet.</p>
       ) : (
-        <>
-          <svg className="island-rating-timeline__svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Island cohort timeline">
-            <line x1={margin.left} y1={margin.top + chartHeight / 2} x2={margin.left + chartWidth} y2={margin.top + chartHeight / 2} className="island-rating-timeline__axis" />
-            {cohorts.map((cohortId, cohortIndex) => {
-              const cohortRows = rows.filter((row) => row.cohortId === cohortId);
-              const points = cohortRows.map((row) => `${xForTurn(row.turn)},${yForAffinity(row.affinity)}`).join(' ');
+        <div className="island-rating-timeline__body">
+          <div className="chip-row island-rating-timeline__chips" role="tablist" aria-label="Visible cohort anchors">
+            {displayRows.map((entry) => {
+              const selected = entry.cohortId === activeCohortId;
               return (
-                <g key={cohortId}>
-                  {points ? <polyline points={points} className={`island-rating-timeline__line island-rating-timeline__line--${cohortIndex % 5}`} /> : null}
-                </g>
+                <button
+                  key={entry.cohortId}
+                  type="button"
+                  className={`chip island-rating-timeline__chip${selected ? ' island-rating-timeline__chip--active' : ''}`}
+                  aria-pressed={selected}
+                  onClick={() => setActiveCohortId(entry.cohortId)}
+                >
+                  {entry.label}
+                </button>
               );
             })}
-          </svg>
-          <div className="report-table-wrap">
-            <table className="report-table">
-              <thead>
-                <tr>
-                  <th scope="col">Turn</th><th scope="col">Cohort</th><th scope="col" className="report-table__cell--right">Affinity</th>
-                  <th scope="col" className="report-table__cell--right">Confidence</th><th scope="col" className="report-table__cell--right">RD</th>
-                  <th scope="col" className="report-table__cell--right">Uncertainty</th><th scope="col" className="report-table__cell--right">Volatility</th>
-                  <th scope="col" className="report-table__cell--right">Effective weight</th><th scope="col" className="report-table__cell--right">Evidence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={`${row.turn}-${row.cohortId}`}>
-                    <td>{row.turn}</td><td>{cohortLabelById.get(row.cohortId) ?? row.cohortId}</td>
-                    <td className="report-table__cell--right">{row.affinity.toFixed(3)}</td><td className="report-table__cell--right">{row.confidence.toFixed(3)}</td>
-                    <td className="report-table__cell--right">{row.ratingDeviation.toFixed(3)}</td><td className="report-table__cell--right">{row.uncertainty.toFixed(3)}</td>
-                    <td className="report-table__cell--right">{row.volatility.toFixed(3)}</td><td className="report-table__cell--right">{row.effectiveWeight.toFixed(3)}</td>
-                    <td className="report-table__cell--right">{row.evidenceCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        </>
+
+          <div className="island-rating-timeline__summary">
+            <div>
+              <div className="island-rating-timeline__summary-label">Selected cohort</div>
+              <strong>{activeLabel}</strong>
+            </div>
+            <div>
+              <div className="island-rating-timeline__summary-label">Latest turn</div>
+              <strong>{activeLatest ? activeLatest.turn : 'n/a'}</strong>
+            </div>
+            <div>
+              <div className="island-rating-timeline__summary-label">Affinity</div>
+              <strong>{activeLatest ? formatSigned(activeLatest.affinity) : 'n/a'}</strong>
+            </div>
+            <div>
+              <div className="island-rating-timeline__summary-label">Confidence</div>
+              <strong>{activeLatest ? formatPercent(activeLatest.confidence) : 'n/a'}</strong>
+            </div>
+            <div>
+              <div className="island-rating-timeline__summary-label">RD</div>
+              <strong>{activeLatest ? activeLatest.ratingDeviation.toFixed(3) : 'n/a'}</strong>
+            </div>
+            <div>
+              <div className="island-rating-timeline__summary-label">Trend</div>
+              <strong>{activeLatest ? trendLabel(activePrevious ?? undefined, activeLatest) : 'no data'}</strong>
+            </div>
+          </div>
+
+          <div className="island-rating-timeline__chart-shell">
+            <svg className="island-rating-timeline__chart" viewBox={`0 0 ${chart?.width ?? 760} ${chart?.height ?? 240}`} role="img" aria-label="Island cohort rating timeline">
+              <rect x="0" y="0" width={chart?.width ?? 760} height={chart?.height ?? 240} className="island-rating-timeline__chart-bg" />
+              {chart ? (
+                <>
+                  {[0, 0.5, 1].map((tick) => (
+                    <g key={tick}>
+                      <line
+                        x1={chart.padding.left}
+                        y1={chart.padding.top + (1 - tick) * (chart.height - chart.padding.top - chart.padding.bottom)}
+                        x2={chart.width - chart.padding.right}
+                        y2={chart.padding.top + (1 - tick) * (chart.height - chart.padding.top - chart.padding.bottom)}
+                        className="island-rating-timeline__grid"
+                      />
+                      <text
+                        x="10"
+                        y={chart.padding.top + 4 + (1 - tick) * (chart.height - chart.padding.top - chart.padding.bottom)}
+                        className="island-rating-timeline__axis-label"
+                      >
+                        {tick === 1 ? '+1' : tick === 0.5 ? '0' : '-1'}
+                      </text>
+                    </g>
+                  ))}
+                  <line
+                    x1={chart.padding.left}
+                    y1={chart.height - chart.padding.bottom}
+                    x2={chart.width - chart.padding.right}
+                    y2={chart.height - chart.padding.bottom}
+                    className="island-rating-timeline__axis-line"
+                  />
+                  <line
+                    x1={chart.padding.left}
+                    y1={chart.padding.top}
+                    x2={chart.padding.left}
+                    y2={chart.height - chart.padding.bottom}
+                    className="island-rating-timeline__axis-line"
+                  />
+                  <path d={chart.path} className="island-rating-timeline__line" />
+                  {chart.points.map((point, index) => (
+                    <g key={`${point.row.cohortId}-${point.row.turn}`}>
+                      <circle cx={point.x} cy={point.y} r={index === chart.points.length - 1 ? 5 : 3.5} className="island-rating-timeline__point" />
+                      <text x={point.x} y={chart.height - 10} textAnchor="middle" className="island-rating-timeline__tick">
+                        {point.row.turn}
+                      </text>
+                    </g>
+                  ))}
+                </>
+              ) : null}
+            </svg>
+          </div>
+
+          <div className="island-rating-timeline__legend">
+            <span className="island-rating-timeline__legend-item island-rating-timeline__legend-item--active">
+              Selected cohort line
+            </span>
+            <span className="island-rating-timeline__legend-item">Y axis = signed affinity, not confidence</span>
+            <span className="island-rating-timeline__legend-item">Latest mean confidence {chart ? formatPercent(chart.meanConfidence) : 'n/a'}</span>
+            <span className="island-rating-timeline__legend-item">Mean effective weight {chart ? chart.meanEffectiveWeight.toFixed(3) : 'n/a'}</span>
+          </div>
+        </div>
       )}
     </div>
   );

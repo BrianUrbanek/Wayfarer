@@ -41,13 +41,8 @@ export function SelectedIslandEvidenceSummary({
     <section className="detail-block">
       <div className="section-heading">
         <h4>Selected island evidence</h4>
-        <p>
-          Confidence shows how certain each island/cohort read is, while directional affinity remains the separate fit-polarity read.
-        </p>
         <p className="muted">
-          Rating Event Weight is shown as a current-context diagnostic: trust proxy multiplied by current uncertainty leverage
-          projected from the island/cohort rating state. Historical snapshots exist for turn-boundary analysis, but this table
-          intentionally shows the current selected-island context.
+          Current confidence and directional affinity are separate reads. The surfaces below are diagnostics, not score cards.
         </p>
       </div>
       <div className="stack">

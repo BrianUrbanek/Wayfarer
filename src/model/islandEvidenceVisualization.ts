@@ -38,6 +38,7 @@ export interface IslandEvidenceConstellationSpoke {
   cohortLabel: string;
   pointCount: number;
   totalPrimaryWeight: number;
+  totalRadiusValue: number;
 }
 
 export interface IslandEvidenceConstellation {
@@ -156,9 +157,21 @@ export function buildIslandEvidenceConstellation(input: {
       cohortId,
       cohortLabel,
       pointCount: spokePoints.length,
-      totalPrimaryWeight: spokePoints.reduce((sum, point) => sum + point.primaryWeight, 0)
+      totalPrimaryWeight: spokePoints.reduce((sum, point) => sum + point.primaryWeight, 0),
+      totalRadiusValue: spokePoints.reduce((sum, point) => sum + point.radiusValue, 0)
     };
   });
+
+  const unassignedPoints = points.filter((point) => !point.primaryCohortId);
+  if (unassignedPoints.length > 0) {
+    spokes.push({
+      cohortId: 'unassigned' as CohortId,
+      cohortLabel: 'No clear cohort',
+      pointCount: unassignedPoints.length,
+      totalPrimaryWeight: 0,
+      totalRadiusValue: unassignedPoints.reduce((sum, point) => sum + point.radiusValue, 0)
+    });
+  }
 
   return {
     points,

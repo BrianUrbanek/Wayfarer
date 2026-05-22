@@ -14,6 +14,7 @@ interface ReportTableProps<Row> {
   onRowClick?: (row: Row) => void;
   emptyTitle: string;
   emptyDescription: string;
+  className?: string;
 }
 
 export function ReportTable<Row>({
@@ -22,7 +23,8 @@ export function ReportTable<Row>({
   getRowKey,
   onRowClick,
   emptyTitle,
-  emptyDescription
+  emptyDescription,
+  className
 }: ReportTableProps<Row>) {
   if (rows.length === 0) {
     return (
@@ -35,7 +37,7 @@ export function ReportTable<Row>({
 
   return (
     <div className="report-table-wrap">
-      <table className="report-table">
+      <table className={`report-table${className ? ` ${className}` : ''}`}>
         <thead>
           <tr>
             {columns.map((column) => (

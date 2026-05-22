@@ -16,16 +16,16 @@ function formatDecimal(value: number, digits = 2): string {
 
 const columns: ReportTableColumn<ConfidenceGrowthRow>[] = [
   { key: 'turn', label: 'Turn', render: (row) => row.turn, align: 'right' },
-  { key: 'ratings', label: 'Ratings created', render: (row) => row.ratingsCreated, align: 'right' },
-  { key: 'cumulative', label: 'Cumulative ratings', render: (row) => row.cumulativeRatingEvents, align: 'right' },
-  { key: 'avg-confidence', label: 'Avg confidence', render: (row) => formatPercent(row.averageIslandCohortConfidence), align: 'right' },
+  { key: 'ratings', label: 'Created', render: (row) => row.ratingsCreated, align: 'right' },
+  { key: 'cumulative', label: 'Cumulative', render: (row) => row.cumulativeRatingEvents, align: 'right' },
+  { key: 'avg-confidence', label: 'Avg certainty', render: (row) => formatPercent(row.averageIslandCohortConfidence), align: 'right' },
   { key: 'avg-weight', label: 'Avg evidence', render: (row) => formatDecimal(row.averageEffectiveWeight), align: 'right' },
-  { key: 'above-25', label: '> 25%', render: (row) => row.estimatesAbove25, align: 'right' },
-  { key: 'above-50', label: '> 50%', render: (row) => row.estimatesAbove50, align: 'right' },
-  { key: 'above-75', label: '> 75%', render: (row) => row.estimatesAbove75, align: 'right' },
+  { key: 'above-25', label: '>25%', render: (row) => row.estimatesAbove25, align: 'right' },
+  { key: 'above-50', label: '>50%', render: (row) => row.estimatesAbove50, align: 'right' },
+  { key: 'above-75', label: '>75%', render: (row) => row.estimatesAbove75, align: 'right' },
   { key: 'routed', label: 'Routed islands', render: (row) => row.routedIslandCount, align: 'right' },
   { key: 'safe-fit', label: 'Safe fits', render: (row) => row.safeFitCount, align: 'right' },
-  { key: 'probe', label: 'Discovery probes', render: (row) => row.discoveryProbeCount, align: 'right' }
+  { key: 'probe', label: 'Probes', render: (row) => row.discoveryProbeCount, align: 'right' }
 ];
 
 export function ConfidenceGrowthPanel({ rows }: ConfidenceGrowthPanelProps) {
@@ -39,6 +39,7 @@ export function ConfidenceGrowthPanel({ rows }: ConfidenceGrowthPanelProps) {
           </p>
         </div>
         <ReportTable
+          className="report-table--dense confidence-growth__table"
           columns={columns}
           rows={[...rows]}
           getRowKey={(row) => String(row.turn)}

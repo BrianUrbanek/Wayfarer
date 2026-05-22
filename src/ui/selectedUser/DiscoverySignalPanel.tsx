@@ -83,11 +83,12 @@ export function DiscoverySignalPanel({ profile }: DiscoverySignalPanelProps) {
       </div>
       {profile && profile.turnRows.length > 0 ? (
         <ReportTable
+          className="discovery-signal-table"
           columns={[
             { key: 'turn', label: 'Turn', render: (row: { turn: number }) => row.turn, align: 'right' },
             { key: 'ratingEvents', label: 'Ratings', render: (row: { ratingEvents: number }) => row.ratingEvents, align: 'right' },
-            { key: 'agreement', label: 'Behavior agree', render: (row: { behaviorAgreement: number }) => `${Math.round(row.behaviorAgreement * 100)}%`, align: 'right' },
-            { key: 'momentum', label: 'Confidence lift', render: (row: { confidenceMomentum: number }) => `${Math.round(row.confidenceMomentum * 100)}%`, align: 'right' },
+            { key: 'agreement', label: 'Agreement', render: (row: { behaviorAgreement: number }) => `${Math.round(row.behaviorAgreement * 100)}%`, align: 'right' },
+            { key: 'momentum', label: 'Lift', render: (row: { confidenceMomentum: number }) => `${Math.round(row.confidenceMomentum * 100)}%`, align: 'right' },
             { key: 'usefulness', label: 'Usefulness', render: (row: { usefulness: number }) => `${Math.round(row.usefulness * 100)}%`, align: 'right' },
             { key: 'earlyUsefulRatingCount', label: 'Early useful', render: (row: { earlyUsefulRatingCount: number }) => row.earlyUsefulRatingCount, align: 'right' },
             { key: 'confirmedPositiveCount', label: 'Confirmed +', render: (row: { confirmedPositiveCount: number }) => row.confirmedPositiveCount, align: 'right' },

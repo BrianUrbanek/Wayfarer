@@ -37,7 +37,7 @@ export function DivergingAffinityBars({ rows, formatSigned, formatPercent, forma
               </div>
             </div>
             <span className="diverging-affinity__meta">
-              {isPositive ? 'Positive' : 'Negative'} {formatSigned(row.affinity)} - conf {formatPercent(row.confidence)} - ev {formatDecimal(row.evidence)}
+              {isPositive ? 'Positive' : 'Negative'} {formatSigned(row.affinity)} - certainty {formatPercent(row.confidence)} - ev {formatDecimal(row.evidence)}
             </span>
           </div>
         );
