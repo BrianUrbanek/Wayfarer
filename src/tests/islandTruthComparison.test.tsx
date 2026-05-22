@@ -153,7 +153,7 @@ describe('island truth comparison', () => {
     expect(report.hiddenTargetTasteCohortLabel).toBe('Hidden Casual');
   });
 
-  it('treats random truth as correctly uncertain when confidence is low', () => {
+  it('treats random truth as false positive when learned structure is confidently positive', () => {
     const report = buildIslandTruthComparison({
       island: {
         id: 'island-random',
@@ -165,6 +165,42 @@ describe('island truth comparison', () => {
       cohortLabelById: visibleLabels,
       affinityReport: {
         islandId: 'island-random',
+        estimates: [
+          makeEstimate({
+            cohortId: 'cohort-action',
+            affinity: 0.41,
+            confidence: 0.73,
+            ratingDeviation: 0.27,
+            volatility: 0.07,
+            effectiveWeight: 3.2,
+            evidenceCount: 4,
+            observedMean: 0.39,
+            uncertainty: 0.27,
+            rawCount: 4,
+            lastUpdatedTurn: 1
+          })
+        ],
+        topPositive: null,
+        topNegative: null
+      }
+    });
+
+    expect(report.status).toBe('possible-false-positive');
+    expect(report.statusLabel).toBe('Possible false positive');
+  });
+
+  it('treats random truth as correctly uncertain when evidence is weak', () => {
+    const report = buildIslandTruthComparison({
+      island: {
+        id: 'island-random-weak',
+        label: 'Island Random Weak',
+        hiddenTruthClass: 'random',
+        hiddenAppealVector: { 'tag-random': 0.2 }
+      },
+      hiddenTasteCohorts: [],
+      cohortLabelById: visibleLabels,
+      affinityReport: {
+        islandId: 'island-random-weak',
         estimates: [
           makeEstimate({
             cohortId: 'cohort-action',
@@ -294,6 +330,50 @@ describe('island truth comparison', () => {
     expect(html).toContain('Top positive visible cohort');
     expect(html).toContain('toy-world audit data');
     expect(html).toContain('Visible cohort estimates');
+  });
+
+  it('renders random hidden truth details without a target cohort', () => {
+    const report = buildIslandTruthComparison({
+      island: {
+        id: 'island-random-modal',
+        label: 'Island Random Modal',
+        hiddenTruthClass: 'random',
+        hiddenAppealVector: { 'tag-random': 0.2 }
+      },
+      hiddenTasteCohorts: [],
+      cohortLabelById: visibleLabels,
+      affinityReport: {
+        islandId: 'island-random-modal',
+        estimates: [
+          makeEstimate({
+            cohortId: 'cohort-action',
+            affinity: 0.12,
+            confidence: 0.18,
+            ratingDeviation: 0.86,
+            volatility: 0.07,
+            effectiveWeight: 0.4,
+            evidenceCount: 1,
+            observedMean: 0.12,
+            uncertainty: 0.82,
+            rawCount: 1,
+            lastUpdatedTurn: 1
+          })
+        ],
+        topPositive: null,
+        topNegative: null
+      }
+    });
+
+    const html = renderToString(
+      <SelectedIslandTruthComparisonModal report={report} open onClose={() => undefined} />
+    );
+
+    expect(html).toContain('Random / noisy truth');
+    expect(html).toContain('Target cohort');
+    expect(html).toContain('none');
+    expect(html).toContain('Target kind');
+    expect(html).toContain('n/a');
+    expect(html).toContain('Appeal vector');
   });
 
   it('handles missing hidden truth fields gracefully', () => {

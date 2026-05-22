@@ -51,7 +51,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
 
         <section className="detail-block">
           <h4>Hidden generator truth</h4>
-          {report.hiddenTargetTasteCohortId ? (
+          {report.hiddenTruthClass || report.hiddenTargetTasteCohortId || report.hiddenAppealVectorSummary !== 'n/a' ? (
             <div className="detail-mini-table">
               <div className="detail-mini-table__row">
                 <span>Truth class</span>
@@ -59,7 +59,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
               </div>
               <div className="detail-mini-table__row">
                 <span>Target cohort</span>
-                <strong>{report.hiddenTargetTasteCohortLabel ?? report.hiddenTargetTasteCohortId}</strong>
+                <strong>{report.hiddenTargetTasteCohortLabel ?? report.hiddenTargetTasteCohortId ?? 'none'}</strong>
               </div>
               <div className="detail-mini-table__row">
                 <span>Target kind</span>
@@ -75,7 +75,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
               </div>
             </div>
           ) : (
-            <EmptyState title="No hidden truth data" description="This island does not expose a hidden target cohort or appeal vector for audit comparison." />
+            <EmptyState title="No hidden truth data" description="This island does not expose hidden truth fields for audit comparison." />
           )}
         </section>
 

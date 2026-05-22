@@ -183,9 +183,11 @@ function deriveStatus(
   const targetAffinity = targetEstimate?.affinity ?? 0;
   const targetEffectiveWeight = targetEstimate?.effectiveWeight ?? 0;
   const topConfidence = Math.max(topPositive?.confidence ?? 0, topNegative?.confidence ?? 0);
+  const topEffectiveWeight = Math.max(topPositive?.effectiveWeight ?? 0, topNegative?.effectiveWeight ?? 0);
 
   if (truthClass === 'random') {
-    if (topConfidence < LOW_CONFIDENCE_THRESHOLD || targetEffectiveWeight < LOW_EVIDENCE_THRESHOLD) {
+    const learnedEvidence = Math.max(topConfidence, topEffectiveWeight / 4);
+    if (learnedEvidence < LOW_CONFIDENCE_THRESHOLD) {
       return 'random-correctly-uncertain';
     }
 
