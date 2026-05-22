@@ -3615,7 +3615,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <Drawer
         open={drawerState?.type === 'golden-demo-report'}
-        title="Golden Demo report"
+        title="Current-state Golden Demo report"
         onClose={() => setDrawerState(null)}
       >
         {goldenDemoReport ? (
@@ -3623,7 +3623,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <section className="detail-block">
               <h4>{goldenDemoReport.title}</h4>
               <p className="muted">
-                {goldenDemoReport.scenario.label} · seed {goldenDemoReport.scenario.seed}
+                Current-state Golden Demo report · {goldenDemoReport.scenario.label} · seed {goldenDemoReport.scenario.seed}
               </p>
             </section>
             <section className="detail-block">

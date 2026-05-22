@@ -44,7 +44,10 @@ export interface GoldenDemoReport {
   readonly hiddenTruthDistribution: {
     readonly seedCohortCount: number;
     readonly unseededCohortCount: number;
+    readonly seedTargetedIslandCount: number;
+    readonly unseededTargetedIslandCount: number;
     readonly randomIslandCount: number;
+    readonly missingTruthIslandCount: number;
   };
   readonly seededVsUnseededRecovery: {
     readonly seedRecoveredCount: number;
@@ -73,6 +76,7 @@ export interface GoldenDemoReport {
     }>;
   };
   readonly routingSummary: {
+    readonly scopeLabel: string;
     readonly routedIslandCount: number;
     readonly discoveryProbeVolume: number;
     readonly safeFitVolume: number;
@@ -104,6 +108,22 @@ function summarizeConfidence(rows: ReturnType<typeof buildConfidenceGrowthRows>)
   return `Confidence moved from ${formatPercent(first.averageIslandCohortConfidence)} at turn ${first.turn} to ${formatPercent(last.averageIslandCohortConfidence)} at turn ${last.turn}; RD/effective-weight movement is visible in the turn recap cards.`;
 }
 
+function summarizeRoutingTotals(state: SimulationState): {
+  routedIslandCount: number;
+  discoveryProbeVolume: number;
+  safeFitVolume: number;
+} {
+  return state.turnHistory.reduce(
+    (accumulator, turn) => {
+      accumulator.routedIslandCount += turn.routedIslandIds.length;
+      accumulator.discoveryProbeVolume += turn.recommendationKinds.DISCOVERY_PROBE;
+      accumulator.safeFitVolume += turn.recommendationKinds.SAFE_FIT;
+      return accumulator;
+    },
+    { routedIslandCount: 0, discoveryProbeVolume: 0, safeFitVolume: 0 }
+  );
+}
+
 export function buildGoldenDemoReport(input: {
   readonly state: SimulationState;
   readonly scenario: ScenarioPreset;
@@ -129,6 +149,7 @@ export function buildGoldenDemoReport(input: {
   });
   const confidenceRows = buildConfidenceGrowthRows(state);
   const discoverySignal = buildDiscoverySignalAnalysis(state);
+  const routingTotals = summarizeRoutingTotals(state);
   const selectedDeprioritization = state.users
     .map((user) => ({
       userId: user.id,
@@ -185,9 +206,8 @@ export function buildGoldenDemoReport(input: {
     {
       heading: 'Hidden truth distribution',
       body: [
-        `Seeded hidden cohorts: ${hiddenCohortRecovery.seedHiddenCohortCount}`,
-        `Unseeded hidden cohorts: ${hiddenCohortRecovery.unseededHiddenCohortCount}`,
-        `Random islands in the audit data: ${hiddenCohortRecovery.randomIslandCount}`,
+        `Hidden cohort registry counts: ${hiddenCohortRecovery.seedHiddenCohortCount} seeded / ${hiddenCohortRecovery.unseededHiddenCohortCount} unseeded cohorts.`,
+        `Content / island truth distribution: ${state.islands.filter((island) => island.hiddenTruthClass === 'seed-cohort-match').length} seed-targeted, ${state.islands.filter((island) => island.hiddenTruthClass === 'unseeded-cohort-match').length} unseeded-targeted, ${state.islands.filter((island) => island.hiddenTruthClass === 'random').length} random/noisy, ${state.islands.filter((island) => island.hiddenTruthClass === undefined).length} missing truth.`,
         `Toy-world hidden truth stays separate from the learned read and exists only for audit comparison.`
       ]
     },
@@ -226,11 +246,9 @@ export function buildGoldenDemoReport(input: {
     {
       heading: 'Routing and deprioritization summary',
       body: [
-        `Routed islands (latest turn recap total): ${turnRecap.highlightRows.length > 0 ? turnRecap.highlightRows.length : 0}`,
-        `Discovery probe volume: ${turnRecap.highlightRows.reduce((sum, row) => sum + (row.moverKind === 'evidence' ? 1 : 0), 0)}`,
-        `Safe-fit volume: ${turnRecap.meaningfulMoverCount}`,
+        `Across run: routed islands ${routingTotals.routedIslandCount}, discovery probes ${routingTotals.discoveryProbeVolume}, safe fits ${routingTotals.safeFitVolume}.`,
         selectedDeprioritization.rows.length > 0
-          ? `Top deprioritization example: ${selectedDeprioritization.rows[0].islandId} for ${selectedDeprioritization.userId} (predicted fit ${formatSigned(selectedDeprioritization.rows[0].predictedFit)}, support ${formatPercent(selectedDeprioritization.rows[0].confidenceSupport)})`
+          ? `Top deprioritization example: ${state.users.find((user) => user.id === selectedDeprioritization.userId)?.label ?? selectedDeprioritization.userId} / ${state.islands.find((island) => island.id === selectedDeprioritization.rows[0].islandId)?.label ?? selectedDeprioritization.rows[0].islandId} (predicted fit ${formatSigned(selectedDeprioritization.rows[0].predictedFit)}, support ${formatPercent(selectedDeprioritization.rows[0].confidenceSupport)})`
           : 'No clean deprioritization example surfaced for this run.'
       ]
     },
@@ -266,7 +284,10 @@ export function buildGoldenDemoReport(input: {
     hiddenTruthDistribution: {
       seedCohortCount: hiddenCohortRecovery.seedHiddenCohortCount,
       unseededCohortCount: hiddenCohortRecovery.unseededHiddenCohortCount,
-      randomIslandCount: hiddenCohortRecovery.randomIslandCount
+      seedTargetedIslandCount: state.islands.filter((island) => island.hiddenTruthClass === 'seed-cohort-match').length,
+      unseededTargetedIslandCount: state.islands.filter((island) => island.hiddenTruthClass === 'unseeded-cohort-match').length,
+      randomIslandCount: state.islands.filter((island) => island.hiddenTruthClass === 'random').length,
+      missingTruthIslandCount: state.islands.filter((island) => island.hiddenTruthClass === undefined).length
     },
     seededVsUnseededRecovery: {
       seedRecoveredCount: hiddenCohortRecovery.seedRecoveredCount,
@@ -300,12 +321,13 @@ export function buildGoldenDemoReport(input: {
       )
     },
     routingSummary: {
-      routedIslandCount: turnRecap.highlightRows.length,
-      discoveryProbeVolume: turnRecap.highlightRows.reduce((sum, row) => sum + (row.moverKind === 'evidence' ? 1 : 0), 0),
-      safeFitVolume: turnRecap.meaningfulMoverCount,
+      scopeLabel: 'Across run',
+      routedIslandCount: routingTotals.routedIslandCount,
+      discoveryProbeVolume: routingTotals.discoveryProbeVolume,
+      safeFitVolume: routingTotals.safeFitVolume,
       topDeprioritizationSummary:
         selectedDeprioritization.rows.length > 0
-          ? `${selectedDeprioritization.rows[0].islandId} for ${selectedDeprioritization.userId}`
+          ? `${state.users.find((user) => user.id === selectedDeprioritization.userId)?.label ?? selectedDeprioritization.userId} / ${state.islands.find((island) => island.id === selectedDeprioritization.rows[0].islandId)?.label ?? selectedDeprioritization.rows[0].islandId}`
           : 'n/a'
     },
     caveats: [
@@ -324,6 +346,12 @@ export function renderGoldenDemoReportMarkdown(report: GoldenDemoReport): string
 
   for (const section of report.sections) {
     lines.push(`## ${section.heading}`);
+    if (section.heading === 'Hidden truth distribution') {
+      lines.push('- Hidden cohort registry counts and content / island truth distribution are separated to avoid conflating registry size with audited content counts.');
+    }
+    if (section.heading === 'Routing and deprioritization summary') {
+      lines.push(`- Routing scope: ${report.routingSummary.scopeLabel}`);
+    }
     for (const line of section.body) {
       lines.push(`- ${line}`);
     }
