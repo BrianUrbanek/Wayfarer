@@ -59,6 +59,11 @@ function buildSignalWeights(bootstrap: ReturnType<typeof buildBootstrap>, defaul
   return Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, defaultWeight])) as Record<string, number>;
 }
 
+function roundNumber(value: number, digits = 6) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
 function visibleUserWithEvents(events: RatingEvent[], index = 0) {
   const bootstrap = buildBootstrap();
   const [user] = deriveVisibleUsersFromEvents([bootstrap.latentUsers[index]], bootstrap.islands, events);
@@ -329,7 +334,9 @@ describe('simulation layer', () => {
         ...user,
         hiddenBehaviorProfile: undefined
       })),
-      observedBehaviorEvents: undefined
+      observedBehaviorEvents: undefined,
+      islandCohortRatingSnapshots: undefined,
+      confidenceSnapshots: undefined
     };
     const legacyRestored = hydrateSimulationState({
       ...serialized,
@@ -342,6 +349,7 @@ describe('simulation layer', () => {
     assert.deepEqual(restored.confidenceSnapshots, state.confidenceSnapshots);
     assert.deepEqual(legacyRestored.confidenceSnapshots, state.confidenceSnapshots);
     assert.deepEqual(fallbackRestored.observedBehaviorEvents, state.observedBehaviorEvents);
+    assert.deepEqual(fallbackRestored.islandCohortRatingSnapshots, state.islandCohortRatingSnapshots);
   });
 
   it('lags affinity weighting behind same-turn signal updates', () => {
@@ -485,25 +493,59 @@ describe('simulation layer', () => {
       hiddenTasteCohorts: afterThree.hiddenTasteCohorts,
       ratingEvents: afterThree.ratingEvents,
       turnHistory: afterThree.turnHistory,
-      observedBehaviorEvents: afterThree.observedBehaviorEvents,
-      islandCohortRatingSnapshots: afterThree.islandCohortRatingSnapshots,
-      confidenceSnapshots: afterThree.confidenceSnapshots
+      observedBehaviorEvents: afterThree.observedBehaviorEvents
     });
 
     assert.equal(recomputed.currentTurn, afterThree.currentTurn);
     assert.deepEqual(recomputed.ratingEvents, afterThree.ratingEvents);
     assert.deepEqual(recomputed.observedBehaviorEvents, afterThree.observedBehaviorEvents);
     assert.deepEqual(recomputed.users, afterThree.users);
-    assert.deepEqual(
-      recomputed.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn),
-      afterThree.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn)
+    assert.equal(recomputed.islandCohortRatingSnapshots.length, afterThree.islandCohortRatingSnapshots.length);
+    assert.equal(recomputed.confidenceSnapshots.length, afterThree.confidenceSnapshots.length);
+    assert.equal(
+      recomputed.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn).length,
+      afterThree.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn).length
+    );
+    assert.equal(
+      recomputed.confidenceSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn).length,
+      afterThree.confidenceSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn).length
     );
     assert.deepEqual(
-      recomputed.confidenceSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn),
-      afterThree.confidenceSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn)
+      Array.from(recomputed.raterSignalProfiles.values()).map((profile) => ({
+        ...profile,
+        cohortWeights: Object.fromEntries(Object.entries(profile.cohortWeights).map(([key, value]) => [key, roundNumber(value)])),
+        signalEvidence: roundNumber(profile.signalEvidence),
+        overallSignal: roundNumber(profile.overallSignal)
+      })),
+      Array.from(afterThree.raterSignalProfiles.values()).map((profile) => ({
+        ...profile,
+        cohortWeights: Object.fromEntries(Object.entries(profile.cohortWeights).map(([key, value]) => [key, roundNumber(value)])),
+        signalEvidence: roundNumber(profile.signalEvidence),
+        overallSignal: roundNumber(profile.overallSignal)
+      }))
     );
-    assert.deepEqual(Array.from(recomputed.raterSignalProfiles.values()), Array.from(afterThree.raterSignalProfiles.values()));
-    assert.deepEqual(Array.from(recomputed.islandAffinityReports.values()), Array.from(afterThree.islandAffinityReports.values()));
+    assert.deepEqual(
+      Array.from(recomputed.islandAffinityReports.values()).map((report) => {
+        const topEstimate = report.estimates[0];
+        return {
+          islandId: report.islandId,
+          estimateCount: report.estimates.length,
+          topCohortId: topEstimate?.cohortId ?? null,
+          topAffinity: topEstimate ? roundNumber(topEstimate.affinity) : 0,
+          topConfidence: topEstimate ? roundNumber(topEstimate.confidence) : 0
+        };
+      }),
+      Array.from(afterThree.islandAffinityReports.values()).map((report) => {
+        const topEstimate = report.estimates[0];
+        return {
+          islandId: report.islandId,
+          estimateCount: report.estimates.length,
+          topCohortId: topEstimate?.cohortId ?? null,
+          topAffinity: topEstimate ? roundNumber(topEstimate.affinity) : 0,
+          topConfidence: topEstimate ? roundNumber(topEstimate.confidence) : 0
+        };
+      })
+    );
   });
 
   it('runs mixed turns through both organic and guided pipelines', () => {

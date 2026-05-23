@@ -487,6 +487,8 @@ function recomputeState(
     allTags
   );
   const raterSignalAnalysis = buildRaterSignalProfiles(users, inferenceByUserId, cohorts);
+  const normalizedObservedBehaviorEvents =
+    observedBehaviorEvents ?? buildObservedBehaviorEvents(ratingEvents, latentUsers, seed);
   const derivedIslandCohortRatingSnapshots =
     islandCohortRatingSnapshots ??
     buildIslandCohortRatingSnapshots({
@@ -494,7 +496,7 @@ function recomputeState(
       cohorts,
       ratingEvents,
       turnHistory,
-      observedBehaviorEvents,
+      observedBehaviorEvents: normalizedObservedBehaviorEvents,
       signalProfiles: raterSignalAnalysis.byUserId
     });
   const islandAffinityAnalysis = buildIslandAffinityReports(
@@ -505,7 +507,7 @@ function recomputeState(
     {
       ratingSnapshots: derivedIslandCohortRatingSnapshots,
       turnHistory,
-      observedBehaviorEvents
+      observedBehaviorEvents: normalizedObservedBehaviorEvents
     }
   );
   const pseudoCohortAnalysis = analyzePseudoCohorts(users, inferenceByUserId);
@@ -537,9 +539,7 @@ function recomputeState(
     islands: islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: ratingEvents.map((event) => ({ ...event })),
-    observedBehaviorEvents: observedBehaviorEvents
-      ? observedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event))
-      : buildObservedBehaviorEvents(ratingEvents, latentUsers, seed),
+    observedBehaviorEvents: normalizedObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: derivedIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     inferenceByUserId,
     raterSignalProfiles: raterSignalAnalysis.byUserId,
@@ -564,8 +564,6 @@ export function recomputeSimulationStateFromCanonicalEvents(
   > & {
     hiddenTasteCohorts?: readonly HiddenTasteCohort[];
     observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
-    islandCohortRatingSnapshots?: readonly IslandCohortRatingState[];
-    confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[];
   }
 ): SimulationState {
   return recomputeState(
@@ -577,9 +575,28 @@ export function recomputeSimulationStateFromCanonicalEvents(
     snapshot.ratingEvents,
     snapshot.turnHistory,
     snapshot.allTags,
-    snapshot.observedBehaviorEvents,
-    snapshot.islandCohortRatingSnapshots,
-    snapshot.confidenceSnapshots
+    snapshot.observedBehaviorEvents
+  );
+}
+
+function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulationState): SimulationState {
+  const normalizedObservedBehaviorEvents = snapshot.observedBehaviorEvents?.map((entry) => ({ ...entry }));
+  const normalizedIslandCohortRatingSnapshots = snapshot.islandCohortRatingSnapshots?.map((entry) => cloneIslandCohortRatingSnapshot(entry));
+  const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
+  const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
+
+  return recomputeState(
+    snapshot.seed,
+    snapshot.latentUsers,
+    snapshot.cohorts,
+    snapshot.islands,
+    normalizedHiddenTasteCohorts ?? deriveHiddenTasteCohortsFromUsers(snapshot.latentUsers, snapshot.cohorts),
+    snapshot.ratingEvents,
+    snapshot.turnHistory,
+    snapshot.allTags,
+    normalizedObservedBehaviorEvents,
+    normalizedIslandCohortRatingSnapshots,
+    normalizedSnapshots
   );
 }
 
@@ -620,24 +637,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
 }
 
 export function hydrateSimulationState(snapshot: SerializedSimulationState): SimulationState {
-  const normalizedObservedBehaviorEvents = snapshot.observedBehaviorEvents?.map((entry) => ({ ...entry }));
-  const normalizedIslandCohortRatingSnapshots = snapshot.islandCohortRatingSnapshots?.map((entry) => cloneIslandCohortRatingSnapshot(entry));
-  const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
-  const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
-
-  return recomputeSimulationStateFromCanonicalEvents({
-    seed: snapshot.seed,
-    allTags: snapshot.allTags,
-    latentUsers: snapshot.latentUsers,
-    cohorts: snapshot.cohorts,
-    islands: snapshot.islands,
-    hiddenTasteCohorts: normalizedHiddenTasteCohorts,
-    ratingEvents: snapshot.ratingEvents,
-    turnHistory: snapshot.turnHistory,
-    observedBehaviorEvents: normalizedObservedBehaviorEvents,
-    islandCohortRatingSnapshots: normalizedIslandCohortRatingSnapshots,
-    confidenceSnapshots: normalizedSnapshots
-  });
+  return hydrateSimulationStateFromStoredSnapshots(snapshot);
 }
 
 export function createInitialSimulationState(config: SimulationBootstrapConfig): SimulationState {
