@@ -4,6 +4,7 @@ import type { ConfidenceGrowthRow } from '../../model/confidenceGrowth';
 
 interface ConfidenceGrowthPanelProps {
   rows: readonly ConfidenceGrowthRow[];
+  collapsed?: boolean;
 }
 
 function formatPercent(value: number): string {
@@ -28,9 +29,9 @@ const columns: ReportTableColumn<ConfidenceGrowthRow>[] = [
   { key: 'probe', label: 'Probes', render: (row) => row.discoveryProbeCount, align: 'right' }
 ];
 
-export function ConfidenceGrowthPanel({ rows }: ConfidenceGrowthPanelProps) {
+export function ConfidenceGrowthPanel({ rows, collapsed = false }: ConfidenceGrowthPanelProps) {
   return (
-    <Panel id="confidence-growth" title="Confidence Growth" className="panel--full" collapsible>
+    <Panel id="confidence-growth" title="Confidence Growth" className="panel--full" collapsible defaultCollapsed={collapsed}>
       <div className="stack">
         <div className="notice notice--subtle">
           <p>

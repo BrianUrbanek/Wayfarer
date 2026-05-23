@@ -65,6 +65,6 @@ describe('selected user summary', () => {
 
     expect(html).toContain('Discovery Signal');
     expect(html).toContain('Retrospective usefulness uses observed behavior and stored confidence snapshots.');
-    expect(html).toContain('Rater trust profile (internal)');
+    expect(html).toContain('Rater signal profile (internal)');
   });
 });

@@ -106,7 +106,7 @@ import {
 } from './model/scenarioPresets';
 import type { CohortAnchor, Island, User } from './model/types';
 
-const INITIAL_SCENARIO_PRESET: ScenarioPreset = getScenarioPreset('small-smoke-test');
+const INITIAL_SCENARIO_PRESET: ScenarioPreset = getScenarioPreset('golden-demo');
 const SCENARIO_PRESET_OPTIONS = listScenarioPresets();
 
 function scenarioPresetMetadataFromPreset(preset: ScenarioPreset): ScenarioPresetMetadata {
@@ -416,20 +416,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [ratingAlignmentDistribution, setRatingAlignmentDistribution] = useState(
     INITIAL_SCENARIO_PRESET.generatorConfig.ratingAlignmentDistribution
   );
-  const [turnMode, setTurnMode] = useState<TurnMode>(DEFAULT_TURN_POLICY.turnMode);
-  const [participationModel, setParticipationModel] = useState<ParticipationModel>(DEFAULT_TURN_POLICY.participationModel);
-  const [participatingUsersPerTurn, setParticipatingUsersPerTurn] = useState(DEFAULT_TURN_POLICY.participatingUsersPerTurn);
-  const [participationChance, setParticipationChance] = useState(DEFAULT_TURN_POLICY.participationChance);
-  const [organicRatingCountModel, setOrganicRatingCountModel] = useState<RatingCountModel>(DEFAULT_TURN_POLICY.organicRatingCountModel);
-  const [organicRatingsPerUser, setOrganicRatingsPerUser] = useState(DEFAULT_TURN_POLICY.organicRatingsPerUser);
-  const [organicRatingDice, setOrganicRatingDice] = useState(DEFAULT_TURN_POLICY.organicRatingDice);
-  const [guidedRatingCountModel, setGuidedRatingCountModel] = useState<RatingCountModel>(DEFAULT_TURN_POLICY.guidedRatingCountModel);
-  const [guidedRecommendationsPerUser, setGuidedRecommendationsPerUser] = useState(DEFAULT_TURN_POLICY.guidedRecommendationsPerUser);
-  const [guidedRecommendationDice, setGuidedRecommendationDice] = useState(DEFAULT_TURN_POLICY.guidedRecommendationDice);
-  const [routingRiskProfile, setRoutingRiskProfile] = useState<RoutingRiskProfile>(DEFAULT_TURN_POLICY.routingRiskProfile);
+  const [turnMode, setTurnMode] = useState<TurnMode>(INITIAL_SCENARIO_PRESET.turnPolicy.turnMode);
+  const [participationModel, setParticipationModel] = useState<ParticipationModel>(INITIAL_SCENARIO_PRESET.turnPolicy.participationModel);
+  const [participatingUsersPerTurn, setParticipatingUsersPerTurn] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.participatingUsersPerTurn);
+  const [participationChance, setParticipationChance] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.participationChance);
+  const [organicRatingCountModel, setOrganicRatingCountModel] = useState<RatingCountModel>(INITIAL_SCENARIO_PRESET.turnPolicy.organicRatingCountModel);
+  const [organicRatingsPerUser, setOrganicRatingsPerUser] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.organicRatingsPerUser);
+  const [organicRatingDice, setOrganicRatingDice] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.organicRatingDice);
+  const [guidedRatingCountModel, setGuidedRatingCountModel] = useState<RatingCountModel>(INITIAL_SCENARIO_PRESET.turnPolicy.guidedRatingCountModel);
+  const [guidedRecommendationsPerUser, setGuidedRecommendationsPerUser] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.guidedRecommendationsPerUser);
+  const [guidedRecommendationDice, setGuidedRecommendationDice] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.guidedRecommendationDice);
+  const [routingRiskProfile, setRoutingRiskProfile] = useState<RoutingRiskProfile>(INITIAL_SCENARIO_PRESET.turnPolicy.routingRiskProfile);
   const [customExplorationWeight, setCustomExplorationWeight] = useState(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
   const [customMinimumPredictedFit, setCustomMinimumPredictedFit] = useState(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
-  const [turnsToRun, setTurnsToRun] = useState(5);
+  const [turnsToRun, setTurnsToRun] = useState(INITIAL_SCENARIO_PRESET.turnsToRun);
   const [executionSeedMode, setExecutionSeedMode] = useState<ScenarioExecutionSeedMode>('random');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedIslandId, setSelectedIslandId] = useState<string>('');
@@ -464,15 +464,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     tag: false
   });
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
-  const [dataFitnessCollapsed, setDataFitnessCollapsed] = useState(false);
+  const [dataFitnessCollapsed, setDataFitnessCollapsed] = useState(initialGuidanceMode === 'novice');
   const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
   const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
   const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
   const [guidedProofCollapsed, setGuidedProofCollapsed] = useState(false);
   const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
-  const [discoveryRoutingCollapsed, setDiscoveryRoutingCollapsed] = useState(false);
+  const [discoveryRoutingCollapsed, setDiscoveryRoutingCollapsed] = useState(true);
   const [selectedIslandCollapsed, setSelectedIslandCollapsed] = useState(false);
-  const [debugCollapsed, setDebugCollapsed] = useState(false);
+  const [debugCollapsed, setDebugCollapsed] = useState(true);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const scenarioExecutionTokenRef = useRef(0);
   const isNoviceMode = guidanceMode === 'novice';
@@ -2246,15 +2246,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     () => resolveScenarioPresetFromControls(currentScenarioControls),
     [currentScenarioControls]
   );
+  const isGoldenDemoPath = scenarioPresetSource?.id === 'golden-demo' || activeScenarioPreset?.id === 'golden-demo';
   const goldenDemoReport = useMemo(
     () =>
-      activeScenarioPreset?.id === 'golden-demo'
+      isGoldenDemoPath
         ? buildGoldenDemoReport({
             state: simulationState,
-            scenario: activeScenarioPreset
+            scenario: activeScenarioPreset ?? INITIAL_SCENARIO_PRESET
           })
         : null,
-    [activeScenarioPreset, simulationState]
+    [activeScenarioPreset, isGoldenDemoPath, simulationState]
   );
   const activeScenarioPresetMetadata = activeScenarioPreset ? scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
   const scenarioPresetDisplay =
@@ -2321,14 +2322,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       { id: 'data-fitness', label: 'Data Fitness' },
       { id: 'primary-workflow-details', label: 'Primary Workflow Details' },
       { id: 'turn-summary', label: 'Turn Summary' },
+      { id: 'turn-recap', label: 'Turn Recap' },
+      { id: 'hidden-cohort-recovery', label: 'Hidden Cohort Recovery' },
+      { id: 'selected-island', label: 'Selected Island' },
       { id: 'population-summary', label: 'Population Summary' },
       { id: 'system-health', label: 'System Health' },
       { id: 'confidence-growth', label: 'Confidence Growth' },
-      { id: 'turn-recap', label: 'Turn Recap' },
       { id: 'selected-user-summary', label: 'Selected User Summary' },
       { id: 'reviewer-archetype-recovery', label: 'Reviewer Archetype Recovery' },
-      { id: 'discovery-routing', label: 'Recommended Unrated Islands' },
-      { id: 'selected-island', label: 'Selected Island' }
+      { id: 'discovery-routing', label: 'Recommended Unrated Islands' }
     ];
     if (!isNoviceMode) {
       options.push({ id: 'model-explanation', label: 'Model Explanation' });
@@ -2396,7 +2398,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </div> : null}
         </Panel>,
         <TurnRecapPanel key="turn-recap" id="turn-recap" report={turnRecapReport} />,
-        <Panel key="population-summary" id="population-summary" title="Population Summary" className="panel--full" collapsible>
+        <Panel key="population-summary" id="population-summary" title="Population Summary" className="panel--full" collapsible defaultCollapsed>
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
             <MetricCard label="Seeded anchors" value={dataset.cohorts.length} />
@@ -2416,10 +2418,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           key="system-health"
           id="system-health"
           summary={systemHealthSummary}
+          collapsed={true}
           showConfidenceSeries={showConfidenceSeries}
           onToggleSeries={(key) => setShowConfidenceSeries((current) => ({ ...current, [key]: !current[key] }))}
         />,
-        <ConfidenceGrowthPanel key="confidence-growth" rows={confidenceGrowthRows} />
+        <ConfidenceGrowthPanel key="confidence-growth" rows={confidenceGrowthRows} collapsed />
       ]
     },
     recovery: {
@@ -2429,7 +2432,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>,
         <HiddenCohortRecoveryPanel key="hidden-cohort-recovery" id="hidden-cohort-recovery" report={hiddenCohortRecoveryReport} />,
-        <Panel key="reviewer-archetype" id="reviewer-archetype-recovery" title="Reviewer Archetype Recovery" className="panel--wide" collapsible>
+        <Panel key="reviewer-archetype" id="reviewer-archetype-recovery" title="Reviewer Archetype Recovery" className="panel--wide" collapsible defaultCollapsed>
           {reviewerArchetypeSummary}
         </Panel>
       ]
@@ -2865,7 +2868,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   Export
                 </button>
                 <button type="button" className="button button--ghost" onClick={openGoldenDemoReport} disabled={!goldenDemoReport}>
-                  Golden Demo report
+                  Open demo report
                 </button>
                 <button type="button" className="button button--ghost" onClick={openScenarioFilePicker} disabled={isExecutingScenario}>
                   Import
@@ -3111,6 +3114,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <p className="eyebrow">Primary workflow</p>
             {!primaryWorkflowCollapsed ? <h2>Inspect the current state, then advance one turn.</h2> : null}
             {!primaryWorkflowCollapsed ? <p className="muted">Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.</p> : null}
+            {!primaryWorkflowCollapsed ? <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p> : null}
           </div>
           <button
             type="button"
@@ -3130,6 +3134,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
           <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
           <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+          <button type="button" className="button button--ghost" onClick={openGoldenDemoReport} disabled={!goldenDemoReport}>
+            Open demo report
+          </button>
+          <span className="muted">Presentation-ready readout for the current Golden Demo state.</span>
           <label className="control control--inline control--jump">
             <span>Jump to module</span>
             <select

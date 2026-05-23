@@ -101,9 +101,9 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
           tone="neutral"
         />
         <MetricCard
-          label="Current trust-weight proxy"
+          label="Current signal-weight proxy"
           value={selectedInference.effectiveSignal.toFixed(3)}
-          helper="Internal reliability weight currently used for routing and affinity evidence. Discovery Signal remains a separate player-facing concept."
+          helper="Internal reliability proxy currently used for routing and affinity evidence. Discovery Signal remains a separate player-facing concept."
           tone="success"
         />
       </div>
@@ -174,40 +174,40 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
       <section className="detail-block">
         <div className="section-heading">
           <h4>
-            Rater trust profile (internal){' '}
+            Rater signal profile (internal){' '}
             <FormulaTip
-              label="Rater trust proxy"
-              formula="cohort trust proxy = max(0), Pearson similarity × evidence; top trust proxy = max cohort trust proxy"
+              label="Rater signal proxy"
+              formula="cohort signal proxy = max(0), Pearson similarity × evidence; top signal proxy = max cohort signal proxy"
               inputs="Evidence comes from rated-overlap support (saturating overlap evidence)."
               interpretation="Higher values indicate stronger cohort-local reliability weighting in the current proxy model."
             />
           </h4>
-          <p>Internal trust weighting proxy only. Discovery Signal is player-facing and currently only partially represented in this prototype.</p>
+          <p>Internal signal weighting proxy only. Discovery Signal is player-facing and currently only partially represented in this prototype.</p>
         </div>
         <div className="metric-grid metric-grid--compact">
           <MetricCard
-            label="Top behavioral trust proxy"
+            label="Top behavioral signal proxy"
             value={(selectedRaterSignalProfile?.overallSignal ?? 0).toFixed(3)}
             helper="Strongest cohort-local reliability score under current proxy math."
             tone="accent"
           />
           <MetricCard
-            label="Trust evidence"
+            label="Signal evidence"
             value={`${Math.round((selectedRaterSignalProfile?.signalEvidence ?? 0) * 100)}%`}
-            helper="Evidence supporting the strongest trust-weight proxy."
+            helper="Evidence supporting the strongest signal-weight proxy."
           />
           <MetricCard
-            label="Top trusted cohort"
+            label="Top signal cohort"
             value={cohortLabel(selectedRaterSignalProfile?.topCohortId ?? null)}
             helper="Cohort with strongest behavioral reliability weight in the current proxy."
             tone="success"
           />
         </div>
         <div className="summary-inline">
-          <span className="muted">Cohort trust proxy table</span>
+          <span className="muted">Cohort signal proxy table</span>
           <FormulaTip
-            label="Cohort trust proxy table"
-            formula="Trust proxy: max(0), Pearson similarity × evidence; Evidence: overlap/(overlap+k); Similarity: Pearson correlation; Overlap: co-rated island count."
+            label="Cohort signal proxy table"
+            formula="Signal proxy: max(0), Pearson similarity × evidence; Evidence: overlap/(overlap+k); Similarity: Pearson correlation; Overlap: co-rated island count."
           />
         </div>
         <ReportTable

@@ -5,11 +5,12 @@ interface PanelProps extends PropsWithChildren {
   className?: string;
   hideTitle?: boolean;
   collapsible?: boolean;
+  defaultCollapsed?: boolean;
   id?: string;
 }
 
-export function Panel({ title, children, className, hideTitle = false, collapsible = false, id }: PanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export function Panel({ title, children, className, hideTitle = false, collapsible = false, defaultCollapsed = false, id }: PanelProps) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   if (hideTitle && !collapsible) {
     return (

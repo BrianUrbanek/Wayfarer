@@ -3,19 +3,20 @@ import { renderToString } from 'react-dom/server';
 import App from '../App';
 
 describe('App analyst console', () => {
-  it('renders the analyst console sections and preset-first novice setup', () => {
+  it('renders the analyst console sections and demo-first novice setup', () => {
     const html = renderToString(<App initialGuidanceMode="novice" />);
 
     expect(html).toContain('Wayfarer analyst console');
     expect(html).toContain('Run Context');
     expect(html).toContain('Primary workflow');
     expect(html).toContain('Scenario setup');
+    expect(html).toContain('Golden Demo');
     expect(html).toContain('Population Summary');
     expect(html).toContain('Selected User Summary');
-    expect(html).toContain('Rater trust profile (internal)');
+    expect(html).toContain('Rater signal profile (internal)');
+    expect(html).toContain('Current signal-weight proxy');
     expect(html).toContain('Cohort-local island affinity');
     expect(html).toContain('Discovery Routing');
-    expect(html).toContain('Deprioritized for selected user');
     expect(html).toContain('Confidence Growth');
     expect(html).toContain('Turn Recap');
     expect(html).toContain('Reviewer Archetype Recovery');
@@ -30,7 +31,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Scenario preset');
     expect(html).toContain('Simulation JSON');
     expect(html).toContain('Golden Demo');
-    expect(html).toContain('Small Smoke Test');
+    expect(html).toContain('Open demo report');
+    expect(html).toContain('Presentation-ready readout for the current Golden Demo state.');
     expect(html).toContain('Inspection / dashboard panels');
     expect(html).not.toContain('Bootstrap Ratings / User');
     expect(html).not.toContain('Rating count policy');
@@ -51,6 +53,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Focus island');
     expect(html).toContain('Top routed island');
     expect(html).toContain('Participating users / turn');
+    expect(html).toContain('For a concrete proof example, select an island and inspect Truth Alignment.');
     expect(html).toContain('Turn <!-- -->0');
     expect(html).toContain('Scenario:');
     expect(html).toContain('Mode:');
@@ -64,10 +67,6 @@ describe('App analyst console', () => {
     expect(html).toContain('Path steps');
     expect(html).toContain('Success criteria');
     expect(html).toContain('Maintenance note');
-    expect(html).toContain('Open full recovery table');
-    expect(html).toContain('Candidate New Seed Users');
-    expect(html).toContain('Early Scouts');
-    expect(html).toContain('Open detail');
     expect(html).not.toContain('Model Explanation');
     expect(html).not.toContain('Island Comparison');
     expect(html).not.toContain('Pseudo-Cohort Reports');
@@ -87,9 +86,9 @@ describe('App analyst console', () => {
     expect(html).toContain('Bootstrap Ratings / User');
     expect(html).toContain('Tag Alignment');
     expect(html).toContain('Rating Alignment');
-    expect(html).toContain('Hidden behavior profile');
-    expect(html).toContain('Hidden taste cohort');
-    expect(html).toContain('Hidden taste kind');
+    expect(html).toContain('Current signal-weight proxy');
+    expect(html).toContain('Turn behavior / Dynamic settings');
+    expect(html).toContain('Open demo report');
     expect(html).toContain('Turn Mode');
     expect(html).toContain('Participation Model');
     expect(html).toContain('Turns to Run');

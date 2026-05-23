@@ -15,6 +15,7 @@ interface SystemHealthPanelProps {
   summary: SystemHealthSummary;
   showConfidenceSeries: ConfidenceSeriesState;
   onToggleSeries: (key: keyof ConfidenceSeriesState) => void;
+  collapsed?: boolean;
 }
 
 type PopoverKey =
@@ -51,7 +52,7 @@ function buildLinePath(values: number[], width: number, height: number, padding:
     .join(' ');
 }
 
-export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleSeries }: SystemHealthPanelProps) {
+export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleSeries, collapsed = false }: SystemHealthPanelProps) {
   const [openPopover, setOpenPopover] = useState<PopoverKey | null>(null);
 
   const trendLines = useMemo(
@@ -66,7 +67,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
   );
 
   return (
-    <Panel id={id} title="System Health" className="panel--full">
+    <Panel id={id} title="System Health" className="panel--full" collapsible defaultCollapsed={collapsed}>
       <div className="system-confidence-header">
         <div className="system-confidence-header__headline">
           <div className="system-health-metric-header-row">
