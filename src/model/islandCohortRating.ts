@@ -46,6 +46,16 @@ export interface BuildIslandCohortRatingSnapshotsInput {
   signalProfiles?: ReadonlyMap<UserId, RaterSignalProfile>;
 }
 
+export interface BuildIslandCohortRatingSnapshotsForTurnInput {
+  islands: readonly Island[];
+  cohorts: readonly CohortAnchor[];
+  turn: number;
+  ratingEvents: readonly IslandCohortRatingRatingEvent[];
+  previousSnapshots: readonly IslandCohortRatingState[];
+  observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
+  signalProfiles?: ReadonlyMap<UserId, RaterSignalProfile>;
+}
+
 const MIN_RD = 0.08;
 const MAX_RD = 1;
 const MIN_VOLATILITY = 0.02;
@@ -274,6 +284,17 @@ function aggregateTurnEvidence(
   };
 }
 
+function aggregateTurnEvidenceForPair(
+  turn: number,
+  islandId: IslandId,
+  cohortId: CohortId,
+  events: readonly IslandCohortRatingRatingEvent[],
+  behaviorLookup: ReadonlyMap<string, ObservedBehaviorEvent>,
+  signalProfiles: ReadonlyMap<UserId, RaterSignalProfile> | undefined
+): AggregatedTurnEvidence {
+  return aggregateTurnEvidence(turn, islandId, cohortId, events, behaviorLookup, signalProfiles);
+}
+
 export function buildIslandCohortRatingSnapshots(
   input: BuildIslandCohortRatingSnapshotsInput
 ): IslandCohortRatingState[] {
@@ -307,6 +328,38 @@ export function buildIslandCohortRatingSnapshots(
   }
 
   return snapshots;
+}
+
+export function buildIslandCohortRatingSnapshotsForTurn(
+  input: BuildIslandCohortRatingSnapshotsForTurnInput
+): IslandCohortRatingState[] {
+  const behaviorLookup = buildBehaviorLookup(input.observedBehaviorEvents);
+  const previousByPair = new Map<string, IslandCohortRatingState>(
+    input.previousSnapshots.map((snapshot) => [`${snapshot.islandId}:${snapshot.cohortId}`, snapshot])
+  );
+  const nextSnapshots: IslandCohortRatingState[] = [];
+
+  for (const island of input.islands) {
+    for (const cohort of input.cohorts) {
+      const pairKey = `${island.id}:${cohort.id}`;
+      const previous = previousByPair.get(pairKey) ?? createBlankState(island.id, cohort.id);
+      const turnEvidence = aggregateTurnEvidenceForPair(
+        input.turn,
+        island.id,
+        cohort.id,
+        input.ratingEvents,
+        behaviorLookup,
+        input.signalProfiles
+      );
+      const nextState = advanceIslandCohortRatingState(previous, {
+        turn: input.turn,
+        ...turnEvidence
+      });
+      nextSnapshots.push({ ...nextState });
+    }
+  }
+
+  return nextSnapshots;
 }
 
 export function indexIslandCohortRatingSnapshots(

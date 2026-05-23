@@ -4,6 +4,7 @@ import { computeInference } from './inference.js';
 import { buildIslandAffinityReports, type IslandAffinityReport } from './affinity.js';
 import {
   buildIslandCohortRatingSnapshots,
+  buildIslandCohortRatingSnapshotsForTurn,
   type IslandCohortRatingState
 } from './islandCohortRating.js';
 import {
@@ -201,6 +202,54 @@ function cloneHiddenTasteCohort(cohort: HiddenTasteCohort): HiddenTasteCohort {
     tagSignature: cohort.tagSignature.slice(),
     preferenceVector: { ...cohort.preferenceVector }
   };
+}
+
+function cloneUsers(users: readonly User[]): User[] {
+  return users.map((user) => ({
+    ...user,
+    declaredTags: user.declaredTags.slice(),
+    ratings: { ...user.ratings },
+    hiddenTastePreferenceVector: user.hiddenTastePreferenceVector ? { ...user.hiddenTastePreferenceVector } : undefined
+  }));
+}
+
+function applyEventsToVisibleUsers(users: readonly User[], events: readonly RatingEvent[]): User[] {
+  const nextUsers = cloneUsers(users);
+  const usersById = new Map(nextUsers.map((user) => [user.id, user]));
+
+  for (const event of events) {
+    const user = usersById.get(event.userId);
+    if (!user) {
+      continue;
+    }
+
+    user.ratings[event.islandId] = event.rating;
+  }
+
+  return nextUsers;
+}
+
+function buildConfidenceSnapshotsForTurn(
+  turn: number,
+  islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>
+): IslandCohortConfidenceSnapshot[] {
+  const snapshots: IslandCohortConfidenceSnapshot[] = [];
+
+  for (const report of islandAffinityReports.values()) {
+    for (const estimate of report.estimates) {
+      snapshots.push({
+        turn,
+        islandId: report.islandId,
+        cohortId: estimate.cohortId,
+        affinity: estimate.affinity,
+        confidence: estimate.confidence,
+        effectiveWeight: estimate.effectiveWeight,
+        rawCount: estimate.rawCount
+      });
+    }
+  }
+
+  return snapshots;
 }
 
 function deriveHiddenTasteCohortsFromUsers(
@@ -508,6 +557,32 @@ function recomputeState(
   };
 }
 
+export function recomputeSimulationStateFromCanonicalEvents(
+  snapshot: Pick<
+    SerializedSimulationState,
+    'seed' | 'allTags' | 'latentUsers' | 'cohorts' | 'islands' | 'ratingEvents' | 'turnHistory'
+  > & {
+    hiddenTasteCohorts?: readonly HiddenTasteCohort[];
+    observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
+    islandCohortRatingSnapshots?: readonly IslandCohortRatingState[];
+    confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[];
+  }
+): SimulationState {
+  return recomputeState(
+    snapshot.seed,
+    snapshot.latentUsers,
+    snapshot.cohorts,
+    snapshot.islands,
+    snapshot.hiddenTasteCohorts ?? deriveHiddenTasteCohortsFromUsers(snapshot.latentUsers, snapshot.cohorts),
+    snapshot.ratingEvents,
+    snapshot.turnHistory,
+    snapshot.allTags,
+    snapshot.observedBehaviorEvents,
+    snapshot.islandCohortRatingSnapshots,
+    snapshot.confidenceSnapshots
+  );
+}
+
 export function serializeSimulationState(state: SimulationState): SerializedSimulationState {
   return {
     seed: state.seed,
@@ -550,19 +625,19 @@ export function hydrateSimulationState(snapshot: SerializedSimulationState): Sim
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
   const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
 
-  return recomputeState(
-    snapshot.seed,
-    snapshot.latentUsers,
-    snapshot.cohorts,
-    snapshot.islands,
-    normalizedHiddenTasteCohorts ?? deriveHiddenTasteCohortsFromUsers(snapshot.latentUsers, snapshot.cohorts),
-    snapshot.ratingEvents,
-    snapshot.turnHistory,
-    snapshot.allTags,
-    normalizedObservedBehaviorEvents,
-    normalizedIslandCohortRatingSnapshots,
-    normalizedSnapshots
-  );
+  return recomputeSimulationStateFromCanonicalEvents({
+    seed: snapshot.seed,
+    allTags: snapshot.allTags,
+    latentUsers: snapshot.latentUsers,
+    cohorts: snapshot.cohorts,
+    islands: snapshot.islands,
+    hiddenTasteCohorts: normalizedHiddenTasteCohorts,
+    ratingEvents: snapshot.ratingEvents,
+    turnHistory: snapshot.turnHistory,
+    observedBehaviorEvents: normalizedObservedBehaviorEvents,
+    islandCohortRatingSnapshots: normalizedIslandCohortRatingSnapshots,
+    confidenceSnapshots: normalizedSnapshots
+  });
 }
 
 export function createInitialSimulationState(config: SimulationBootstrapConfig): SimulationState {
@@ -860,14 +935,26 @@ export function advancePolicyTurn(
         );
   const newEvents = organicEvents.concat(guided.events);
   const nextEvents = state.ratingEvents.concat(newEvents);
+  const turnObservedBehaviorEvents = buildObservedBehaviorEvents(newEvents, state.latentUsers, state.seed);
   const nextObservedBehaviorEvents = state.observedBehaviorEvents.concat(
-    buildObservedBehaviorEvents(newEvents, state.latentUsers, state.seed)
+    turnObservedBehaviorEvents
   );
+  const nextUsers = applyEventsToVisibleUsers(state.users, newEvents);
   const nextHistory = state.turnHistory.slice();
   const participatingUserIds = Array.from(new Set(selectedUsers.map((user) => user.id))).sort();
-
-  const nextVisibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, nextEvents);
+  const nextVisibleUsers = nextUsers;
   const nextInferenceByUserId = computeInferenceMap(nextVisibleUsers, state.cohorts, state.islands, state.allTags);
+  const nextRaterSignalAnalysis = buildRaterSignalProfiles(nextVisibleUsers, nextInferenceByUserId, state.cohorts);
+  const nextTurnIslandCohortRatingSnapshots = buildIslandCohortRatingSnapshotsForTurn({
+    islands: state.islands,
+    cohorts: state.cohorts,
+    turn,
+    ratingEvents: newEvents,
+    previousSnapshots: state.islandCohortRatingSnapshots,
+    observedBehaviorEvents: turnObservedBehaviorEvents,
+    signalProfiles: nextRaterSignalAnalysis.byUserId
+  });
+  const nextIslandCohortRatingSnapshots = state.islandCohortRatingSnapshots.concat(nextTurnIslandCohortRatingSnapshots);
   nextHistory.push(
     summarizeTurn(
       turn,
@@ -882,16 +969,56 @@ export function advancePolicyTurn(
     )
   );
 
-  return recomputeState(
-    state.seed,
-    state.latentUsers,
+  const nextIslandAffinityAnalysis = buildIslandAffinityReports(
+    nextEvents,
+    nextRaterSignalAnalysis.byUserId,
     state.cohorts,
     state.islands,
-    state.hiddenTasteCohorts,
-    nextEvents,
-    nextHistory,
-    state.allTags,
-    nextObservedBehaviorEvents,
-    undefined
+    {
+      ratingSnapshots: nextIslandCohortRatingSnapshots,
+      turnHistory: nextHistory,
+      observedBehaviorEvents: nextObservedBehaviorEvents
+    }
   );
+  const nextPseudoCohortAnalysis = analyzePseudoCohorts(nextVisibleUsers, nextInferenceByUserId);
+  const nextReviewerArchetypeAnalysis = analyzeReviewerArchetypes(
+    nextVisibleUsers,
+    nextInferenceByUserId,
+    nextRaterSignalAnalysis.byUserId,
+    state.cohorts,
+    state.islands,
+    nextEvents
+  );
+
+  return {
+    seed: state.seed,
+    currentTurn: turn,
+    allTags: state.allTags.slice(),
+    latentUsers: cloneUsers(state.latentUsers),
+    users: nextVisibleUsers,
+    cohorts: state.cohorts.map((cohort) => ({
+      ...cohort,
+      tags: cohort.tags.slice(),
+      ratings: { ...cohort.ratings }
+    })),
+    islands: state.islands.map((island) => cloneIsland(island)),
+    hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
+    ratingEvents: nextEvents.map((event) => ({ ...event })),
+    observedBehaviorEvents: nextObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
+    islandCohortRatingSnapshots: nextIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
+    confidenceSnapshots: state.confidenceSnapshots.concat(buildConfidenceSnapshotsForTurn(turn, nextIslandAffinityAnalysis.byIslandId)),
+    inferenceByUserId: nextInferenceByUserId,
+    raterSignalProfiles: nextRaterSignalAnalysis.byUserId,
+    islandAffinityReports: nextIslandAffinityAnalysis.byIslandId,
+    pseudoCohortAnalysis: nextPseudoCohortAnalysis,
+    reviewerArchetypeAnalysis: nextReviewerArchetypeAnalysis,
+    turnHistory: nextHistory.map((summary) => ({
+      ...summary,
+      participatingUserIds: summary.participatingUserIds.slice(),
+      newlyRatedIslandIds: summary.newlyRatedIslandIds.slice(),
+      routedIslandIds: summary.routedIslandIds.slice(),
+      recommendationKinds: { ...summary.recommendationKinds },
+      diagnosisCounts: { ...summary.diagnosisCounts }
+    }))
+  };
 }

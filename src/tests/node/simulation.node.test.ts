@@ -9,6 +9,7 @@ import {
   advancePolicyTurn,
   createInitialSimulationState,
   deriveVisibleUsersFromEvents,
+  recomputeSimulationStateFromCanonicalEvents,
   hydrateSimulationState,
   serializeSimulationState,
   type RatingEvent
@@ -93,6 +94,35 @@ describe('simulation layer', () => {
       Object.values(firstEvent.raterSignalWeights).every((weight) => weight === 1),
       true
     );
+  });
+
+  it('appends turn-boundary snapshots without rebuilding earlier turns', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const turnZeroConfidence = state.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0);
+    const turnZeroRating = state.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === 0);
+    const next = advancePolicyTurn(state, {
+      turnMode: 'organic',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 2,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 2,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 0,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 0.55,
+      customMinimumPredictedFit: -1
+    });
+
+    assert.equal(next.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0).length, turnZeroConfidence.length);
+    assert.equal(next.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === 0).length, turnZeroRating.length);
+    assert.equal(next.confidenceSnapshots.filter((snapshot) => snapshot.turn === 1).length, bootstrap.islands.length * bootstrap.cohorts.length);
+    assert.equal(next.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === 1).length, bootstrap.islands.length * bootstrap.cohorts.length);
+    assert.deepEqual(next.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0), turnZeroConfidence);
+    assert.deepEqual(next.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === 0), turnZeroRating);
   });
 
   it('advances organic turns and only adds previously unrated pairs', () => {
@@ -422,6 +452,58 @@ describe('simulation layer', () => {
       assert.equal(state.users.find((user) => user.id === event.userId)?.ratings[event.islandId] ?? null, null);
       assert.ok((preTurnRecommendations.get(event.userId) ?? []).includes(event.islandId));
     }
+  });
+
+  it('matches a full recompute from canonical evidence after incremental advancement', () => {
+    const bootstrap = buildBootstrap(24681);
+    const initial = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 2 });
+    const turnConfig = {
+      turnMode: 'mixed' as const,
+      participationModel: 'fixed-count' as const,
+      participatingUsersPerTurn: 2,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count' as const,
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2' as const,
+      guidedRatingCountModel: 'fixed-count' as const,
+      guidedRecommendationsPerUser: 1,
+      guidedRecommendationDice: '1d2' as const,
+      routingRiskProfile: 'custom' as const,
+      customExplorationWeight: 0.75,
+      customMinimumPredictedFit: -1
+    };
+
+    const afterOne = advancePolicyTurn(initial, turnConfig);
+    const afterTwo = advancePolicyTurn(afterOne, turnConfig);
+    const afterThree = advancePolicyTurn(afterTwo, turnConfig);
+    const recomputed = recomputeSimulationStateFromCanonicalEvents({
+      seed: afterThree.seed,
+      allTags: afterThree.allTags,
+      latentUsers: afterThree.latentUsers,
+      cohorts: afterThree.cohorts,
+      islands: afterThree.islands,
+      hiddenTasteCohorts: afterThree.hiddenTasteCohorts,
+      ratingEvents: afterThree.ratingEvents,
+      turnHistory: afterThree.turnHistory,
+      observedBehaviorEvents: afterThree.observedBehaviorEvents,
+      islandCohortRatingSnapshots: afterThree.islandCohortRatingSnapshots,
+      confidenceSnapshots: afterThree.confidenceSnapshots
+    });
+
+    assert.equal(recomputed.currentTurn, afterThree.currentTurn);
+    assert.deepEqual(recomputed.ratingEvents, afterThree.ratingEvents);
+    assert.deepEqual(recomputed.observedBehaviorEvents, afterThree.observedBehaviorEvents);
+    assert.deepEqual(recomputed.users, afterThree.users);
+    assert.deepEqual(
+      recomputed.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn),
+      afterThree.islandCohortRatingSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn)
+    );
+    assert.deepEqual(
+      recomputed.confidenceSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn),
+      afterThree.confidenceSnapshots.filter((snapshot) => snapshot.turn === afterThree.currentTurn)
+    );
+    assert.deepEqual(Array.from(recomputed.raterSignalProfiles.values()), Array.from(afterThree.raterSignalProfiles.values()));
+    assert.deepEqual(Array.from(recomputed.islandAffinityReports.values()), Array.from(afterThree.islandAffinityReports.values()));
   });
 
   it('runs mixed turns through both organic and guided pipelines', () => {
