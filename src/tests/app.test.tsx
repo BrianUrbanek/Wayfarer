@@ -60,8 +60,9 @@ describe('App analyst console', () => {
     expect(html).toContain('Participation:');
     expect(html).toContain('Rating counts:');
     expect(html).toContain('Routing:');
-    expect(html).toContain('Navigation Tutorial');
+    expect(html).toContain('Analyst Workflow');
     expect(html).toContain('Guided path overview');
+    expect(html).toContain('golden-demo');
     expect(html).toContain('System framing');
     expect(html).toContain('Experience framing');
     expect(html).toContain('Path steps');

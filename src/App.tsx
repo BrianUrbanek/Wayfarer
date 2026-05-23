@@ -442,7 +442,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
   const [dashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
-  const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>('navigation-tutorial');
+  const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>('analyst-workflow');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
