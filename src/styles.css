@@ -380,6 +380,31 @@ select {
   align-items: center;
 }
 
+.stage-panel__setup {
+  display: grid;
+  gap: 16px;
+}
+
+.stage-panel__setup-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  align-items: start;
+}
+
+.stage-panel__utility-column {
+  display: grid;
+  gap: 10px;
+}
+
+.stage-panel__expert-controls {
+  display: grid;
+  gap: 16px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .control--jump {
   min-width: 220px;
 }
@@ -690,6 +715,12 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .stage-panel__setup-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tray {

@@ -13,7 +13,7 @@ export interface PresentationState {
 }
 
 function hasPostBootstrapEvidence(state: Pick<SimulationState, 'currentTurn' | 'turnHistory' | 'ratingEvents'>): boolean {
-  return state.currentTurn > 0 || state.turnHistory.some((turn) => turn.turn > 0 || turn.ratingsCreated > 0);
+  return state.currentTurn > 0 || state.turnHistory.some((turn) => turn.turn > 0);
 }
 
 export function derivePresentationState(input: {

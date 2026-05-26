@@ -9,7 +9,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Wayfarer analyst console');
     expect(html).toContain('Run Context');
     expect(html).toContain('Primary workflow');
-    expect(html).toContain('Scenario setup');
+    expect(html).toContain('Scenario utility / report cluster');
     expect(html).toContain('Golden Demo');
     expect(html).toContain('Choose a scenario or load a saved run.');
     expect(html).toContain('Novice');
@@ -23,10 +23,9 @@ describe('App analyst console', () => {
     expect(html).toContain('Simulation JSON');
     expect(html).toContain('Golden Demo');
     expect(html).toContain('Open demo report');
-    expect(html).toContain('Presentation-ready readout for the current Golden Demo state.');
+    expect(html).toContain('Select a scenario or import valid data to enable scenario inspection controls.');
     expect(html).toContain('Choose a scenario or import a saved run.');
     expect(html).toContain('Golden Demo is selected, but no meaningful run has been executed or imported yet.');
-    expect(html).toContain('Load or execute a run to reveal the analysis modules.');
     expect(html).not.toContain('Inspection / dashboard panels');
     expect(html).not.toContain('Population Summary');
     expect(html).not.toContain('Selected User Summary');
@@ -67,12 +66,13 @@ describe('App analyst console', () => {
     const html = renderToString(<App initialGuidanceMode="expert" />);
 
     expect(html).toContain('Scenario preset');
-    expect(html).toContain('Scenario setup');
+    expect(html).toContain('Scenario utility / report cluster');
     expect(html).toContain('Bootstrap Ratings / User');
     expect(html).toContain('Tag Alignment');
     expect(html).toContain('Rating Alignment');
     expect(html).toContain('Current signal-weight proxy');
     expect(html).toContain('Turn behavior / Dynamic settings');
+    expect(html).toContain('Expert scenario tuning');
     expect(html).toContain('Open demo report');
     expect(html).toContain('Turn Mode');
     expect(html).toContain('Participation Model');

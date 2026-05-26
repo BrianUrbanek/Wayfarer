@@ -61,6 +61,51 @@ describe('presentation state', () => {
     assert.equal(executed.runState, 'bootstrap-only');
   });
 
+  it('keeps turn 0 bootstrap ratings from becoming meaningful evidence', () => {
+    const bootstrapState = {
+      currentTurn: 0,
+      turnHistory: [
+        {
+          turn: 0,
+          mode: 'organic',
+          participatingUserIds: [],
+          ratingsCreated: 12,
+          organicRatingsCreated: 12,
+          guidedRatingsCreated: 0,
+          newlyRatedIslandIds: [],
+          routedIslandIds: [],
+          recommendationKinds: { SAFE_FIT: 0, DISCOVERY_PROBE: 0 },
+          diagnosisCounts: {
+            HIGH_SIGNAL: 0,
+            MISMATCH_RETAG: 0,
+            INVERSE_PROFILE: 0,
+            UNKNOWN_OR_NOISY: 0,
+            LOW_SIGNAL: 0,
+            AMBIGUOUS: 0,
+            UNEXPLAINED_PREDICTIVE: 0
+          }
+        } satisfies SimulationTurnSummary
+      ],
+      ratingEvents: []
+    };
+
+    const imported = derivePresentationState({
+      guidanceMode: 'novice',
+      runSource: 'imported',
+      simulationState: bootstrapState
+    });
+    const executed = derivePresentationState({
+      guidanceMode: 'novice',
+      runSource: 'executed',
+      simulationState: bootstrapState
+    });
+
+    assert.equal(imported.runState, 'bootstrap-only');
+    assert.equal(executed.runState, 'bootstrap-only');
+    assert.equal(imported.hasMeaningfulRun, false);
+    assert.equal(executed.hasMeaningfulRun, false);
+  });
+
   it('treats post-bootstrap turn history as a meaningful run', () => {
     const state = derivePresentationState({
       guidanceMode: 'novice',
