@@ -76,7 +76,6 @@ describe('App analyst console', () => {
     expect(html).not.toContain('Active Discovery Turns');
     expect(html).not.toContain('False Positives Preview');
     expect(html).not.toContain('False Negatives Preview');
-    expect(html).toContain('These scenarios are defined in src/data/scenario-catalog.json. Edit that JSON to change the named presets.');
   });
 
   it('renders expert preset controls', () => {

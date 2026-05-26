@@ -743,7 +743,8 @@ select {
 .tray--collapsed .tray__rail {
   padding: 14px 12px;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  flex-direction: column;
   border-bottom: 0;
 }
 
@@ -753,6 +754,14 @@ select {
 }
 
 .tray--collapsed .tray__rail-title h2 {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+  font-size: 0.82rem;
+}
+
+.tray--collapsed .tray__rail-title .eyebrow {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   white-space: nowrap;
@@ -770,6 +779,7 @@ select {
 
 .tray--collapsed .tray__rail-actions {
   flex-direction: column;
+  margin-left: 0;
 }
 
 .tray__toggle,
@@ -2857,19 +2867,37 @@ select {
   margin-left: 6px;
 }
 
-.formula-tip__button {
+.wayfarer-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wayfarer-tooltip__trigger {
   width: 24px;
   height: 24px;
   min-width: 24px;
+  min-height: 24px;
   padding: 0;
 }
 
-.formula-tip__popover {
-  right: 0;
-  left: auto;
-  top: calc(100% + 6px);
+.wayfarer-tooltip__popover {
+  position: fixed;
   width: min(360px, 80vw);
+  max-width: min(360px, calc(100vw - 24px));
   z-index: 140;
+  pointer-events: auto;
+}
+
+.wayfarer-tooltip .system-health-popover {
+  right: auto;
+  left: auto;
+  top: auto;
+  bottom: auto;
+}
+
+.info-tip__tooltip {
+  margin-left: 0;
 }
 
 .island-confidence-radar {

@@ -1,3 +1,5 @@
+import { Tooltip } from './Tooltip';
+
 interface InfoTipProps {
   label: string;
   text: string;
@@ -5,13 +7,11 @@ interface InfoTipProps {
 
 export function InfoTip({ label, text }: InfoTipProps) {
   return (
-    <button
-      type="button"
-      className="icon-button info-tip"
-      aria-label={label}
-      title={text}
-    >
-      ?
-    </button>
+    <Tooltip label={label} ariaLabel={label} icon="?" activation="click" className="info-tip__tooltip">
+      <section className="system-health-popover__section">
+        <h5>About</h5>
+        <p>{text}</p>
+      </section>
+    </Tooltip>
   );
 }
