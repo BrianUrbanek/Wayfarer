@@ -6,7 +6,7 @@ export type DashboardOrderingPreset = 'overview-first' | 'recovery-first' | 'rou
 
 export type DashboardPanelGroupKey = 'overview' | 'recovery' | 'routing' | 'debug';
 
-export type GuidedPathId = 'navigation-tutorial' | 'analyst-workflow';
+export type GuidedPathId = 'run-start' | 'portfolio-reviewer' | 'navigation-tutorial' | 'analyst-workflow';
 
 export type DashboardModuleId =
   | 'turn-summary'
@@ -57,6 +57,96 @@ export const DASHBOARD_ORDERINGS: Record<DashboardOrderingPreset, DashboardPanel
 };
 
 export const GUIDED_PATHS: GuidedPath[] = [
+  {
+    id: 'run-start',
+    title: 'Run Start',
+    recommendedPreset: 'golden-demo',
+    recommendedOrdering: 'overview-first',
+    framing: {
+      system: 'Start from a clean prompt to choose a scenario or load an existing run.',
+      experience: 'Cold-load first-contact path for starting or importing a meaningful run.'
+    },
+    steps: [
+      {
+        title: 'Choose a scenario',
+        instruction: 'Use Scenario preset to select Golden Demo or another setup before you inspect anything else.',
+        targetModuleId: 'turn-summary',
+        why: 'Preset selection sets up the run, but it does not mean a meaningful run has been loaded yet.'
+      },
+      {
+        title: 'Execute or import',
+        instruction: 'Execute Scenario to generate a run, or Import JSON to load a saved run blob.',
+        targetModuleId: 'turn-summary',
+        why: 'A run becomes interpretable only after it has real turn history or an imported saved state.'
+      },
+      {
+        title: 'Read the first proof path',
+        instruction: 'Once a meaningful run is loaded, read Turn Summary, Turn Recap, Hidden Cohort Recovery, and Selected Island / Truth Alignment in that order.',
+        targetModuleId: 'turn-summary',
+        why: 'This is the portfolio-reviewer path after the run exists.'
+      },
+      {
+        title: 'Open the report',
+        instruction: 'Open demo report only after a meaningful Golden Demo run exists.',
+        targetModuleId: 'turn-summary',
+        why: 'The report is a readout artifact, not a start-state control.'
+      }
+    ],
+    successCriteria: [
+      'The viewer can start or import a run without seeing analysis warnings.',
+      'The viewer can tell that preset selection is not the same as a loaded run.',
+      'The first proof path appears only after a meaningful run exists.'
+    ],
+    maintenanceNote: 'Keep this path aligned to cold-load novice behavior and the start/import contract.'
+  },
+  {
+    id: 'portfolio-reviewer',
+    title: 'Portfolio Reviewer',
+    recommendedPreset: 'golden-demo',
+    recommendedOrdering: 'recovery-first',
+    framing: {
+      system: 'Show the proof path a reviewer needs after a meaningful run is loaded.',
+      experience: 'Portfolio review flow centered on claim, run context, evidence, recovery, and report.'
+    },
+    steps: [
+      {
+        title: 'Read the run context',
+        instruction: 'Open Scenario Setup / Run Context and confirm the active preset, seed, and turn policy.',
+        targetModuleId: 'turn-summary',
+        why: 'This anchors the loaded run before reading evidence.'
+      },
+      {
+        title: 'Read what changed',
+        instruction: 'Open Turn Summary and Turn Recap to see the current state and the turn-level delta.',
+        targetModuleId: 'turn-summary',
+        why: 'These are the fastest summary cards for the loaded run.'
+      },
+      {
+        title: 'Inspect recovery',
+        instruction: 'Open Hidden Cohort Recovery to read the seeded, unseeded, and noisy recovery story.',
+        targetModuleId: 'selected-island',
+        why: 'Recovery is the key claim surface for the Golden Demo path.'
+      },
+      {
+        title: 'Inspect proof',
+        instruction: 'Select an island and inspect Truth Alignment to compare hidden truth with the learned estimate.',
+        targetModuleId: 'selected-island',
+        why: 'This is the concrete proof path behind the summary cards.'
+      },
+      {
+        title: 'Open the report',
+        instruction: 'Open demo report for a presentation-ready readout of the current Golden Demo state.',
+        targetModuleId: 'turn-summary',
+        why: 'The report is the reviewer-friendly artifact once a meaningful run exists.'
+      }
+    ],
+    successCriteria: [
+      'The viewer can understand the claim without opening every detail panel.',
+      'The proof path stays centered on turn summary, recovery, truth alignment, and report.',
+      'Technical detail remains available but secondary.'
+    ],
+    maintenanceNote: 'Keep this path aligned to the novice proof path after a meaningful run loads.'
+  },
   {
     id: 'navigation-tutorial',
     title: 'Navigation Tutorial',

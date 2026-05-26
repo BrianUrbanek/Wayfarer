@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import App from '../App';
 
 describe('App analyst console', () => {
-  it('renders the analyst console sections and demo-first novice setup', () => {
+  it('renders the novice cold-load start/import state without analysis panels', () => {
     const html = renderToString(<App initialGuidanceMode="novice" />);
 
     expect(html).toContain('Wayfarer analyst console');
@@ -11,16 +11,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Primary workflow');
     expect(html).toContain('Scenario setup');
     expect(html).toContain('Golden Demo');
-    expect(html).toContain('Population Summary');
-    expect(html).toContain('Selected User Summary');
-    expect(html).toContain('Rater signal profile (internal)');
-    expect(html).toContain('Current signal-weight proxy');
-    expect(html).toContain('Cohort-local island affinity');
-    expect(html).toContain('Discovery Routing');
-    expect(html).toContain('Confidence Growth');
-    expect(html).toContain('Turn Recap');
-    expect(html).toContain('Reviewer Archetype Recovery');
-    expect(html).toContain('Turn Summary');
+    expect(html).toContain('Choose a scenario or load a saved run.');
     expect(html).toContain('Novice');
     expect(html).toContain('Expert');
     expect(html).toContain('Novice keeps the instructional rails open while expert exposes the resolved controls.');
@@ -33,7 +24,18 @@ describe('App analyst console', () => {
     expect(html).toContain('Golden Demo');
     expect(html).toContain('Open demo report');
     expect(html).toContain('Presentation-ready readout for the current Golden Demo state.');
-    expect(html).toContain('Inspection / dashboard panels');
+    expect(html).toContain('Choose a scenario or import a saved run.');
+    expect(html).toContain('Golden Demo is selected, but no meaningful run has been executed or imported yet.');
+    expect(html).toContain('Load or execute a run to reveal the analysis modules.');
+    expect(html).not.toContain('Inspection / dashboard panels');
+    expect(html).not.toContain('Population Summary');
+    expect(html).not.toContain('Selected User Summary');
+    expect(html).not.toContain('Rater signal profile (internal)');
+    expect(html).not.toContain('Current signal-weight proxy');
+    expect(html).not.toContain('Cohort-local island affinity');
+    expect(html).not.toContain('Discovery Routing');
+    expect(html).not.toContain('Confidence Growth');
+    expect(html).not.toContain('Reviewer Archetype Recovery');
     expect(html).not.toContain('Bootstrap Ratings / User');
     expect(html).not.toContain('Rating count policy');
     expect(html).not.toContain('Organic Ratings / User');
@@ -48,26 +50,9 @@ describe('App analyst console', () => {
     expect(html).toContain('Timing log');
     expect(html).toContain('Export');
     expect(html).toContain('Import');
-    expect(html).toContain('Selected user');
-    expect(html).toContain('Discovery Signal');
-    expect(html).toContain('Focus island');
-    expect(html).toContain('Top routed island');
-    expect(html).toContain('Participating users / turn');
-    expect(html).toContain('For a concrete proof example, select an island and inspect Truth Alignment.');
-    expect(html).toContain('Turn <!-- -->0');
-    expect(html).toContain('Scenario:');
-    expect(html).toContain('Mode:');
-    expect(html).toContain('Participation:');
-    expect(html).toContain('Rating counts:');
-    expect(html).toContain('Routing:');
-    expect(html).toContain('Analyst Workflow');
-    expect(html).toContain('Guided path overview');
-    expect(html).toContain('golden-demo');
-    expect(html).toContain('System framing');
-    expect(html).toContain('Experience framing');
-    expect(html).toContain('Path steps');
-    expect(html).toContain('Success criteria');
-    expect(html).toContain('Maintenance note');
+    expect(html).toContain('Run state');
+    expect(html).toContain('Golden Demo is selected, but no meaningful run has been executed or imported yet.');
+    expect(html).toContain('Run Start');
     expect(html).not.toContain('Model Explanation');
     expect(html).not.toContain('Island Comparison');
     expect(html).not.toContain('Pseudo-Cohort Reports');

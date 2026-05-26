@@ -104,6 +104,7 @@ import {
   type ScenarioPreset,
   type ScenarioPresetControls
 } from './model/scenarioPresets';
+import { derivePresentationState, type RunPresentationSource } from './ui/presentationState';
 import type { CohortAnchor, Island, User } from './model/types';
 
 const INITIAL_SCENARIO_PRESET: ScenarioPreset = getScenarioPreset('golden-demo');
@@ -442,7 +443,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
   const [dashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
-  const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>('analyst-workflow');
+  const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>(
+    initialGuidanceMode === 'novice' ? 'run-start' : 'analyst-workflow'
+  );
+  const [runPresentationSource, setRunPresentationSource] = useState<RunPresentationSource>('cold-load');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
@@ -503,23 +507,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   );
 
   const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
-
-  useEffect(() => {
-    if (guidanceMode === 'novice') {
-      setGuidanceOpen(true);
-      setDynamicSettingsCollapsed(true);
-      setDrilldownTargetsCollapsed(true);
-      setPinnedTrayCollapsed(false);
-      setShowDebug(false);
-      return;
-    }
-
-    setGuidanceOpen(false);
-    setDynamicSettingsCollapsed(false);
-    setDrilldownTargetsCollapsed(false);
-    setPinnedTrayCollapsed(true);
-    setShowDebug(true);
-  }, [guidanceMode]);
 
   useEffect(() => {
     if (pinnedDrilldownKind !== null) {
@@ -896,7 +883,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
 
-  const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
   const runContextNote = isNoviceMode
@@ -1798,6 +1784,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setExecutionStatus('');
     setExecutionProgress(0);
     setIsExecutingScenario(false);
+    setRunPresentationSource('cold-load');
     setScenarioPresetSource(getScenarioPresetMetadata(preset.id));
     setSeed(controls.seed);
     setNumUsers(controls.numUsers);
@@ -1896,6 +1883,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setExecutionStatus('');
     setExecutionProgress(0);
     setIsExecutingScenario(false);
+    setRunPresentationSource('imported');
     setScenarioPresetSource(scenario.scenarioPreset ?? (importedPresetMatch ? scenarioPresetMetadataFromPreset(importedPresetMatch) : null));
     setSeed(scenario.generatorConfig.seed);
     setNumUsers(scenario.generatorConfig.numUsers);
@@ -2018,6 +2006,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       setScenarioMessage(`Executed ${executionLabel} with seed ${nextSeed} for ${turnsToRun} turns.`);
       setExecutionStatus('Scenario execution complete.');
       setExecutionProgress(1);
+      setRunPresentationSource(nextState.currentTurn > 0 ? 'executed' : 'cold-load');
       setRecentAction({
         kind: 'scenario-executed',
         scenarioLabel: executionLabel,
@@ -2058,6 +2047,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         currentTurn: nextState.currentTurn,
         latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1] ?? null
       });
+      if (nextState.currentTurn > 0) {
+        setRunPresentationSource('executed');
+      }
       return nextState;
     });
   };
@@ -2092,6 +2084,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         latestTurnSummary: next.turnHistory[next.turnHistory.length - 1] ?? null,
         batchSize: turnsToRun
       });
+      if (next.currentTurn > 0) {
+        setRunPresentationSource('executed');
+      }
 
       return next;
     });
@@ -2106,6 +2101,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setIsExecutingScenario(false);
     setTurnTimingLog([]);
     resetControlPolicy();
+    setRunPresentationSource('cold-load');
     const defaultBootstrap = buildDataset({
       seed: INITIAL_SCENARIO_PRESET.generatorConfig.seed,
       numUsers: INITIAL_SCENARIO_PRESET.generatorConfig.numUsers,
@@ -2239,23 +2235,38 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       return;
     }
 
-    setSimulationState(initialSimulationState);
-  }, [currentScenarioControls, importedScenario, initialSimulationState]);
+    if (runPresentationSource === 'cold-load' && !isExecutingScenario) {
+      setSimulationState(initialSimulationState);
+    }
+  }, [currentScenarioControls, importedScenario, initialSimulationState, isExecutingScenario, runPresentationSource]);
+
+  const presentationState = useMemo(
+    () =>
+      derivePresentationState({
+        guidanceMode,
+        runSource: runPresentationSource,
+        simulationState
+      }),
+    [guidanceMode, runPresentationSource, simulationState]
+  );
+  const isMeaningfulRunLoaded = presentationState.runState === 'meaningful-run';
+  const showAnalysisDashboard = presentationState.guidanceMode === 'expert' || isMeaningfulRunLoaded;
 
   const activeScenarioPreset = useMemo(
     () => resolveScenarioPresetFromControls(currentScenarioControls),
     [currentScenarioControls]
   );
   const isGoldenDemoPath = scenarioPresetSource?.id === 'golden-demo' || activeScenarioPreset?.id === 'golden-demo';
+  const hasGoldenDemoReportAccess = isGoldenDemoPath && isMeaningfulRunLoaded;
   const goldenDemoReport = useMemo(
     () =>
-      isGoldenDemoPath
+      hasGoldenDemoReportAccess
         ? buildGoldenDemoReport({
             state: simulationState,
             scenario: activeScenarioPreset ?? INITIAL_SCENARIO_PRESET
           })
         : null,
-    [activeScenarioPreset, isGoldenDemoPath, simulationState]
+    [activeScenarioPreset, hasGoldenDemoReportAccess, simulationState]
   );
   const activeScenarioPresetMetadata = activeScenarioPreset ? scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
   const scenarioPresetDisplay =
@@ -2265,6 +2276,26 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ? scenarioPresetSource
       : null;
   const currentScenarioLabel = scenarioPresetDisplay?.label ?? scenarioPresetSource?.label ?? 'Custom / imported';
+  const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
+
+  useEffect(() => {
+    if (guidanceMode === 'novice') {
+      setGuidanceOpen(true);
+      setDynamicSettingsCollapsed(true);
+      setDrilldownTargetsCollapsed(true);
+      setPinnedTrayCollapsed(false);
+      setShowDebug(false);
+      setGuidedPathId(presentationState.runState === 'meaningful-run' ? 'portfolio-reviewer' : 'run-start');
+      return;
+    }
+
+    setGuidanceOpen(false);
+    setDynamicSettingsCollapsed(false);
+    setDrilldownTargetsCollapsed(false);
+    setPinnedTrayCollapsed(true);
+    setShowDebug(true);
+    setGuidedPathId('analyst-workflow');
+  }, [guidanceMode, presentationState.runState]);
 
   const advanceCurrentTurn = (state: SimulationState) => {
     return advancePolicyTurn(state, currentTurnPolicy);
@@ -3112,9 +3143,27 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <div className="stage-panel__lead">
           <div>
             <p className="eyebrow">Primary workflow</p>
-            {!primaryWorkflowCollapsed ? <h2>Inspect the current state, then advance one turn.</h2> : null}
-            {!primaryWorkflowCollapsed ? <p className="muted">Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.</p> : null}
-            {!primaryWorkflowCollapsed ? <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p> : null}
+            {!primaryWorkflowCollapsed ? (
+              <h2>
+                {presentationState.runState === 'no-run'
+                  ? 'Choose a scenario or load a saved run.'
+                  : presentationState.runState === 'bootstrap-only'
+                    ? 'Loaded baseline only. Execute to inspect the proof path.'
+                    : 'Inspect the current state, then advance one turn.'}
+              </h2>
+            ) : null}
+            {!primaryWorkflowCollapsed ? (
+              <p className="muted">
+                {presentationState.runState === 'no-run'
+                  ? 'Preset selection sets up the run, but a meaningful run only exists after execution or import.'
+                  : presentationState.runState === 'bootstrap-only'
+                    ? 'This state is a baseline snapshot, not the review path.'
+                    : 'Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.'}
+              </p>
+            ) : null}
+            {!primaryWorkflowCollapsed && showAnalysisDashboard ? (
+              <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -3138,27 +3187,31 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             Open demo report
           </button>
           <span className="muted">Presentation-ready readout for the current Golden Demo state.</span>
-          <label className="control control--inline control--jump">
-            <span>Jump to module</span>
-            <select
-              defaultValue=""
-              onChange={(event) => {
-                const targetId = event.target.value;
-                if (!targetId) return;
-                scrollModuleIntoView(targetId);
-                event.target.value = '';
-              }}
-            >
-              <option value="" disabled>
-                Select module
-              </option>
-              {moduleJumpOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
+          {showAnalysisDashboard ? (
+            <label className="control control--inline control--jump">
+              <span>Jump to module</span>
+              <select
+                defaultValue=""
+                onChange={(event) => {
+                  const targetId = event.target.value;
+                  if (!targetId) return;
+                  scrollModuleIntoView(targetId);
+                  event.target.value = '';
+                }}
+              >
+                <option value="" disabled>
+                  Select module
                 </option>
-              ))}
-            </select>
-          </label>
+                {moduleJumpOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="muted">Load or execute a run to reveal the analysis modules.</span>
+          )}
         </div>
         {!primaryWorkflowCollapsed ? (
           <>
@@ -3185,10 +3238,25 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </>
         ) : null}
       </section>
-      <div id="data-fitness">
-        <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />
-      </div>
+      {showAnalysisDashboard ? (
+        <div id="data-fitness">
+          <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />
+        </div>
+      ) : (
+        <section className="panel stage-panel stage-panel--details" aria-label="Run state">
+          <EmptyState
+            title={presentationState.runState === 'no-run' ? 'Choose a scenario or import a saved run.' : 'Baseline loaded only.'}
+            description={
+              presentationState.runState === 'no-run'
+                ? 'Golden Demo is selected, but no meaningful run has been executed or imported yet.'
+                : 'This state only contains bootstrap evidence. Execute one or more turns to open the proof path, or switch to expert mode for bootstrap inspection.'
+            }
+          />
+        </section>
+      )}
 
+      {showAnalysisDashboard ? (
+      <>
       <section id="primary-workflow-details" className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
         <div className="section-heading section-heading--collapse-row">
           <h3>Primary workflow details</h3>
@@ -3287,7 +3355,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
 
       <section className="inspection-shell" aria-label="Inspection / dashboard panels">
-        <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
+        {showAnalysisDashboard ? (
+          <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
           {visibleDashboardSections.map((sectionKey) => {
             if (sectionKey === 'debug' && !showDebug) {
               return null;
@@ -3321,8 +3390,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </section>
             );
           })}
-        </section>
+          </section>
+        ) : null}
       </section>
+      </>
+      ) : null}
 
       {showInstructionTray ? (
         <Tray

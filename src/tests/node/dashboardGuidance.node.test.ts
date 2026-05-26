@@ -10,7 +10,9 @@ import { getScenarioPreset } from '../../model/scenarioPresets.js';
 
 describe('dashboard guidance data', () => {
   it('exposes the expected guided path set', () => {
-    assert.equal(GUIDED_PATHS.length, 2);
+    assert.equal(GUIDED_PATHS.length, 4);
+    assert.equal(getGuidedPath('run-start').title, 'Run Start');
+    assert.equal(getGuidedPath('portfolio-reviewer').title, 'Portfolio Reviewer');
     assert.equal(getGuidedPath('navigation-tutorial').title, 'Navigation Tutorial');
     assert.equal(getGuidedPath('analyst-workflow').recommendedPreset, 'golden-demo');
     assert.equal(getScenarioPreset('small-smoke-test').id, 'small-smoke-test');
@@ -48,6 +50,8 @@ describe('dashboard guidance data', () => {
     assert.ok(allText.includes('choose island'));
     assert.ok(allText.includes('pin island'));
     assert.ok(allText.includes('inspect top route'));
+    assert.ok(allText.includes('start or import a run'));
+    assert.ok(allText.includes('portfolio review'));
     assert.ok(allText.includes('data fitness'));
     assert.ok(allText.includes('turn summary'));
     assert.ok(allText.includes('selected user summary'));
