@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Badge } from './ui/components/Badge';
 import { Drawer } from './ui/components/Drawer';
 import { EmptyState } from './ui/components/EmptyState';
@@ -14,7 +14,7 @@ import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { ModulePanelHeader } from './ui/components/ModulePanelHeader';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
-import { AboutGlossaryContent } from './ui/components/AboutGlossaryContent';
+import { AboutGlossaryLauncher } from './ui/components/AboutGlossaryLauncher';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
 import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
 import { SelectedIslandTruthComparison } from './ui/routing/SelectedIslandTruthComparison';
@@ -25,7 +25,6 @@ import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
 import { DivergingAffinityBars } from './ui/components/DivergingAffinityBars';
-import { aggregateBatchTotals, type RecentActionState } from './ui/recentActionSummary';
 import { buildSystemHealthSummary } from './ui/systemHealth';
 import {
   collapseDistributionSlices,
@@ -58,7 +57,6 @@ import {
   type RoutingRiskProfile,
   type TurnMode
 } from './model/turnPolicy';
-import { buildDataFitnessSummary } from './model/dataFitness';
 import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
 import { buildGoldenDemoReport, renderGoldenDemoReportMarkdown } from './analysis/goldenDemoReport';
 import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
@@ -66,10 +64,8 @@ import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } fro
 import { buildIslandTruthComparison } from './model/islandTruthComparison';
 import { buildHiddenCohortRecoveryReport } from './model/hiddenCohortRecovery';
 import { buildTurnRecapReport } from './model/turnRecap';
-import { DataFitnessPanel } from './ui/components/DataFitnessPanel';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
-import { ReviewerArchetypeRecoveryModal } from './ui/reviewerRecovery/ReviewerArchetypeRecoveryModal';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
@@ -106,6 +102,11 @@ import {
 } from './model/scenarioPresets';
 import { derivePresentationState, type RunPresentationSource } from './ui/presentationState';
 import type { CohortAnchor, Island, User } from './model/types';
+
+const ReviewerArchetypeRecoveryModal = lazy(async () => {
+  const module = await import('./ui/reviewerRecovery/ReviewerArchetypeRecoveryModal');
+  return { default: module.ReviewerArchetypeRecoveryModal };
+});
 
 const INITIAL_SCENARIO_PRESET: ScenarioPreset = getScenarioPreset('golden-demo');
 const SCENARIO_PRESET_OPTIONS = listScenarioPresets();
@@ -201,7 +202,7 @@ function labelForCohortFactory(cohorts: CohortAnchor[]) {
       }
       const analyst = analystLabels.get(cohortId) ?? cohortId;
       const technical = labels.get(cohortId) ?? cohortId;
-      return analyst === technical ? technical : `${analyst} — ${technical}`;
+      return analyst === technical ? technical : `${analyst} � ${technical}`;
     }
   };
 }
@@ -437,7 +438,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [comparisonCohortId, setComparisonCohortId] = useState<string>('auto');
   const showDebugInitial = initialGuidanceMode !== 'novice';
   const [showDebug, setShowDebug] = useState(showDebugInitial);
-  const [showAbout, setShowAbout] = useState(false);
   const [showTimingLog, setShowTimingLog] = useState(false);
   const [turnTimingLog, setTurnTimingLog] = useState<TurnTimingRow[]>([]);
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
@@ -459,7 +459,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [executionProgress, setExecutionProgress] = useState<number>(0);
   const [executionStatus, setExecutionStatus] = useState<string>('');
   const [isExecutingScenario, setIsExecutingScenario] = useState(false);
-  const [recentAction, setRecentAction] = useState<RecentActionState | null>(null);
+  const [, setRecentAction] = useState<RecentActionState | null>(null);
   const [showConfidenceSeries, setShowConfidenceSeries] = useState({
     player: true,
     island: true,
@@ -467,8 +467,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     tag: false
   });
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
-  const [dataFitnessCollapsed, setDataFitnessCollapsed] = useState(initialGuidanceMode === 'novice');
-  const [primaryDetailsCollapsed, setPrimaryDetailsCollapsed] = useState(false);
   const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
   const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
   const [guidedProofCollapsed, setGuidedProofCollapsed] = useState(false);
@@ -683,45 +681,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
   const observedBehaviorAnalysis = useMemo(() => buildObservedBehaviorAnalysis(dataset.observedBehaviorEvents), [dataset.observedBehaviorEvents]);
 
-  const eligibleRecommendationUsers = useMemo(() => {
-    return dataset.users.filter((user) => {
-      const recommendations = recommendIslandsForUser(
-        user,
-        dataset.islandAffinityReports,
-        dataset.raterSignalProfiles,
-        dataset.islands,
-        routingOptions
-      ).recommendations;
-      return recommendations.length > 0;
-    }).length;
-  }, [dataset.islandAffinityReports, dataset.islands, dataset.raterSignalProfiles, dataset.users, routingOptions]);
-
-  const dataFitnessSummary = useMemo(() => {
-    const totalRated = dataset.users.reduce((sum, user) => sum + countNonNullRatings(user), 0);
-    const averageRatingsPerUser = dataset.users.length > 0 ? totalRated / dataset.users.length : 0;
-    const usersWithUsableSignal = Array.from(dataset.raterSignalProfiles.values()).filter((profile) => profile.overallSignal >= 0.25).length;
-    const averageSignalEvidence =
-      dataset.raterSignalProfiles.size > 0
-        ? Array.from(dataset.raterSignalProfiles.values()).reduce((sum, profile) => sum + profile.signalEvidence, 0) /
-          dataset.raterSignalProfiles.size
-        : 0;
-    const lastTurnRatingsCreated = dataset.turnHistory[dataset.turnHistory.length - 1]?.ratingsCreated ?? 0;
-    const ratedPairCoverage =
-      dataset.users.length * dataset.islands.length > 0 ? totalRated / (dataset.users.length * dataset.islands.length) : 0;
-    return buildDataFitnessSummary({
-      totalUsers: dataset.users.length,
-      ratingEventCount: dataset.ratingEvents.length,
-      averageRatingsPerUser,
-      usersWithUsableSignal,
-      averageSignalEvidence,
-      lastTurnRatingsCreated,
-      hasTurnHistory: dataset.turnHistory.length > 0,
-      turnMode,
-      eligibleRecommendationUsers,
-      ratedPairCoverage
-    });
-  }, [dataset.islands.length, dataset.ratingEvents.length, dataset.raterSignalProfiles, dataset.turnHistory, dataset.users, eligibleRecommendationUsers, turnMode]);
-
   const selectedRecommendationDetail =
     drawerState?.type === 'recommendation' && selectedUser
       ? selectedUserRecommendations.find((recommendation) => recommendation.islandId === drawerState.islandId) ?? null
@@ -891,7 +850,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
       const inference = dataset.inferenceByUserId.get(user.id);
-      const tags = user.declaredTags.slice(0, 3).join(' · ');
+      const tags = user.declaredTags.slice(0, 3).join(' � ');
 
       return {
         id: user.id,
@@ -923,7 +882,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ...dataset.cohorts.map((cohort) => ({
         id: cohort.id,
         label: cohort.label,
-        description: cohort.tags.join(' · '),
+        description: cohort.tags.join(' � '),
         badge: cohort.source
       }))
     ];
@@ -933,7 +892,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return dataset.pseudoCohortAnalysis.allReports.map((report) => ({
       id: report.key,
       label: report.tags.join(' | '),
-      description: `${report.userCount} users · ${report.reportType}`,
+      description: `${report.userCount} users � ${report.reportType}`,
       badge: report.analystPriority
     }));
   }, [dataset.pseudoCohortAnalysis.allReports]);
@@ -1124,7 +1083,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
                   </div>
                   <span className="muted">
-                    {archetypeLabel(row.hiddenReviewerArchetype)} · {row.inferredDiagnosisType}
+                    {archetypeLabel(row.hiddenReviewerArchetype)} � {row.inferredDiagnosisType}
                   </span>
                 </div>
                 <div className="recovery-preview-row__meta">
@@ -1132,7 +1091,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
-                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
+                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' � ')}</span> : null}
                   <span className="recovery-preview-row__action">Open detail</span>
                 </div>
               </button>
@@ -1165,7 +1124,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
                   </div>
                   <span className="muted">
-                    {archetypeLabel(row.hiddenReviewerArchetype)} · guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
+                    {archetypeLabel(row.hiddenReviewerArchetype)} � guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
                   </span>
                 </div>
                 <div className="recovery-preview-row__meta">
@@ -1173,7 +1132,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
-                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' · ')}</span> : null}
+                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' � ')}</span> : null}
                   <span className="recovery-preview-row__action">Open detail</span>
                 </div>
               </button>
@@ -1189,11 +1148,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
   const declaredOverlapText = declaredTagOverlap
     ? declaredTagOverlap.isExact
-      ? `Exact tag fit · ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
+      ? `Exact tag fit � ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
       : `${declaredTagOverlap.overlap}/${declaredTagOverlap.total} declared tags`
     : 'No declared-tag overlap available.';
   const inverseNotice = showInverseDiagnostic
-    ? `Anti-match signal: ${cohortLabels.full(selectedInference?.inverseTop.cohortId ?? null)} · inverse evidence ${formatPercent(selectedInference?.inverseTop.score ?? 0)}`
+    ? `Anti-match signal: ${cohortLabels.full(selectedInference?.inverseTop.cohortId ?? null)} � inverse evidence ${formatPercent(selectedInference?.inverseTop.score ?? 0)}`
     : 'No strong inverse signal';
   const declaredDistributionCard = (
     <div className="stack">
@@ -1286,7 +1245,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <section className="detail-block">
         <div className="section-heading">
-          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating × cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
+          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating � cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
           <p>Weighted by rater signal only. Higher-signal raters count more for their strongest cohort.</p>
         </div>
         <section className="distribution-card">
@@ -1391,7 +1350,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           )}
         </p>
         <p className="muted">
-          Analyst flags: {selectedUserReviewerReport?.analystFlags.join(' · ') ?? 'n/a'}
+          Analyst flags: {selectedUserReviewerReport?.analystFlags.join(' � ') ?? 'n/a'}
         </p>
         <p className="muted">Hidden labels are debug checksums only. They do not feed the model.</p>
       </section>
@@ -1495,7 +1454,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <div key={entry.cohortId} className="detail-mini-table__row">
               <span>{cohortLabels.full(entry.cohortId)}</span>
               <span className="muted">
-                {formatSignedDecimal(entry.affinity)} · confidence {formatPercent(entry.confidence)} · evidence {formatDecimal(entry.effectiveWeight)}
+                {formatSignedDecimal(entry.affinity)} � confidence {formatPercent(entry.confidence)} � evidence {formatDecimal(entry.effectiveWeight)}
               </span>
             </div>
           ))}
@@ -2277,6 +2236,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ? scenarioPresetSource
       : null;
   const currentScenarioLabel = scenarioPresetDisplay?.label ?? scenarioPresetSource?.label ?? 'Custom / imported';
+  const primaryWorkflowHelperCopy = useMemo(() => {
+    if (!hasScenarioSelection) {
+      return 'Select a scenario or import valid data to enable scenario inspection controls.';
+    }
+
+    if (presentationState.runState === 'bootstrap-only') {
+      return 'Baseline state loaded. You can inspect setup data or advance turns; the proof path appears after post-bootstrap turn history exists.';
+    }
+
+    if (presentationState.runState === 'meaningful-run') {
+      return 'Meaningful run loaded. Use the badges and controls below to navigate, advance, or inspect the run.';
+    }
+
+    return `${currentScenarioLabel} is selected. You can inspect or advance the generated setup; execute the scenario to unlock the portfolio proof path and demo report.`;
+  }, [currentScenarioLabel, hasScenarioSelection, presentationState.runState]);
   const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
 
   useEffect(() => {
@@ -2312,14 +2286,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     [turnTimingLog]
   );
 
-  const stageTopRecommendation = selectedUserRecommendations[0] ?? null;
-  const participationDisplay =
-    participationModel === 'fixed-count'
-      ? `${participatingUsersPerTurn} users`
-      : `${Math.round(participationChance * 100)}% chance`;
-  const routingSurfaceLabel = stageTopRecommendation
-    ? dataset.islands.find((island) => island.id === stageTopRecommendation.islandId)?.label ?? stageTopRecommendation.islandId
-    : 'No routed island';
   const handleInspectTopRoute = () => {
     setDrawerState(
       selectedUser && selectedUserRecommendations[0]
@@ -2387,7 +2353,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   ? TURN_MODE_LABELS.guided
                   : turn.mode === 'mixed'
                     ? TURN_MODE_LABELS.mixed
-                    : TURN_MODE_LABELS.organic} ·{' '}
+                    : TURN_MODE_LABELS.organic} �{' '}
                 {turn.ratingsCreated} ratings
               </Badge>
             ))}
@@ -2606,9 +2572,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </div>
         <div className="hero__title-row">
           <h1>Wayfarer</h1>
-          <button type="button" className="button button--ghost hero__about-button" onClick={() => setShowAbout(true)}>
-            Open About
-          </button>
+          <AboutGlossaryLauncher />
         </div>
         <p className="subtitle">
           Browser-based analyst console for cohort recovery, guided routing, and island-fit evidence on a widescreen
@@ -2651,6 +2615,396 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </select>
           </label>
         </div>
+      </section>
+
+      <section
+        id="primary-workflow"
+        className={`panel stage-panel${primaryWorkflowCollapsed ? ' stage-panel__sticky' : ''}`}
+        aria-label="Primary workflow"
+      >
+        <div className="stage-panel__lead">
+          <div>
+            <p className="eyebrow">Primary workflow</p>
+            {!primaryWorkflowCollapsed ? (
+              <h2>
+                {presentationState.runState === 'no-run'
+                  ? 'Choose a scenario or load a saved run.'
+                  : presentationState.runState === 'bootstrap-only'
+                    ? 'Loaded baseline only. Execute to inspect the proof path.'
+                    : 'Inspect the current state, then advance one turn.'}
+              </h2>
+            ) : null}
+            {!primaryWorkflowCollapsed ? (
+              <p className="muted">
+                {presentationState.runState === 'no-run'
+                  ? 'Preset selection sets up the run, but a meaningful run only exists after execution or import.'
+                  : presentationState.runState === 'bootstrap-only'
+                    ? 'This state is a baseline snapshot, not the review path.'
+                    : 'Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.'}
+              </p>
+            ) : null}
+            {!primaryWorkflowCollapsed && showAnalysisDashboard ? (
+              <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="icon-button collapsible-panel__toggle"
+            onClick={() => setPrimaryWorkflowCollapsed((value) => !value)}
+            aria-label={primaryWorkflowCollapsed ? 'Expand Primary workflow' : 'Collapse Primary workflow'}
+          >
+            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+              {primaryWorkflowCollapsed ? 'v' : '^'}
+            </span>
+          </button>
+        </div>
+
+        <div className="stage-panel__workspace">
+          {!primaryWorkflowCollapsed ? (
+            <div className="stage-panel__workspace-main">
+              <div className="control-strip__preset">
+                <div className="control-strip__preset-main">
+                  <div className="control-strip__preset-start-row">
+                    <div className="control-strip__preset-start-column">
+                      <label className="control control--preset">
+                        <span className="control__label-row">
+                          <span>Scenario preset</span>
+                          <InfoTip
+                            label="Scenario preset help"
+                            text="These scenarios are defined in src/data/scenario-catalog.json. Edit that JSON to change the named presets."
+                          />
+                        </span>
+                        <select
+                          value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
+                          onChange={(event) => {
+                            const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
+                            if (nextPresetId !== 'custom') {
+                              applyScenarioPresetSelection(nextPresetId);
+                            }
+                          }}
+                        >
+                          <option value="custom" disabled>
+                            Custom / imported
+                          </option>
+                          {SCENARIO_PRESET_OPTIONS.map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <div className="control-strip__notes control-strip__notes--inline control-strip__notes--setup">
+                        <p className="muted">{primaryWorkflowHelperCopy}</p>
+                        {scenarioMessage ? <p className="muted">{scenarioMessage}</p> : null}
+                        {scenarioError ? <p className="text-danger">{scenarioError}</p> : null}
+                      </div>
+                    </div>
+
+                    <div className="stage-panel__utility-block stage-panel__utility-block--execute stage-panel__utility-block--compact">
+                      <button
+                        type="button"
+                        className="button button--primary"
+                        onClick={executeScenario}
+                        disabled={isExecutingScenario}
+                      >
+                        Execute Scenario
+                      </button>
+                      <p className="muted">
+                        Generate a fresh dataset from the selected setup, then run {turnsToRun} turns to the next inspection
+                        state.
+                      </p>
+                      {isExecutingScenario ? (
+                        <ProgressBar value={executionProgress} label={executionStatus || 'Executing scenario'} tone="accent" />
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="control-strip__preset-frame control-strip__preset-frame--wide">
+                    <div className="control-strip__preset-frame-header">
+                      <span className="control__label-row">
+                        <span>Preset details</span>
+                      </span>
+                    </div>
+                    <div className="control-strip__preset-copy">
+                      <p>{scenarioPresetDisplay?.goodFor ?? 'Custom / imported scenario with no named preset match.'}</p>
+                      <p className="muted">
+                        {scenarioPresetDisplay?.description ??
+                          'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
+                      </p>
+                      {scenarioPresetSourceNote ? <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="control-strip__utility-row">
+                <div className="control-strip__utility-group">
+                  <div className="control-strip__subframe-heading">
+                    <span className="control__label-row">
+                      <span className="eyebrow">Simulation JSON</span>
+                      <InfoTip
+                        label="Simulation JSON help"
+                        text="Save or reload the current resolved scenario and simulation state."
+                      />
+                    </span>
+                  </div>
+                  <div className="control-strip__action-group control-strip__action-group--compact">
+                    <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson} disabled={isExecutingScenario}>
+                      Export
+                    </button>
+                    <button type="button" className="button button--ghost" onClick={openScenarioFilePicker} disabled={isExecutingScenario}>
+                      Import
+                    </button>
+                  </div>
+                </div>
+
+                <div className="control-strip__utility-group">
+                  <div className="control-strip__subframe-heading">
+                    <span className="control__label-row">
+                      <span className="eyebrow">Scenario utilities</span>
+                      <InfoTip
+                        label="Scenario utility help"
+                        text="Utility actions stay available next to the demo report. Open the report only after a meaningful Golden Demo run exists."
+                      />
+                    </span>
+                  </div>
+                  <div className="control-strip__action-group control-strip__action-group--compact">
+                    <button type="button" className="button button--ghost" onClick={openGoldenDemoReport} disabled={!goldenDemoReport}>
+                      Demo report
+                    </button>
+                    <button type="button" className="button button--quiet" onClick={resetSimulation} disabled={isExecutingScenario}>
+                      Reset Simulation
+                    </button>
+                    <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)} disabled={isExecutingScenario}>
+                      {showDebug ? 'Hide debug' : 'Show debug'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <input
+                ref={scenarioFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={handleScenarioFileChange}
+              />
+
+              {!isNoviceMode ? (
+                <div className="stage-panel__expert-controls">
+                  <div className="section-heading section-heading--collapse-row">
+                    <h3>Expert scenario tuning</h3>
+                  </div>
+                  <div className="stack">
+                    <div className="control-strip__fields">
+                      <label className="control">
+                        {labeledControl('Seed', 'Controls the reproducible random number stream for the generated world and turns.')}
+                        <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+                      </label>
+                      <label className="control">
+                        {labeledControl('Users', 'How many synthetic users the generator creates.')}
+                        <input
+                          type="number"
+                          value={numUsers}
+                          onChange={(event) => setNumUsers(Number(event.target.value))}
+                          min={1}
+                          max={400}
+                          step={1}
+                        />
+                      </label>
+                      <label className="control">
+                        {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
+                        <input
+                          type="number"
+                          value={numIslands}
+                          onChange={(event) => setNumIslands(Number(event.target.value))}
+                          min={4}
+                          max={96}
+                          step={1}
+                        />
+                      </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Bootstrap Ratings / User',
+                          'Initial sparse rating events created at Turn 0. These are evidence, not signal.'
+                        )}
+                        <input
+                          type="number"
+                          value={bootstrapRatingsPerUser}
+                          onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
+                          min={1}
+                          max={12}
+                          step={1}
+                        />
+                      </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Tag Alignment (Legacy)',
+                          'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
+                        )}
+                        <select
+                          value={JSON.stringify(tagAlignmentDistribution)}
+                          onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
+                          aria-label="Tag Alignment Legacy Metadata"
+                        >
+                          <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
+                          <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
+                          <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
+                          <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
+                        </select>
+                      </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Rating Alignment (Legacy)',
+                          'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
+                        )}
+                        <select
+                          value={JSON.stringify(ratingAlignmentDistribution)}
+                          onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
+                          aria-label="Rating Alignment Legacy Metadata"
+                        >
+                          <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
+                          <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
+                          <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
+                          <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
+                        </select>
+                      </label>
+                      <p className="muted">
+                        Reviewer archetype profile alignment is authoritative. Legacy alignment controls are metadata-only and do not alter generated user behavior.
+                      </p>
+                      <label className="control">
+                        {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
+                        <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                          {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Participation Model',
+                          'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
+                        )}
+                        <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
+                          {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="control">
+                        {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
+                        <input
+                          type="number"
+                          value={turnsToRun}
+                          onChange={(event) => setTurnsToRun(Number(event.target.value))}
+                          min={1}
+                          max={20}
+                          step={1}
+                        />
+                      </label>
+                      <label className="control">
+                        {labeledControl(
+                          'Seed on execute',
+                          'Choose whether Execute Scenario uses a fresh random seed or the current seed value.'
+                        )}
+                        <select
+                          value={executionSeedMode}
+                          onChange={(event) => setExecutionSeedMode(event.target.value as ScenarioExecutionSeedMode)}
+                        >
+                          <option value="random">Fresh random seed</option>
+                          <option value="fixed">Current seed</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+        <div className="stage-panel__summary-rail">
+          <div className="stage-panel__badges">
+            <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
+            <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
+            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
+            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
+            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
+            <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
+          </div>
+
+          <div className="stage-panel__actions stage-panel__actions--summary">
+            <div className="stage-panel__action-group">
+              <button
+                type="button"
+                className="button button--primary"
+                onClick={takeSingleTurn}
+                disabled={standardScenarioControlsDisabled}
+              >
+                Take 1 Turn
+              </button>
+              <button type="button" className="button" onClick={takeBatchTurns} disabled={standardScenarioControlsDisabled}>
+                Take {turnsToRun} Turns
+              </button>
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={() => setShowTimingLog(true)}
+                disabled={standardScenarioControlsDisabled}
+              >
+                Timing log
+              </button>
+            </div>
+            <div className="stage-panel__action-group stage-panel__action-group--right">
+              {openSelectionButton('user', 'Choose user', 'button button--ghost', standardScenarioControlsDisabled)}
+              {openSelectionButton('island', 'Choose island', 'button button--ghost', standardScenarioControlsDisabled)}
+            </div>
+          </div>
+        </div><section className="inspection-shell" aria-label="Inspection / dashboard panels">
+        {showAnalysisDashboard ? (
+          <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
+          {visibleDashboardSections.map((sectionKey) => {
+            if (sectionKey === 'debug' && !showDebug) {
+              return null;
+            }
+
+            const section = dashboardSections[sectionKey];
+
+            return (
+              <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
+                {sectionKey !== 'routing' && sectionKey !== 'recovery' && sectionKey !== 'overview' ? (
+                <ModulePanelHeader
+                  eyebrow={section.title}
+                  title="Debug checksums"
+                  subtitle="Checksums, hidden metadata, and debug-only fields"
+                  collapsed={sectionKey === 'debug' && debugCollapsed}
+                  onToggleCollapsed={() => {
+                    if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
+                  }}
+                  collapseLabel={
+                    sectionKey === 'debug' && debugCollapsed
+                      ? `Expand ${section.title}`
+                      : `Collapse ${section.title}`
+                  }
+                />
+                ) : null}
+                {sectionKey === 'routing' || sectionKey === 'recovery' || sectionKey === 'overview' ? (
+                  <div className="dashboard-section__panels">{section.panels}</div>
+                ) : !(sectionKey === 'debug' && debugCollapsed) ? (
+                  <div className="dashboard-section__panels">{section.panels}</div>
+                ) : null}
+              </section>
+            );
+          })}
+          </section>
+        ) : null}
+      </section>
+      </div>
       </section>
 
       <section className="top-stack" aria-label="Controls and drilldown">
@@ -2863,491 +3217,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </CollapsiblePanel>
       </section>
 
-      <section id="primary-workflow" className="panel stage-panel stage-panel__sticky" aria-label="Primary workflow">
-        <div className="stage-panel__lead">
-          <div>
-            <p className="eyebrow">Primary workflow</p>
-            {!primaryWorkflowCollapsed ? (
-              <h2>
-                {presentationState.runState === 'no-run'
-                  ? 'Choose a scenario or load a saved run.'
-                  : presentationState.runState === 'bootstrap-only'
-                    ? 'Loaded baseline only. Execute to inspect the proof path.'
-                    : 'Inspect the current state, then advance one turn.'}
-              </h2>
-            ) : null}
-            {!primaryWorkflowCollapsed ? (
-              <p className="muted">
-                {presentationState.runState === 'no-run'
-                  ? 'Preset selection sets up the run, but a meaningful run only exists after execution or import.'
-                  : presentationState.runState === 'bootstrap-only'
-                    ? 'This state is a baseline snapshot, not the review path.'
-                    : 'Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.'}
-              </p>
-            ) : null}
-            {!primaryWorkflowCollapsed && showAnalysisDashboard ? (
-              <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="icon-button collapsible-panel__toggle"
-            onClick={() => setPrimaryWorkflowCollapsed((value) => !value)}
-            aria-label={primaryWorkflowCollapsed ? 'Expand Primary workflow' : 'Collapse Primary workflow'}
-          >
-            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-              {primaryWorkflowCollapsed ? 'v' : '^'}
-            </span>
-          </button>
-        </div>
-
-        <div className="stage-panel__setup">
-          <div className="stage-panel__setup-grid">
-            <div className="control-strip__preset">
-              <div className="control-strip__preset-main">
-                <label className="control control--preset">
-                  <span className="control__label-row">
-                    <span>Scenario preset</span>
-                    <InfoTip
-                      label="Scenario preset help"
-                      text="These scenarios are defined in src/data/scenario-catalog.json. Edit that JSON to change the named presets."
-                    />
-                  </span>
-                  <select
-                    value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
-                    onChange={(event) => {
-                      const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
-                      if (nextPresetId !== 'custom') {
-                        applyScenarioPresetSelection(nextPresetId);
-                      }
-                    }}
-                  >
-                    <option value="custom" disabled>
-                      Custom / imported
-                    </option>
-                    {SCENARIO_PRESET_OPTIONS.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="control-strip__preset-frame">
-                  <div className="control-strip__preset-frame-header">
-                    <span className="control__label-row">
-                      <span>Preset details</span>
-                    </span>
-                  </div>
-                  <div className="control-strip__preset-copy">
-                    <p>{scenarioPresetDisplay?.goodFor ?? 'Custom / imported scenario with no named preset match.'}</p>
-                    <p className="muted">
-                      {scenarioPresetDisplay?.description ??
-                        'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
-                    </p>
-                    {scenarioPresetSourceNote ? <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="stage-panel__utility-column">
-              <div className="control-strip__execute">
-                <button
-                  type="button"
-                  className="button button--primary"
-                  onClick={executeScenario}
-                  disabled={isExecutingScenario}
-                >
-                  Execute Scenario
-                </button>
-                <p className="muted">
-                  Generate a fresh dataset from the selected setup, then run {turnsToRun} turns to the next inspection
-                  state.
-                </p>
-              </div>
-              <div className="control-strip__subframe">
-                <div className="control-strip__subframe-heading">
-                  <span className="control__label-row">
-                    <span className="eyebrow">Simulation JSON</span>
-                    <InfoTip
-                      label="Simulation JSON help"
-                      text="Save or reload the current resolved scenario and simulation state."
-                    />
-                  </span>
-                </div>
-                <div className="control-strip__action-group control-strip__action-group--compact">
-                  <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson} disabled={isExecutingScenario}>
-                    Export
-                  </button>
-                  <button type="button" className="button button--ghost" onClick={openScenarioFilePicker} disabled={isExecutingScenario}>
-                    Import
-                  </button>
-                </div>
-              </div>
-              <div className="control-strip__subframe">
-                <div className="control-strip__subframe-heading">
-                  <span className="control__label-row">
-                    <span className="eyebrow">Scenario utility / report cluster</span>
-                    <InfoTip
-                      label="Scenario utility help"
-                      text="Utility actions stay available next to the demo report. Open the report only after a meaningful Golden Demo run exists."
-                    />
-                  </span>
-                </div>
-                <div className="control-strip__action-group control-strip__action-group--compact">
-                  <button type="button" className="button button--ghost" onClick={openGoldenDemoReport} disabled={!goldenDemoReport}>
-                    Open demo report
-                  </button>
-                  <button type="button" className="button button--quiet" onClick={resetSimulation} disabled={isExecutingScenario}>
-                    Reset Simulation
-                  </button>
-                  <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)} disabled={isExecutingScenario}>
-                    {showDebug ? 'Hide debug' : 'Show debug'}
-                  </button>
-                </div>
-              </div>
-              {isExecutingScenario ? (
-                <ProgressBar value={executionProgress} label={executionStatus || 'Executing scenario'} tone="accent" />
-              ) : null}
-            </div>
-          </div>
-
-          <p className="muted">Select a scenario or import valid data to enable scenario inspection controls.</p>
-
-          <div className="stage-panel__badges">
-            <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-            <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
-            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-            <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
-          </div>
-
-          <div className="stage-panel__actions">
-            <div className="stage-panel__action-group">
-              <button
-                type="button"
-                className="button button--primary"
-                onClick={takeSingleTurn}
-                disabled={standardScenarioControlsDisabled}
-              >
-                Take 1 Turn
-              </button>
-              <button type="button" className="button" onClick={takeBatchTurns} disabled={standardScenarioControlsDisabled}>
-                Take {turnsToRun} Turns
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => setShowTimingLog(true)} disabled={standardScenarioControlsDisabled}>
-                Timing log
-              </button>
-            </div>
-            <div className="stage-panel__action-group">
-              {openSelectionButton('user', 'Choose user', 'button button--ghost', standardScenarioControlsDisabled)}
-              {openSelectionButton('island', 'Choose island', 'button button--ghost', standardScenarioControlsDisabled)}
-            </div>
-          </div>
-
-          <input
-            ref={scenarioFileInputRef}
-            type="file"
-            accept="application/json,.json"
-            onChange={handleScenarioFileChange}
-            style={{ display: 'none' }}
-          />
-          {(scenarioMessage || scenarioError) && (
-            <div className="control-strip__notes">
-              {scenarioMessage ? <p className="muted">{scenarioMessage}</p> : null}
-              {scenarioError ? <p className="text-danger">{scenarioError}</p> : null}
-            </div>
-          )}
-
-          {!isNoviceMode ? (
-            <div className="stage-panel__expert-controls">
-              <div className="section-heading section-heading--collapse-row">
-                <h3>Expert scenario tuning</h3>
-              </div>
-              <div className="stack">
-                <div className="control-strip__fields">
-                  <label className="control">
-                    {labeledControl(
-                      'Seed',
-                      'Controls the reproducible random number stream for the generated world and turns.'
-                    )}
-                    <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-                  </label>
-                  <label className="control">
-                    {labeledControl('Users', 'How many synthetic users the generator creates.')}
-                    <input
-                      type="number"
-                      value={numUsers}
-                      onChange={(event) => setNumUsers(Number(event.target.value))}
-                      min={1}
-                      max={400}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
-                    <input
-                      type="number"
-                      value={numIslands}
-                      onChange={(event) => setNumIslands(Number(event.target.value))}
-                      min={4}
-                      max={96}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Bootstrap Ratings / User',
-                      'Initial sparse rating events created at Turn 0. These are evidence, not signal.'
-                    )}
-                    <input
-                      type="number"
-                      value={bootstrapRatingsPerUser}
-                      onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
-                      min={1}
-                      max={12}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl('Tag Alignment (Legacy)', 'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.')}
-                    <select
-                      value={JSON.stringify(tagAlignmentDistribution)}
-                      onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
-                      aria-label="Tag Alignment Legacy Metadata"
-                    >
-                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
-                    </select>
-                  </label>
-                  <label className="control">
-                    {labeledControl('Rating Alignment (Legacy)', 'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.')}
-                    <select
-                      value={JSON.stringify(ratingAlignmentDistribution)}
-                      onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
-                      aria-label="Rating Alignment Legacy Metadata"
-                    >
-                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
-                    </select>
-                  </label>
-                  <p className="muted">Reviewer archetype profile alignment is authoritative. Legacy alignment controls are metadata-only and do not alter generated user behavior.</p>
-                  <label className="control">
-                    {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
-                    <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                      {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Participation Model',
-                      'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
-                    )}
-                    <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
-                      {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="control">
-                    {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
-                    <input
-                      type="number"
-                      value={turnsToRun}
-                      onChange={(event) => setTurnsToRun(Number(event.target.value))}
-                      min={1}
-                      max={20}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Seed on execute',
-                      'Choose whether Execute Scenario uses a fresh random seed or the current seed value.'
-                    )}
-                    <select
-                      value={executionSeedMode}
-                      onChange={(event) => setExecutionSeedMode(event.target.value as ScenarioExecutionSeedMode)}
-                    >
-                      <option value="random">Fresh random seed</option>
-                      <option value="fixed">Current seed</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-      {showAnalysisDashboard ? (
-        <div id="data-fitness">
-          <DataFitnessPanel summary={dataFitnessSummary} collapsed={dataFitnessCollapsed} onToggle={() => setDataFitnessCollapsed((value) => !value)} />
-        </div>
-      ) : (
-        <section className="panel stage-panel stage-panel--details" aria-label="Run state">
-          <EmptyState
-            title={presentationState.runState === 'no-run' ? 'Choose a scenario or import a saved run.' : 'Baseline loaded only.'}
-            description={
-              presentationState.runState === 'no-run'
-                ? 'Golden Demo is selected, but no meaningful run has been executed or imported yet.'
-                : 'This state only contains bootstrap evidence. Execute one or more turns to open the proof path, or switch to expert mode for bootstrap inspection.'
-            }
-          />
-        </section>
-      )}
-
-      {showAnalysisDashboard ? (
-      <>
-      <section id="primary-workflow-details" className="panel stage-panel stage-panel--details" aria-label="Primary workflow details">
-        <div className="section-heading section-heading--collapse-row">
-          <h3>Primary workflow details</h3>
-          <button
-            type="button"
-            className="icon-button collapsible-panel__toggle"
-            onClick={() => setPrimaryDetailsCollapsed((value) => !value)}
-            aria-label={primaryDetailsCollapsed ? 'Expand Primary workflow details' : 'Collapse Primary workflow details'}
-          >
-            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-              {primaryDetailsCollapsed ? 'v' : '^'}
-            </span>
-          </button>
-        </div>
-        {!primaryDetailsCollapsed ? (
-          <>
-        <div className="stage-panel__metrics">
-          <MetricCard label="Selected user" value={selectedUser?.label ?? 'None'} helper="Current analyst subject." tone="accent" />
-          <MetricCard label="Focus island" value={selectedIsland?.label ?? 'None'} helper="Current island comparison target." />
-          <MetricCard
-            label="Top routed island"
-            value={routingSurfaceLabel}
-            helper="Highest available guided route for the current user."
-            tone="success"
-          />
-          <MetricCard
-            label="Participating users / turn"
-            value={participationDisplay}
-            helper="Turn policy cap or chance applied before stream filtering."
-          />
-        </div>
-        <div className="recent-action">
-          <div className="section-heading">
-            <h3>Recent action summary</h3>
-            <p className="muted">What changed after the latest workflow action.</p>
-          </div>
-          {recentAction ? (
-            (() => {
-              const latest = recentAction.latestTurnSummary;
-              const batchTurns =
-                recentAction.kind === 'batch-turns-advanced' && recentAction.batchSize
-                  ? dataset.turnHistory.slice(-recentAction.batchSize)
-                  : [];
-              const batchTotals = batchTurns.length > 0 ? aggregateBatchTotals(batchTurns) : null;
-              const noEvents = latest ? latest.ratingsCreated === 0 : true;
-              return (
-                <div className="recent-action__content">
-                  <p className="recent-action__title">
-                    {recentAction.kind === 'scenario-executed'
-                      ? 'Scenario executed'
-                      : recentAction.kind === 'turn-advanced'
-                        ? 'One turn advanced'
-                        : recentAction.kind === 'batch-turns-advanced'
-                          ? `Batch advanced (${recentAction.batchSize ?? 0} turns)`
-                          : recentAction.kind === 'simulation-reset'
-                            ? 'Simulation reset'
-                            : recentAction.kind === 'scenario-imported'
-                              ? 'Scenario imported'
-                              : 'Scenario exported'}
-                  </p>
-                  <p className="muted">
-                    Turn {recentAction.previousTurn} to {recentAction.currentTurn} • Scenario: {recentAction.scenarioLabel} • Mode: {recentAction.turnModeLabel}
-                  </p>
-                  {batchTotals ? (
-                    <div className="recent-action__metrics">
-                      <MetricCard label="Batch ratings" value={batchTotals.ratingsCreated} />
-                      <MetricCard label="Batch organic" value={batchTotals.organicRatingsCreated} />
-                      <MetricCard label="Batch guided" value={batchTotals.guidedRatingsCreated} />
-                      <MetricCard label="Batch participants" value={batchTotals.participatingUsers} />
-                    </div>
-                  ) : null}
-                  {latest ? (
-                    <div className="recent-action__metrics">
-                      <MetricCard label={batchTotals ? 'Latest-turn ratings' : 'Ratings created'} value={latest.ratingsCreated} />
-                      <MetricCard label="Organic / guided" value={`${latest.organicRatingsCreated}/${latest.guidedRatingsCreated}`} />
-                      <MetricCard label="Newly rated islands" value={latest.newlyRatedIslandIds.length} />
-                      <MetricCard label="Routed safe / probe" value={`${latest.recommendationKinds.SAFE_FIT}/${latest.recommendationKinds.DISCOVERY_PROBE}`} />
-                    </div>
-                  ) : null}
-                  {recentAction.exportFileName ? <p className="muted">Exported file: {recentAction.exportFileName}</p> : null}
-                  {noEvents ? (
-                    <div className="notice notice--warning">
-                      <strong>No rating events were created.</strong>
-                      <p>Inspect turn controls and recommendation thresholds if this was unexpected.</p>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })()
-          ) : (
-            <EmptyState title="No recent action yet" description="Execute a scenario or advance turns to view compact deltas." />
-          )}
-        </div>
-        </>
-        ) : null}
-      </section>
-
-      <section className="inspection-shell" aria-label="Inspection / dashboard panels">
-        {showAnalysisDashboard ? (
-          <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
-          {visibleDashboardSections.map((sectionKey) => {
-            if (sectionKey === 'debug' && !showDebug) {
-              return null;
-            }
-
-            const section = dashboardSections[sectionKey];
-
-            return (
-              <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
-                {sectionKey !== 'routing' && sectionKey !== 'recovery' && sectionKey !== 'overview' ? (
-                <ModulePanelHeader
-                  eyebrow={section.title}
-                  title="Debug checksums"
-                  subtitle="Checksums, hidden metadata, and debug-only fields"
-                  collapsed={sectionKey === 'debug' && debugCollapsed}
-                  onToggleCollapsed={() => {
-                    if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
-                  }}
-                  collapseLabel={
-                    sectionKey === 'debug' && debugCollapsed
-                      ? `Expand ${section.title}`
-                      : `Collapse ${section.title}`
-                  }
-                />
-                ) : null}
-                {sectionKey === 'routing' || sectionKey === 'recovery' || sectionKey === 'overview' ? (
-                  <div className="dashboard-section__panels">{section.panels}</div>
-                ) : !(sectionKey === 'debug' && debugCollapsed) ? (
-                  <div className="dashboard-section__panels">{section.panels}</div>
-                ) : null}
-              </section>
-            );
-          })}
-          </section>
-        ) : null}
-      </section>
-      </>
-      ) : null}
-
       {showInstructionTray ? (
         <Tray
           collapsed={!guidanceOpen}
@@ -3488,9 +3357,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         )}
       </Tray>
 
-      <Modal open={showAbout} title="Concept Primer / Glossary" placement="top" onClose={() => setShowAbout(false)}>
-        <AboutGlossaryContent />
-      </Modal>
       <Modal open={showTimingLog} title="Turn timing log" onClose={() => setShowTimingLog(false)}>
         {turnTimingLog.length === 0 ? (
           <EmptyState title="No turn timings recorded yet." description="Advance turns to capture per-turn wall-clock timings." />
@@ -3655,7 +3521,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <section className="detail-block">
               <h4>{goldenDemoReport.title}</h4>
               <p className="muted">
-                Current-state Golden Demo report · {goldenDemoReport.scenario.label} · seed {goldenDemoReport.scenario.seed}
+                Current-state Golden Demo report � {goldenDemoReport.scenario.label} � seed {goldenDemoReport.scenario.seed}
               </p>
             </section>
             <section className="detail-block">
@@ -3673,7 +3539,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         )}
       </Drawer>
 
-      <ReviewerArchetypeRecoveryModal
+      <Suspense fallback={null}>
+        <ReviewerArchetypeRecoveryModal
         open={drawerState?.type === 'reviewer-recovery'}
         onClose={() => setDrawerState(null)}
         analysis={reviewerArchetypeAnalysis}
@@ -3682,6 +3549,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         reviewerRecoveryTone={reviewerRecoveryTone}
         onOpenReviewer={(userId) => setDrawerState({ type: 'reviewer', userId })}
       />
+      </Suspense>
     </main>
   );
 }
@@ -3708,3 +3576,4 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
 
 
+import { type RecentActionState } from './ui/recentActionSummary';
