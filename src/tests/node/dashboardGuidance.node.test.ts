@@ -1,11 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  DASHBOARD_ORDERINGS,
-  DASHBOARD_ORDERING_LABELS,
-  GUIDED_PATHS,
-  getGuidedPath
-} from '../../ui/dashboardGuidance.js';
+import { GUIDED_PATHS, getGuidedPath } from '../../ui/dashboardGuidance.js';
 import { getScenarioPreset } from '../../model/scenarioPresets.js';
 
 describe('dashboard guidance data', () => {
@@ -24,7 +19,6 @@ describe('dashboard guidance data', () => {
       path.id,
       path.title,
       path.recommendedPreset,
-      path.recommendedOrdering,
       path.framing.system,
       path.framing.experience,
       path.maintenanceNote,
@@ -38,7 +32,6 @@ describe('dashboard guidance data', () => {
       assert.ok(path.id);
       assert.ok(path.title);
       assert.ok(path.recommendedPreset);
-      assert.ok(path.recommendedOrdering);
       assert.ok(path.framing.system);
       assert.ok(path.framing.experience);
       assert.ok(path.steps.length > 0);
@@ -58,13 +51,7 @@ describe('dashboard guidance data', () => {
     assert.ok(allText.includes('selected island'));
     assert.ok(allText.includes('reviewer archetype recovery'));
     assert.ok(!allText.includes('drilldown targets'));
-    assert.ok(!allText.includes('use debug first ordering'));
-    assert.ok(!allText.includes('group-first'));
-  });
-
-  it('keeps dashboard ordering explicit and user directed', () => {
-    assert.deepEqual(DASHBOARD_ORDERINGS['overview-first'], ['overview', 'recovery', 'routing', 'debug']);
-    assert.deepEqual(DASHBOARD_ORDERINGS['recovery-first'], ['recovery', 'overview', 'routing', 'debug']);
-    assert.equal(DASHBOARD_ORDERING_LABELS['routing-first'], 'Routing first');
+    assert.ok(!allText.includes('recommended ordering'));
+    assert.ok(!allText.includes('debug first ordering'));
   });
 });

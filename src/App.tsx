@@ -15,6 +15,7 @@ import { ModulePanelHeader } from './ui/components/ModulePanelHeader';
 import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
 import { AboutGlossaryLauncher } from './ui/components/AboutGlossaryLauncher';
+import { PrimaryWorkflowPanel } from './ui/PrimaryWorkflowPanel';
 import { DiscoveryRoutingPanel } from './ui/routing/DiscoveryRoutingPanel';
 import { SelectedIslandPanel } from './ui/routing/SelectedIslandPanel';
 import { SelectedIslandTruthComparison } from './ui/routing/SelectedIslandTruthComparison';
@@ -34,7 +35,7 @@ import {
 } from './ui/summaryVisuals';
 import { buildPrimarySignalSummary } from './ui/userSignalDiagnosis';
 import { useRef } from 'react';
-import { DASHBOARD_ORDERINGS, getGuidedPath, GUIDED_PATHS, type DashboardOrderingPreset, type DashboardPanelGroupKey, type GuidanceMode, type GuidedPathId } from './ui/dashboardGuidance';
+import { getGuidedPath, GUIDED_PATHS, type DashboardPanelGroupKey, type GuidanceMode, type GuidedPathId } from './ui/dashboardGuidance';
 import {
   DEFAULT_TURN_POLICY,
   getTurnModeVisibility,
@@ -435,7 +436,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [turnTimingLog, setTurnTimingLog] = useState<TurnTimingRow[]>([]);
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(initialGuidanceMode);
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
-  const [dashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>(
     initialGuidanceMode === 'novice'  ?  'run-start' : 'analyst-workflow'
   );
@@ -834,8 +834,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
 
-  const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
-  const visibleDashboardSections = orderedDashboardSections;
+  const visibleDashboardSections: DashboardPanelGroupKey[] = ['overview', 'recovery', 'routing', 'debug'];
   const runContextNote = isNoviceMode
      ?  'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
     : 'Expert keeps the same run-context choices visible and exposes the resolved controls. Current run badges live in Primary Workflow.';
@@ -2610,358 +2609,186 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </div>
       </section>
 
-      <section
-        id="primary-workflow"
-        className={`panel stage-panel${primaryWorkflowCollapsed  ?  ' stage-panel__sticky' : ''}`}
-        aria-label="Primary workflow"
-      >
-        <div className="stage-panel__lead">
-          <div>
-            <p className="eyebrow">Primary workflow</p>
-            {!primaryWorkflowCollapsed  ?  (
-              <h2>
-                {presentationState.runState === 'no-run'
-                   ?  'Choose a scenario or load a saved run.'
-                  : presentationState.runState === 'bootstrap-only'
-                     ?  'Loaded baseline only. Execute to inspect the proof path.'
-                    : 'Inspect the current state, then advance one turn.'}
-              </h2>
-            ) : null}
-            {!primaryWorkflowCollapsed  ?  (
-              <p className="muted">
-                {presentationState.runState === 'no-run'
-                   ?  'Preset selection sets up the run, but a meaningful run only exists after execution or import.'
-                  : presentationState.runState === 'bootstrap-only'
-                     ?  'This state is a baseline snapshot, not the review path.'
-                    : 'Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.'}
-              </p>
-            ) : null}
-            {!primaryWorkflowCollapsed && showAnalysisDashboard  ?  (
-              <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="icon-button collapsible-panel__toggle"
-            onClick={() => setPrimaryWorkflowCollapsed((value) => !value)}
-            aria-label={primaryWorkflowCollapsed  ?  'Expand Primary workflow' : 'Collapse Primary workflow'}
-          >
-            <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-              {primaryWorkflowCollapsed  ?  'v' : '^'}
-            </span>
-          </button>
-        </div>
-
-        <div className="stage-panel__workspace">
-          {!primaryWorkflowCollapsed  ?  (
-            <div className="stage-panel__workspace-main">
-              <div className="control-strip__preset">
-                <div className="control-strip__preset-main">
-                  <div className="control-strip__preset-start-row">
-                    <div className="control-strip__preset-start-column">
-                      <label className="control control--preset">
-                        <span className="control__label-row">
-                          <span>Scenario preset</span>
-                          <InfoTip
-                            label="Scenario preset help"
-                            text="These scenarios are defined in src/data/scenario-catalog.json. Edit that JSON to change the named presets."
-                          />
-                        </span>
-                        <select
-                          value={scenarioPresetSource ?.id  ??  activeScenarioPreset ?.id  ??  'custom'}
-                          onChange={(event) => {
-                            const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
-                            if (nextPresetId !== 'custom') {
-                              applyScenarioPresetSelection(nextPresetId);
-                            }
-                          }}
-                        >
-                          <option value="custom" disabled>
-                            Custom / imported
-                          </option>
-                          {SCENARIO_PRESET_OPTIONS.map((preset) => (
-                            <option key={preset.id} value={preset.id}>
-                              {preset.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <div className="control-strip__notes control-strip__notes--inline control-strip__notes--setup">
-                        <p className="muted">{primaryWorkflowHelperCopy}</p>
-                        {scenarioMessage  ?  <p className="muted">{scenarioMessage}</p> : null}
-                        {scenarioError  ?  <p className="text-danger">{scenarioError}</p> : null}
-                      </div>
-                    </div>
-
-                    <div className="stage-panel__utility-block stage-panel__utility-block--execute stage-panel__utility-block--compact">
-                      <button
-                        type="button"
-                        className="button button--primary"
-                        onClick={executeScenario}
-                        disabled={isExecutingScenario}
-                      >
-                        Execute Scenario
-                      </button>
-                      <p className="muted">
-                        Generate a fresh dataset from the selected setup, then run {turnsToRun} turns to the next inspection
-                        state.
-                      </p>
-                      {isExecutingScenario  ?  (
-                        <ProgressBar value={executionProgress} label={executionStatus || 'Executing scenario'} tone="accent" />
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="control-strip__preset-frame control-strip__preset-frame--wide">
-                    <div className="control-strip__preset-frame-header">
-                      <span className="control__label-row">
-                        <span>Preset details</span>
-                      </span>
-                    </div>
-                    <div className="control-strip__preset-copy">
-                      <p>{scenarioPresetDisplay ?.goodFor  ??  'Custom / imported scenario with no named preset match.'}</p>
-                      <p className="muted">
-                        {scenarioPresetDisplay ?.description  ?? 
-                          'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
-                      </p>
-                      {scenarioPresetSourceNote  ?  <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
-                    </div>
-                  </div>
+      <PrimaryWorkflowPanel
+        collapsed={primaryWorkflowCollapsed}
+        onToggleCollapsed={() => setPrimaryWorkflowCollapsed((value) => !value)}
+        runState={presentationState.runState}
+        showAnalysisDashboard={showAnalysisDashboard}
+        primaryWorkflowHelperCopy={primaryWorkflowHelperCopy}
+        scenarioMessage={scenarioMessage}
+        scenarioError={scenarioError}
+        isExecutingScenario={isExecutingScenario}
+        executionProgress={executionProgress}
+        executionStatus={executionStatus}
+        turnsToRun={turnsToRun}
+        datasetCurrentTurn={dataset.currentTurn}
+        currentScenarioLabel={currentScenarioLabel}
+        turnMode={turnMode}
+        participationModel={participationModel}
+        organicRatingCountModel={organicRatingCountModel}
+        routingRiskProfile={routingRiskProfile}
+        scenarioPresetSource={scenarioPresetSource}
+        activeScenarioPreset={activeScenarioPreset}
+        scenarioPresetDisplay={scenarioPresetDisplay}
+        scenarioPresetSourceNote={scenarioPresetSourceNote}
+        scenarioPresetOptions={SCENARIO_PRESET_OPTIONS}
+        onScenarioPresetChange={(presetId) => {
+          if (presetId !== 'custom') {
+            applyScenarioPresetSelection(presetId);
+          }
+        }}
+        onExecuteScenario={executeScenario}
+        onExportCurrentSimulationJson={exportCurrentSimulationJson}
+        onOpenScenarioFilePicker={openScenarioFilePicker}
+        onOpenGoldenDemoReport={openGoldenDemoReport}
+        onResetSimulation={resetSimulation}
+        onToggleDebug={() => setShowDebug((value) => !value)}
+        showDebug={showDebug}
+        onTakeSingleTurn={takeSingleTurn}
+        onTakeBatchTurns={takeBatchTurns}
+        onShowTimingLog={() => setShowTimingLog(true)}
+        standardScenarioControlsDisabled={standardScenarioControlsDisabled}
+        scenarioFileInputRef={scenarioFileInputRef}
+        onScenarioFileChange={handleScenarioFileChange}
+        expertScenarioTuning={
+          !isNoviceMode ? (
+            <div className="stage-panel__expert-controls">
+              <div className="section-heading section-heading--collapse-row">
+                <h3>Expert scenario tuning</h3>
+              </div>
+              <div className="stack">
+                <div className="control-strip__fields">
+                  <label className="control">
+                    {labeledControl('Seed', 'Controls the reproducible random number stream for the generated world and turns.')}
+                    <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
+                  </label>
+                  <label className="control">
+                    {labeledControl('Users', 'How many synthetic users the generator creates.')}
+                    <input
+                      type="number"
+                      value={numUsers}
+                      onChange={(event) => setNumUsers(Number(event.target.value))}
+                      min={1}
+                      max={400}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
+                    <input
+                      type="number"
+                      value={numIslands}
+                      onChange={(event) => setNumIslands(Number(event.target.value))}
+                      min={4}
+                      max={96}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Bootstrap Ratings / User',
+                      'Initial sparse rating events created at Turn 0. These are evidence, not signal.'
+                    )}
+                    <input
+                      type="number"
+                      value={bootstrapRatingsPerUser}
+                      onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
+                      min={1}
+                      max={12}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Tag Alignment (Legacy)',
+                      'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
+                    )}
+                    <select
+                      value={JSON.stringify(tagAlignmentDistribution)}
+                      onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
+                      aria-label="Tag Alignment Legacy Metadata"
+                    >
+                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Rating Alignment (Legacy)',
+                      'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
+                    )}
+                    <select
+                      value={JSON.stringify(ratingAlignmentDistribution)}
+                      onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
+                      aria-label="Rating Alignment Legacy Metadata"
+                    >
+                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
+                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
+                    </select>
+                  </label>
+                  <p className="muted">
+                    Reviewer archetype profile alignment is authoritative. Legacy alignment controls are metadata-only and do not alter generated user behavior.
+                  </p>
+                  <label className="control">
+                    {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
+                    <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
+                      {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Participation Model',
+                      'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
+                    )}
+                    <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
+                      {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="control">
+                    {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
+                    <input
+                      type="number"
+                      value={turnsToRun}
+                      onChange={(event) => setTurnsToRun(Number(event.target.value))}
+                      min={1}
+                      max={20}
+                      step={1}
+                    />
+                  </label>
+                  <label className="control">
+                    {labeledControl(
+                      'Seed on execute',
+                      'Choose whether Execute Scenario uses a fresh random seed or the current seed value.'
+                    )}
+                    <select
+                      value={executionSeedMode}
+                      onChange={(event) => setExecutionSeedMode(event.target.value as ScenarioExecutionSeedMode)}
+                    >
+                      <option value="random">Fresh random seed</option>
+                      <option value="fixed">Current seed</option>
+                    </select>
+                  </label>
                 </div>
               </div>
-
-              <div className="control-strip__utility-row">
-                <div className="control-strip__utility-group">
-                  <div className="control-strip__subframe-heading">
-                    <span className="control__label-row">
-                      <span className="eyebrow">Simulation JSON</span>
-                      <InfoTip
-                        label="Simulation JSON help"
-                        text="Save or reload the current resolved scenario and simulation state."
-                      />
-                    </span>
-                  </div>
-                  <div className="control-strip__action-group control-strip__action-group--compact">
-                    <button type="button" className="button button--ghost" onClick={exportCurrentSimulationJson} disabled={isExecutingScenario}>
-                      Export
-                    </button>
-                    <button type="button" className="button button--ghost" onClick={openScenarioFilePicker} disabled={isExecutingScenario}>
-                      Import
-                    </button>
-                  </div>
-                </div>
-
-                <div className="control-strip__utility-group">
-                  <div className="control-strip__subframe-heading">
-                    <span className="control__label-row">
-                      <span className="eyebrow">Scenario utilities</span>
-                      <InfoTip
-                        label="Scenario utility help"
-                        text="Utility actions stay available next to the demo report. Open the report only after a meaningful Golden Demo run exists."
-                      />
-                    </span>
-                  </div>
-                  <div className="control-strip__action-group control-strip__action-group--compact">
-                    <button type="button" className="button button--ghost" onClick={openGoldenDemoReport} disabled={!goldenDemoReport}>
-                      Demo report
-                    </button>
-                    <button type="button" className="button button--quiet" onClick={resetSimulation} disabled={isExecutingScenario}>
-                      Reset Simulation
-                    </button>
-                    <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)} disabled={isExecutingScenario}>
-                      {showDebug  ?  'Hide debug' : 'Show debug'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <input
-                ref={scenarioFileInputRef}
-                type="file"
-                accept=".json,application/json"
-                className="sr-only"
-                aria-hidden="true"
-                tabIndex={-1}
-                onChange={handleScenarioFileChange}
-              />
-
-              {!isNoviceMode  ?  (
-                <div className="stage-panel__expert-controls">
-                  <div className="section-heading section-heading--collapse-row">
-                    <h3>Expert scenario tuning</h3>
-                  </div>
-                  <div className="stack">
-                    <div className="control-strip__fields">
-                      <label className="control">
-                        {labeledControl('Seed', 'Controls the reproducible random number stream for the generated world and turns.')}
-                        <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-                      </label>
-                      <label className="control">
-                        {labeledControl('Users', 'How many synthetic users the generator creates.')}
-                        <input
-                          type="number"
-                          value={numUsers}
-                          onChange={(event) => setNumUsers(Number(event.target.value))}
-                          min={1}
-                          max={400}
-                          step={1}
-                        />
-                      </label>
-                      <label className="control">
-                        {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
-                        <input
-                          type="number"
-                          value={numIslands}
-                          onChange={(event) => setNumIslands(Number(event.target.value))}
-                          min={4}
-                          max={96}
-                          step={1}
-                        />
-                      </label>
-                      <label className="control">
-                        {labeledControl(
-                          'Bootstrap Ratings / User',
-                          'Initial sparse rating events created at Turn 0. These are evidence, not signal.'
-                        )}
-                        <input
-                          type="number"
-                          value={bootstrapRatingsPerUser}
-                          onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
-                          min={1}
-                          max={12}
-                          step={1}
-                        />
-                      </label>
-                      <label className="control">
-                        {labeledControl(
-                          'Tag Alignment (Legacy)',
-                          'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
-                        )}
-                        <select
-                          value={JSON.stringify(tagAlignmentDistribution)}
-                          onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
-                          aria-label="Tag Alignment Legacy Metadata"
-                        >
-                          <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
-                          <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
-                          <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
-                          <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
-                        </select>
-                      </label>
-                      <label className="control">
-                        {labeledControl(
-                          'Rating Alignment (Legacy)',
-                          'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
-                        )}
-                        <select
-                          value={JSON.stringify(ratingAlignmentDistribution)}
-                          onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
-                          aria-label="Rating Alignment Legacy Metadata"
-                        >
-                          <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
-                          <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
-                          <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
-                          <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
-                        </select>
-                      </label>
-                      <p className="muted">
-                        Reviewer archetype profile alignment is authoritative. Legacy alignment controls are metadata-only and do not alter generated user behavior.
-                      </p>
-                      <label className="control">
-                        {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
-                        <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                          {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="control">
-                        {labeledControl(
-                          'Participation Model',
-                          'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
-                        )}
-                        <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
-                          {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="control">
-                        {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
-                        <input
-                          type="number"
-                          value={turnsToRun}
-                          onChange={(event) => setTurnsToRun(Number(event.target.value))}
-                          min={1}
-                          max={20}
-                          step={1}
-                        />
-                      </label>
-                      <label className="control">
-                        {labeledControl(
-                          'Seed on execute',
-                          'Choose whether Execute Scenario uses a fresh random seed or the current seed value.'
-                        )}
-                        <select
-                          value={executionSeedMode}
-                          onChange={(event) => setExecutionSeedMode(event.target.value as ScenarioExecutionSeedMode)}
-                        >
-                          <option value="random">Fresh random seed</option>
-                          <option value="fixed">Current seed</option>
-                        </select>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
             </div>
-          ) : null}
-
-        <div className="stage-panel__summary-rail">
-          <div className="stage-panel__badges">
-            <Badge tone="accent">Turn {dataset.currentTurn}</Badge>
-            <Badge tone="neutral">Scenario: {currentScenarioLabel}</Badge>
-            <Badge tone="neutral">Mode: {TURN_MODE_LABELS[turnMode]}</Badge>
-            <Badge tone="neutral">Participation: {PARTICIPATION_MODEL_LABELS[participationModel]}</Badge>
-            <Badge tone="neutral">Rating counts: {RATING_COUNT_MODEL_LABELS[organicRatingCountModel]}</Badge>
-            <Badge tone="neutral">Routing: {ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}</Badge>
-          </div>
-
-          <div className="stage-panel__actions stage-panel__actions--summary">
-            <div className="stage-panel__action-group">
-              <button
-                type="button"
-                className="button button--primary"
-                onClick={takeSingleTurn}
-                disabled={standardScenarioControlsDisabled}
-              >
-                Take 1 Turn
-              </button>
-              <button type="button" className="button" onClick={takeBatchTurns} disabled={standardScenarioControlsDisabled}>
-                Take {turnsToRun} Turns
-              </button>
-              <button
-                type="button"
-                className="button button--ghost"
-                onClick={() => setShowTimingLog(true)}
-                disabled={standardScenarioControlsDisabled}
-              >
-                Timing log
-              </button>
-            </div>
-            <div className="stage-panel__action-group stage-panel__action-group--right">
-              {openSelectionButton('user', 'Choose user', 'button button--ghost', standardScenarioControlsDisabled)}
-              {openSelectionButton('island', 'Choose island', 'button button--ghost', standardScenarioControlsDisabled)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      </section>
+          ) : null
+        }
+        onChooseUser={() => setModalKind('user')}
+        onChooseIsland={() => setModalKind('island')}
+        canOpenGoldenDemoReport={Boolean(goldenDemoReport)}
+      />
 
       <InspectionShell
         showAnalysisDashboard={showAnalysisDashboard}

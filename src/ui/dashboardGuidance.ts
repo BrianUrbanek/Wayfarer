@@ -2,8 +2,6 @@ import type { ScenarioPresetId } from '../model/scenarioPresets.js';
 
 export type GuidanceMode = 'novice' | 'expert';
 
-export type DashboardOrderingPreset = 'overview-first' | 'recovery-first' | 'routing-first' | 'debug-first';
-
 export type DashboardPanelGroupKey = 'overview' | 'recovery' | 'routing' | 'debug';
 
 export type GuidedPathId = 'run-start' | 'portfolio-reviewer' | 'navigation-tutorial' | 'analyst-workflow';
@@ -32,7 +30,6 @@ export interface GuidedPath {
   id: GuidedPathId;
   title: string;
   recommendedPreset: ScenarioPresetId;
-  recommendedOrdering: DashboardOrderingPreset;
   recommendedPath?: string;
   framing: {
     system: string;
@@ -43,27 +40,12 @@ export interface GuidedPath {
   maintenanceNote: string;
 }
 
-export const DASHBOARD_ORDERING_LABELS: Record<DashboardOrderingPreset, string> = {
-  'overview-first': 'Overview first',
-  'recovery-first': 'Recovery first',
-  'routing-first': 'Routing first',
-  'debug-first': 'Debug first'
-};
-
-export const DASHBOARD_ORDERINGS: Record<DashboardOrderingPreset, DashboardPanelGroupKey[]> = {
-  'overview-first': ['overview', 'recovery', 'routing', 'debug'],
-  'recovery-first': ['recovery', 'overview', 'routing', 'debug'],
-  'routing-first': ['routing', 'overview', 'recovery', 'debug'],
-  'debug-first': ['debug', 'overview', 'recovery', 'routing']
-};
-
 export const GUIDED_PATHS: GuidedPath[] = [
   {
     id: 'run-start',
     title: 'Run Start',
     recommendedPreset: 'golden-demo',
-    recommendedOrdering: 'overview-first',
-    recommendedPath: 'Run context → Turn Summary / Recap → Recovery → Truth Alignment → Report',
+    recommendedPath: 'Run context -> Turn Summary / Recap -> Recovery -> Truth Alignment -> Report',
     framing: {
       system: 'Start from a clean prompt to choose a scenario or load an existing run.',
       experience: 'Cold-load first-contact path for starting or importing a meaningful run.'
@@ -105,8 +87,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     id: 'portfolio-reviewer',
     title: 'Portfolio Reviewer',
     recommendedPreset: 'golden-demo',
-    recommendedOrdering: 'recovery-first',
-    recommendedPath: 'Run context → Turn Summary / Recap → Recovery → Truth Alignment → Report',
+    recommendedPath: 'Run context -> Turn Summary / Recap -> Recovery -> Truth Alignment -> Report',
     framing: {
       system: 'Show the proof path a reviewer needs after a meaningful run is loaded.',
       experience: 'Portfolio review flow centered on claim, run context, evidence, recovery, and report.'
@@ -154,8 +135,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     id: 'navigation-tutorial',
     title: 'Navigation Tutorial',
     recommendedPreset: 'small-smoke-test',
-    recommendedOrdering: 'overview-first',
-    recommendedPath: 'Run context → Turn Summary → Selected User → Selected Island',
+    recommendedPath: 'Run context -> Turn Summary -> Selected User -> Selected Island',
     framing: {
       system: 'Teach a newcomer how to navigate the console on a simple stable frame.',
       experience: 'Hand-holding tutorial for learning the main surfaces and how they update.'
@@ -201,7 +181,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
         title: 'Advance and reread',
         instruction: 'Advance one turn, then reread Data Fitness, Turn Summary, Selected User Summary, and Selected Island to see what changed.',
         targetModuleId: 'turn-summary',
-        why: 'Repeating the same read after a turn teaches the app’s update loop.'
+        why: "Repeating the same read after a turn teaches the app's update loop."
       },
       {
         title: 'Optional formulas',
@@ -221,8 +201,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     id: 'analyst-workflow',
     title: 'Analyst Workflow',
     recommendedPreset: 'golden-demo',
-    recommendedOrdering: 'recovery-first',
-    recommendedPath: 'Run context → Turn Summary / Recap → Recovery → Routing → Debug',
+    recommendedPath: 'Run context -> Turn Summary / Recap -> Recovery -> Routing -> Debug',
     framing: {
       system: 'Expose the app surfaces used for deeper analysis and evidence review.',
       experience: 'Analyst deep-dive for understanding why the current read holds or breaks.'
@@ -280,7 +259,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
         title: 'Advance and compare',
         instruction: 'Advance a turn and check whether the new evidence strengthens, separates, or contradicts the previous read.',
         targetModuleId: 'turn-summary',
-        why: 'The analyst workflow closes by testing whether the model’s story holds after new evidence arrives.'
+        why: "The analyst workflow closes by testing whether the model's story holds after new evidence arrives."
       }
     ],
     successCriteria: [
