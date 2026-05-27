@@ -421,23 +421,6 @@ select {
   gap: 16px;
 }
 
-.stage-panel__setup-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  align-items: start;
-}
-
-.stage-panel__utility-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns:
-    minmax(180px, 1fr)
-    minmax(140px, 0.68fr)
-    minmax(200px, 0.9fr);
-  align-items: stretch;
-}
-
 .control-strip__execute--full {
   grid-column: 1 / -1;
 }
@@ -458,23 +441,10 @@ select {
   padding-top: 6px;
 }
 
-.stage-panel__workspace-main,
-.stage-panel__workspace-side {
+.stage-panel__workspace-main {
   display: grid;
   gap: 16px;
   min-width: 0;
-}
-
-.stage-panel__workspace-side {
-  grid-template-columns:
-    minmax(180px, 1fr)
-    minmax(140px, 0.68fr)
-    minmax(200px, 0.9fr);
-  align-items: stretch;
-}
-
-.stage-panel__workspace-side .stage-panel__utility-block {
-  height: 100%;
 }
 
 .stage-panel__utility-block {
@@ -504,21 +474,6 @@ select {
 }
 
 .stage-panel__utility-block:last-child .control-strip__action-group--compact .button {
-  padding-inline: 0.82rem;
-}
-
-.stage-panel__utility-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: start;
-}
-
-.stage-panel__utility-actions .button:last-child {
-  grid-column: 1 / -1;
-}
-
-.stage-panel__utility-actions .button {
   padding-inline: 0.82rem;
 }
 
@@ -857,13 +812,6 @@ select {
 }
 
 @media (max-width: 1180px) {
-  .stage-panel__setup-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stage-panel__utility-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .tray {
@@ -1809,28 +1757,8 @@ select {
   width: auto;
 }
 
-.control-strip__subframe {
-  display: grid;
-  gap: 12px;
-  width: fit-content;
-  max-width: 292px;
-  min-width: 0;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(141, 164, 255, 0.16);
-  background: rgba(255, 255, 255, 0.03);
-  justify-self: center;
-}
-
 .control-strip__subframe-heading {
   display: grid;
-}
-
-.control-strip__subframe .control-strip__action-group {
-  justify-content: center;
-  width: fit-content;
-  flex-wrap: nowrap;
-  margin: 0 auto;
 }
 
 .summary-grid {

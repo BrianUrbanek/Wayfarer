@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+﻿import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Badge } from './ui/components/Badge';
 import { Drawer } from './ui/components/Drawer';
 import { EmptyState } from './ui/components/EmptyState';
@@ -34,16 +34,7 @@ import {
 } from './ui/summaryVisuals';
 import { buildPrimarySignalSummary } from './ui/userSignalDiagnosis';
 import { useRef } from 'react';
-import {
-  DASHBOARD_ORDERINGS,
-  DASHBOARD_ORDERING_LABELS,
-  getGuidedPath,
-  GUIDED_PATHS,
-  type DashboardOrderingPreset,
-  type DashboardPanelGroupKey,
-  type GuidanceMode,
-  type GuidedPathId
-} from './ui/dashboardGuidance';
+import { DASHBOARD_ORDERINGS, getGuidedPath, GUIDED_PATHS, type DashboardOrderingPreset, type DashboardPanelGroupKey, type GuidanceMode, type GuidedPathId } from './ui/dashboardGuidance';
 import {
   DEFAULT_TURN_POLICY,
   getTurnModeVisibility,
@@ -67,6 +58,8 @@ import { buildTurnRecapReport } from './model/turnRecap';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
+import { InspectionShell } from './ui/InspectionShell';
+import { type RecentActionState } from './ui/recentActionSummary';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
@@ -144,7 +137,7 @@ function buildDataset(config: {
   numIslands: number;
   tagAlignmentDistribution: SavedScenarioGeneratorConfig['tagAlignmentDistribution'];
   ratingAlignmentDistribution: SavedScenarioGeneratorConfig['ratingAlignmentDistribution'];
-  islandClassWeights?: SavedScenarioGeneratorConfig['islandClassWeights'];
+  islandClassWeights ? : SavedScenarioGeneratorConfig['islandClassWeights'];
 }) {
   return generateColumbusDataset({
     seed: config.seed,
@@ -181,28 +174,28 @@ function buildSimulationStateFromControls(controls: ScenarioPresetControls) {
 
 function labelForCohortFactory(cohorts: CohortAnchor[]) {
   const labels = new Map(cohorts.map((cohort) => [cohort.id, cohort.label]));
-  const analystLabels = new Map(cohorts.map((cohort) => [cohort.id, cohort.analystName ?? cohort.label]));
+  const analystLabels = new Map(cohorts.map((cohort) => [cohort.id, cohort.analystName  ??  cohort.label]));
 
   return {
     analyst: (cohortId: string | null) => {
       if (cohortId === null) {
         return 'none';
       }
-      return analystLabels.get(cohortId) ?? labels.get(cohortId) ?? cohortId;
+      return analystLabels.get(cohortId)  ??  labels.get(cohortId)  ??  cohortId;
     },
     technical: (cohortId: string | null) => {
       if (cohortId === null) {
         return 'none';
       }
-      return labels.get(cohortId) ?? cohortId;
+      return labels.get(cohortId)  ??  cohortId;
     },
     full: (cohortId: string | null) => {
       if (cohortId === null) {
         return 'none';
       }
-      const analyst = analystLabels.get(cohortId) ?? cohortId;
-      const technical = labels.get(cohortId) ?? cohortId;
-      return analyst === technical ? technical : `${analyst} � ${technical}`;
+      const analyst = analystLabels.get(cohortId)  ??  cohortId;
+      const technical = labels.get(cohortId)  ??  cohortId;
+      return analyst === technical  ?  technical : `${analyst}  ·  ${technical}`;
     }
   };
 }
@@ -238,7 +231,7 @@ function formatDecimal(value: number, digits = 3): string {
 }
 
 function formatSignedDecimal(value: number, digits = 3): string {
-  const prefix = value > 0 ? '+' : '';
+  const prefix = value > 0  ?  '+' : '';
   return `${prefix}${value.toFixed(digits)}`;
 }
 
@@ -285,10 +278,10 @@ function renderPrimarySignalTitle(
 ): string {
   if (!summary) return 'AMBIGUOUS';
   if (summary.titleKey === 'positive') {
-    return `Primary behavior read: positive ${labelForCohort(summary.primaryCohortId ?? null)} audience fit`;
+    return `Primary behavior read: positive ${labelForCohort(summary.primaryCohortId  ??  null)} audience fit`;
   }
   if (summary.titleKey === 'inverse') {
-    return `Primary behavior read: anti-match against ${labelForCohort(summary.inverseCohortId ?? null)}`;
+    return `Primary behavior read: anti-match against ${labelForCohort(summary.inverseCohortId  ??  null)}`;
   }
   if (summary.titleKey === 'mismatch') return 'Primary behavior read: declared/observed mismatch';
   if (summary.titleKey === 'diffuse') return 'Primary behavior read: diffuse behavior';
@@ -302,7 +295,7 @@ function comparisonLabel(user: User | null, selectedCohort: CohortAnchor | null,
   }
 
   if (user) {
-    return cohortLabel(user.hiddenSeedCohortId ?? null);
+    return cohortLabel(user.hiddenSeedCohortId  ??  null);
   }
 
   return 'none';
@@ -321,8 +314,8 @@ function computeExactMatchRate(user: User, cohort: CohortAnchor, islandIds: stri
   let rated = 0;
 
   for (const islandId of islandIds) {
-    const userRating = user.ratings[islandId] ?? null;
-    const cohortRating = cohort.ratings[islandId] ?? null;
+    const userRating = user.ratings[islandId]  ??  null;
+    const cohortRating = cohort.ratings[islandId]  ??  null;
 
     if (userRating === null || cohortRating === null) {
       continue;
@@ -337,7 +330,7 @@ function computeExactMatchRate(user: User, cohort: CohortAnchor, islandIds: stri
   return {
     matches,
     rated,
-    rate: rated > 0 ? matches / rated : 0
+    rate: rated > 0  ?  matches / rated : 0
   };
 }
 
@@ -399,7 +392,7 @@ function reviewerRecoveryTone(status: string) {
 }
 
 interface AppProps {
-  initialGuidanceMode?: GuidanceMode;
+  initialGuidanceMode ? : GuidanceMode;
 }
 
 export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
@@ -444,7 +437,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [guidanceOpen, setGuidanceOpen] = useState(initialGuidanceMode === 'novice');
   const [dashboardOrdering] = useState<DashboardOrderingPreset>('overview-first');
   const [guidedPathId, setGuidedPathId] = useState<GuidedPathId>(
-    initialGuidanceMode === 'novice' ? 'run-start' : 'analyst-workflow'
+    initialGuidanceMode === 'novice'  ?  'run-start' : 'analyst-workflow'
   );
   const [runPresentationSource, setRunPresentationSource] = useState<RunPresentationSource>('cold-load');
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
@@ -537,31 +530,31 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   }, [dataset.islands, selectedIslandId]);
 
   const selectedUser = useMemo(() => {
-    return dataset.users.find((user) => user.id === selectedUserId) ?? dataset.users[0] ?? null;
+    return dataset.users.find((user) => user.id === selectedUserId)  ??  dataset.users[0]  ??  null;
   }, [dataset.users, selectedUserId]);
 
   const selectedIsland = useMemo(() => {
-    return dataset.islands.find((island) => island.id === selectedIslandId) ?? dataset.islands[0] ?? null;
+    return dataset.islands.find((island) => island.id === selectedIslandId)  ??  dataset.islands[0]  ??  null;
   }, [dataset.islands, selectedIslandId]);
 
-  const selectedInference = selectedUser ? dataset.inferenceByUserId.get(selectedUser.id) : undefined;
+  const selectedInference = selectedUser  ?  dataset.inferenceByUserId.get(selectedUser.id) : undefined;
 
   const selectedComparisonCohort = useMemo(() => {
     if (comparisonCohortId !== 'auto') {
-      return dataset.cohorts.find((cohort) => cohort.id === comparisonCohortId) ?? null;
+      return dataset.cohorts.find((cohort) => cohort.id === comparisonCohortId)  ??  null;
     }
 
     return (
-      dataset.cohorts.find((cohort) => cohort.id === selectedInference?.behaviorTop.cohortId) ??
-      dataset.cohorts.find((cohort) => cohort.id === selectedInference?.declaredTop.cohortId) ??
-      dataset.cohorts[0] ??
+      dataset.cohorts.find((cohort) => cohort.id === selectedInference ?.behaviorTop.cohortId)  ?? 
+      dataset.cohorts.find((cohort) => cohort.id === selectedInference ?.declaredTop.cohortId)  ?? 
+      dataset.cohorts[0]  ?? 
       null
     );
   }, [comparisonCohortId, dataset.cohorts, selectedInference]);
 
   const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, cohortLabels.full);
-  const selectedRaterSignalProfile = selectedUser ? dataset.raterSignalProfiles.get(selectedUser.id) ?? null : null;
-  const selectedIslandAffinityReport = selectedIsland ? dataset.islandAffinityReports.get(selectedIsland.id) ?? null : null;
+  const selectedRaterSignalProfile = selectedUser  ?  dataset.raterSignalProfiles.get(selectedUser.id)  ??  null : null;
+  const selectedIslandAffinityReport = selectedIsland  ?  dataset.islandAffinityReports.get(selectedIsland.id)  ??  null : null;
   const cohortLabelById = useMemo(
     () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohortLabels.full(cohort.id)])),
     [dataset.cohorts, cohortLabels]
@@ -599,16 +592,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       dataset.users
     ]
   );
-  const selectedIslandRatingCount = selectedIslandAffinityReport?.estimates[0]?.rawCount ?? 0;
+  const selectedIslandRatingCount = selectedIslandAffinityReport ?.estimates[0] ?.rawCount  ??  0;
   const selectedIslandEffectiveWeight =
-    selectedIslandAffinityReport?.topPositive?.effectiveWeight ??
-    selectedIslandAffinityReport?.topNegative?.effectiveWeight ??
-    selectedIslandAffinityReport?.estimates[0]?.effectiveWeight ??
+    selectedIslandAffinityReport ?.topPositive ?.effectiveWeight  ?? 
+    selectedIslandAffinityReport ?.topNegative ?.effectiveWeight  ?? 
+    selectedIslandAffinityReport ?.estimates[0] ?.effectiveWeight  ?? 
     0;
 
   const inferenceTypes = useMemo(() => {
     return new Map(
-      dataset.users.map((user) => [user.id, dataset.inferenceByUserId.get(user.id)?.diagnosis.type ?? 'AMBIGUOUS'])
+      dataset.users.map((user) => [user.id, dataset.inferenceByUserId.get(user.id) ?.diagnosis.type  ??  'AMBIGUOUS'])
     );
   }, [dataset.inferenceByUserId, dataset.users]);
 
@@ -630,9 +623,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohort.label] as const)),
     [dataset.cohorts]
   );
-  const selectedDiscoverySignalProfile = selectedUser ? discoverySignalAnalysis.byUserId.get(selectedUser.id) ?? null : null;
+  const selectedDiscoverySignalProfile = selectedUser  ?  discoverySignalAnalysis.byUserId.get(selectedUser.id)  ??  null : null;
 
-  const selectedInferenceDiagnostics = selectedInference?.diagnosis;
+  const selectedInferenceDiagnostics = selectedInference ?.diagnosis;
   const effectiveRoutingValues = useMemo(
     () =>
       resolveRoutingRiskProfileValues(routingRiskProfile, {
@@ -673,7 +666,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return buildUserDeprioritizationAnalysis(
       selectedUser,
       dataset.islandAffinityReports,
-      selectedRaterSignalProfile ?? undefined,
+      selectedRaterSignalProfile  ??  undefined,
       dataset.islands,
       { topLimit: routingOptions.topLimit }
     ).rows;
@@ -682,16 +675,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const observedBehaviorAnalysis = useMemo(() => buildObservedBehaviorAnalysis(dataset.observedBehaviorEvents), [dataset.observedBehaviorEvents]);
 
   const selectedRecommendationDetail =
-    drawerState?.type === 'recommendation' && selectedUser
-      ? selectedUserRecommendations.find((recommendation) => recommendation.islandId === drawerState.islandId) ?? null
+    drawerState ?.type === 'recommendation' && selectedUser
+       ?  selectedUserRecommendations.find((recommendation) => recommendation.islandId === drawerState.islandId)  ??  null
       : null;
 
-  const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1] ?? null;
+  const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1]  ??  null;
   const reviewerArchetypeAnalysis = dataset.reviewerArchetypeAnalysis;
-  const selectedUserRatings = selectedUser ? countNonNullRatings(selectedUser) : 0;
+  const selectedUserRatings = selectedUser  ?  countNonNullRatings(selectedUser) : 0;
   const visibleTurnModeLabel = TURN_MODE_LABELS[turnMode];
   const selectedDeclaredCohort =
-    selectedInference?.declaredTop.cohortId ? dataset.cohorts.find((cohort) => cohort.id === selectedInference.declaredTop.cohortId) ?? null : null;
+    selectedInference ?.declaredTop.cohortId  ?  dataset.cohorts.find((cohort) => cohort.id === selectedInference.declaredTop.cohortId)  ??  null : null;
   const turnRecapReport = useMemo(
     () =>
       buildTurnRecapReport({
@@ -704,15 +697,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       }),
     [cohortDisplayLabelById, dataset.cohorts, dataset.islandCohortRatingSnapshots, dataset.islands, dataset.turnHistory, islandLabelById]
   );
-  const declaredTagOverlap = selectedUser && selectedDeclaredCohort ? computeDeclaredTagOverlap(selectedUser.declaredTags, selectedDeclaredCohort) : null;
-  const declaredDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.declaredDistribution, cohortLabels.full, 4) : [];
-  const behaviorDistributionSlices = selectedInference ? collapseDistributionSlices(selectedInference.behaviorDistribution, cohortLabels.full, 4) : [];
-  const behaviorReadSummary = selectedInference ? summarizeBehaviorRead(selectedInference.behaviorDistribution, selectedInference.behaviorSpecificity) : null;
-  const declaredObservedRelationshipText = selectedInference ? buildDeclaredObservedRelationshipText(selectedInference) : '';
+  const declaredTagOverlap = selectedUser && selectedDeclaredCohort  ?  computeDeclaredTagOverlap(selectedUser.declaredTags, selectedDeclaredCohort) : null;
+  const declaredDistributionSlices = selectedInference  ?  collapseDistributionSlices(selectedInference.declaredDistribution, cohortLabels.full, 4) : [];
+  const behaviorDistributionSlices = selectedInference  ?  collapseDistributionSlices(selectedInference.behaviorDistribution, cohortLabels.full, 4) : [];
+  const behaviorReadSummary = selectedInference  ?  summarizeBehaviorRead(selectedInference.behaviorDistribution, selectedInference.behaviorSpecificity) : null;
+  const declaredObservedRelationshipText = selectedInference  ?  buildDeclaredObservedRelationshipText(selectedInference) : '';
   const showInverseDiagnostic = selectedInference
-    ? shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
+     ?  shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
     : false;
-  const selectedPrimarySignal = selectedInference ? buildPrimarySignalSummary(selectedInference) : null;
+  const selectedPrimarySignal = selectedInference  ?  buildPrimarySignalSummary(selectedInference) : null;
 
   const signalRows = useMemo(() => {
     if (!selectedRaterSignalProfile) {
@@ -722,9 +715,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return dataset.cohorts
       .map((cohort) => ({
         cohort,
-        weight: selectedRaterSignalProfile.cohortWeights[cohort.id] ?? 0,
-        evidence: selectedRaterSignalProfile.cohortEvidence[cohort.id] ?? 0,
-        similarity: selectedRaterSignalProfile.cohortSimilarities[cohort.id] ?? {
+        weight: selectedRaterSignalProfile.cohortWeights[cohort.id]  ??  0,
+        evidence: selectedRaterSignalProfile.cohortEvidence[cohort.id]  ??  0,
+        similarity: selectedRaterSignalProfile.cohortSimilarities[cohort.id]  ??  {
           value: 0,
           evidence: 0,
           overlapCount: 0
@@ -740,7 +733,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
     return selectedIslandAffinityReport.estimates
       .map((estimate) => ({
-        cohort: dataset.cohorts.find((entry) => entry.id === estimate.cohortId) ?? null,
+        cohort: dataset.cohorts.find((entry) => entry.id === estimate.cohortId)  ??  null,
         estimate
       }))
       .filter((row): row is { cohort: CohortAnchor; estimate: CohortAffinityEstimate } => row.cohort !== null)
@@ -765,7 +758,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       return [];
     }
 
-    return deriveRatingEventWeightsForIsland(selectedIsland.id, dataset.ratingEvents, selectedIslandAffinityReport ?? undefined);
+    return deriveRatingEventWeightsForIsland(selectedIsland.id, dataset.ratingEvents, selectedIslandAffinityReport  ??  undefined);
   }, [dataset.ratingEvents, selectedIsland, selectedIslandAffinityReport]);
 
   const selectedIslandTimelineRows = useMemo(() => {
@@ -803,33 +796,33 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       return null;
     }
 
-    return observedBehaviorAnalysis.byIslandId.get(selectedIsland.id) ?? null;
+    return observedBehaviorAnalysis.byIslandId.get(selectedIsland.id)  ??  null;
   }, [observedBehaviorAnalysis.byIslandId, selectedIsland]);
 
   const selectedAffinityDetail =
-    drawerState?.type === 'affinity'
-      ? dataset.islandAffinityReports.get(drawerState.islandId)?.estimates.find((estimate) => estimate.cohortId === drawerState.cohortId) ??
+    drawerState ?.type === 'affinity'
+       ?  dataset.islandAffinityReports.get(drawerState.islandId) ?.estimates.find((estimate) => estimate.cohortId === drawerState.cohortId)  ?? 
         null
       : null;
 
   const selectedIslandRows = useMemo(() => {
     return dataset.cohorts.map((cohort) => ({
       cohort,
-      rating: selectedIsland ? cohort.ratings[selectedIsland.id] ?? null : null
+      rating: selectedIsland  ?  cohort.ratings[selectedIsland.id]  ??  null : null
     }));
   }, [dataset.cohorts, selectedIsland]);
 
   const selectedComparisonUserRating = selectedUser && selectedIsland
-    ? selectedUser.ratings[selectedIsland.id] ?? null
+     ?  selectedUser.ratings[selectedIsland.id]  ??  null
     : null;
 
   const selectedComparisonCohortRating = selectedComparisonCohort && selectedIsland
-    ? selectedComparisonCohort.ratings[selectedIsland.id] ?? null
+     ?  selectedComparisonCohort.ratings[selectedIsland.id]  ??  null
     : null;
 
   const exactMatchRate =
     selectedUser && selectedComparisonCohort
-      ? computeExactMatchRate(
+       ?  computeExactMatchRate(
           selectedUser,
           selectedComparisonCohort,
           dataset.islands.map((island) => island.id)
@@ -844,19 +837,19 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const orderedDashboardSections = useMemo(() => DASHBOARD_ORDERINGS[dashboardOrdering], [dashboardOrdering]);
   const visibleDashboardSections = orderedDashboardSections;
   const runContextNote = isNoviceMode
-    ? 'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
+     ?  'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
     : 'Expert keeps the same run-context choices visible and exposes the resolved controls. Current run badges live in Primary Workflow.';
 
   const selectedUserOptions = useMemo<SelectionOption[]>(() => {
     return dataset.users.map((user) => {
       const inference = dataset.inferenceByUserId.get(user.id);
-      const tags = user.declaredTags.slice(0, 3).join(' � ');
+      const tags = user.declaredTags.slice(0, 3).join('  ·  ');
 
       return {
         id: user.id,
         label: user.label,
         description: tags,
-        badge: inference?.diagnosis.type ?? 'unknown'
+        badge: inference ?.diagnosis.type  ??  'unknown'
       };
     });
   }, [dataset.inferenceByUserId, dataset.users]);
@@ -867,7 +860,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         id: island.id,
         label: island.label,
         description: `Rated by ${dataset.cohorts.length} seeded anchors`,
-        badge: island.hiddenClass ?? 'island'
+        badge: island.hiddenClass  ??  'island'
       };
     });
   }, [dataset.cohorts.length, dataset.islands]);
@@ -882,7 +875,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ...dataset.cohorts.map((cohort) => ({
         id: cohort.id,
         label: cohort.label,
-        description: cohort.tags.join(' � '),
+        description: cohort.tags.join('  ·  '),
         badge: cohort.source
       }))
     ];
@@ -892,7 +885,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return dataset.pseudoCohortAnalysis.allReports.map((report) => ({
       id: report.key,
       label: report.tags.join(' | '),
-      description: `${report.userCount} users � ${report.reportType}`,
+      description: `${report.userCount} users  ·  ${report.reportType}`,
       badge: report.analystPriority
     }));
   }, [dataset.pseudoCohortAnalysis.allReports]);
@@ -901,9 +894,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const reviewerCohortRows = useMemo(
     () =>
       reviewerArchetypeAnalysis.highSignalByCohort.map((entry) => ({
-        cohort: dataset.cohorts.find((cohort) => cohort.id === entry.cohortId) ?? null,
+        cohort: dataset.cohorts.find((cohort) => cohort.id === entry.cohortId)  ??  null,
         users: entry.users,
-        topUser: entry.users[0] ?? null
+        topUser: entry.users[0]  ??  null
       })),
     [dataset.cohorts, reviewerArchetypeAnalysis.highSignalByCohort]
   );
@@ -1007,7 +1000,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     {
       key: 'affinity',
       label: 'Affinity',
-      render: (row) => <ProgressBar value={(row.estimate.affinity + 1) / 2} label={formatSignedDecimal(row.estimate.affinity)} tone={row.estimate.affinity >= 0 ? 'success' : 'danger'} />
+      render: (row) => <ProgressBar value={(row.estimate.affinity + 1) / 2} label={formatSignedDecimal(row.estimate.affinity)} tone={row.estimate.affinity >= 0  ?  'success' : 'danger'} />
     },
     {
       key: 'confidence',
@@ -1030,12 +1023,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   ];
 
 
-  const selectedReviewerReport = drawerState?.type === 'reviewer'
-    ? reviewerReportRows.find((report) => report.userId === drawerState.userId) ?? null
+  const selectedReviewerReport = drawerState ?.type === 'reviewer'
+     ?  reviewerReportRows.find((report) => report.userId === drawerState.userId)  ??  null
     : null;
 
   const selectedUserReviewerReport = selectedUser
-    ? reviewerReportRows.find((report) => report.userId === selectedUser.id) ?? null
+     ?  reviewerReportRows.find((report) => report.userId === selectedUser.id)  ??  null
     : null;
 
   const reviewerArchetypeSummary = (
@@ -1083,20 +1076,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
                   </div>
                   <span className="muted">
-                    {archetypeLabel(row.hiddenReviewerArchetype)} � {row.inferredDiagnosisType}
+                    {archetypeLabel(row.hiddenReviewerArchetype)}  ·  {row.inferredDiagnosisType}
                   </span>
                 </div>
                 <div className="recovery-preview-row__meta">
                   <span className="muted">
-                    Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
+                    Cohort: {row.inferredCohortId  ?  cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
-                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' � ')}</span> : null}
+                  {row.analystFlags.length > 0  ?  <span className="muted">{row.analystFlags.slice(0, 2).join('  ·  ')}</span> : null}
                   <span className="recovery-preview-row__action">Open detail</span>
                 </div>
               </button>
             ))}
-            {reviewerArchetypeAnalysis.candidateSeedUsers.length === 0 ? (
+            {reviewerArchetypeAnalysis.candidateSeedUsers.length === 0  ?  (
               <EmptyState
                 title="No analyst candidates"
                 description="This preview fills when the system finds strong signal but weak known-cohort fit."
@@ -1124,20 +1117,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <Badge tone={reviewerRecoveryTone(row.recoveryStatus)}>{row.recoveryStatus}</Badge>
                   </div>
                   <span className="muted">
-                    {archetypeLabel(row.hiddenReviewerArchetype)} � guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
+                    {archetypeLabel(row.hiddenReviewerArchetype)}  ·  guided turn bias {formatDecimal(row.guidedTurnBias, 2)}
                   </span>
                 </div>
                 <div className="recovery-preview-row__meta">
                   <span className="muted">
-                    Cohort: {row.inferredCohortId ? cohortLabels.full(row.inferredCohortId) : 'none'}
+                    Cohort: {row.inferredCohortId  ?  cohortLabels.full(row.inferredCohortId) : 'none'}
                   </span>
                   <span className="muted">Signal {formatDecimal(row.effectiveSignal)}</span>
-                  {row.analystFlags.length > 0 ? <span className="muted">{row.analystFlags.slice(0, 2).join(' � ')}</span> : null}
+                  {row.analystFlags.length > 0  ?  <span className="muted">{row.analystFlags.slice(0, 2).join('  ·  ')}</span> : null}
                   <span className="recovery-preview-row__action">Open detail</span>
                 </div>
               </button>
             ))}
-            {reviewerArchetypeAnalysis.earlyScouts.length === 0 ? (
+            {reviewerArchetypeAnalysis.earlyScouts.length === 0  ?  (
               <EmptyState title="No early scouts" description="Guided turn timing has not yet produced any early-scout patterns." />
             ) : null}
           </div>
@@ -1147,12 +1140,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   );
 
   const declaredOverlapText = declaredTagOverlap
-    ? declaredTagOverlap.isExact
-      ? `Exact tag fit � ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
+     ?  declaredTagOverlap.isExact
+       ?  `Exact tag fit  ·  ${declaredTagOverlap.overlap}/${declaredTagOverlap.total} tags`
       : `${declaredTagOverlap.overlap}/${declaredTagOverlap.total} declared tags`
     : 'No declared-tag overlap available.';
   const inverseNotice = showInverseDiagnostic
-    ? `Anti-match signal: ${cohortLabels.full(selectedInference?.inverseTop.cohortId ?? null)} � inverse evidence ${formatPercent(selectedInference?.inverseTop.score ?? 0)}`
+     ?  `Anti-match signal: ${cohortLabels.full(selectedInference ?.inverseTop.cohortId  ??  null)}  ·  inverse evidence ${formatPercent(selectedInference ?.inverseTop.score  ??  0)}`
     : 'No strong inverse signal';
   const declaredDistributionCard = (
     <div className="stack">
@@ -1167,21 +1160,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   );
 
-  const selectedUserSummary = selectedInference ? (
+  const selectedUserSummary = selectedInference  ?  (
     <SelectedUserSummary
-      selectedUserLabel={selectedUser?.label ?? 'None'}
-      declaredTags={selectedUser?.declaredTags ?? []}
+      selectedUserLabel={selectedUser ?.label  ??  'None'}
+      declaredTags={selectedUser ?.declaredTags  ??  []}
       selectedInference={selectedInference}
       selectedPrimarySignal={selectedPrimarySignal}
-      selectedInferenceDiagnosticsMessage={selectedInferenceDiagnostics?.message}
-      selectedInferenceDiagnosticsType={selectedInferenceDiagnostics?.type}
+      selectedInferenceDiagnosticsMessage={selectedInferenceDiagnostics ?.message}
+      selectedInferenceDiagnosticsType={selectedInferenceDiagnostics ?.type}
       selectedRaterSignalProfile={selectedRaterSignalProfile}
       selectedDiscoverySignalProfile={selectedDiscoverySignalProfile}
       declaredOverlapText={declaredOverlapText}
       declaredObservedRelationshipText={declaredObservedRelationshipText}
-      behaviorReadText={behaviorReadSummary?.message ?? 'Not enough rating data yet.'}
+      behaviorReadText={behaviorReadSummary ?.message  ??  'Not enough rating data yet.'}
       inverseNotice={inverseNotice}
-      cohortLabel={(cohortId) => cohortLabels.full(cohortId ?? null)}
+      cohortLabel={(cohortId) => cohortLabels.full(cohortId  ??  null)}
       openUserPicker={() => setModalKind('user')}
       pinCurrentUser={() => {
         if (selectedUser) {
@@ -1195,7 +1188,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       behaviorDistributionChart={behaviorDistributionCard}
     />
   ) : null;
-  const discoveryRoutingSummary = selectedUser ? (
+  const discoveryRoutingSummary = selectedUser  ?  (
     <DiscoveryRoutingSummary
       selectedUserLabel={selectedUser.label}
       routingModeLabel={visibleTurnModeLabel}
@@ -1205,14 +1198,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       guidedRecommendationsPerUser={guidedRecommendationsPerUser}
       recommendations={selectedUserRecommendations}
       deprioritizationRows={selectedUserDeprioritization}
-      islandLabelForId={(islandId) => dataset.islands.find((island) => island.id === islandId)?.label ?? islandId}
+      islandLabelForId={(islandId) => dataset.islands.find((island) => island.id === islandId) ?.label  ??  islandId}
       onInspectRecommendation={(row) => setDrawerState({ type: 'recommendation', userId: selectedUser.id, islandId: row.islandId })}
     />
   ) : (
     <EmptyState title="Select a user" description="Discovery routing appears once a user is selected." />
   );
 
-  const selectedIslandSummary = selectedIsland ? (
+  const selectedIslandSummary = selectedIsland  ?  (
     <div className="stack">
 
       <div className="metric-grid metric-grid--compact">
@@ -1231,7 +1224,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           label="Exact match rate"
           value={
             exactMatchRate
-              ? `${exactMatchRate.matches}/${exactMatchRate.rated} (${formatPercent(exactMatchRate.rate)})`
+               ?  `${exactMatchRate.matches}/${exactMatchRate.rated} (${formatPercent(exactMatchRate.rate)})`
               : 'Unrated'
           }
           helper="Matches across islands both the user and comparison cohort rated."
@@ -1245,7 +1238,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <section className="detail-block">
         <div className="section-heading">
-          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating � cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
+          <h4>Cohort-local island affinity <FormulaTip label="Island affinity" formula="weighted contribution = user rating  ·  cohort-local rater signal; observed mean = weighted sum / effective weight; affinity = shrunk observed mean" inputs="effective weight is summed positive cohort-local rater signal for that island." interpretation="Positive and negative sides show directional audience fit only; not a recommendation guarantee or moderation verdict." /></h4>
           <p>Weighted by rater signal only. Higher-signal raters count more for their strongest cohort.</p>
         </div>
         <section className="distribution-card">
@@ -1297,7 +1290,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   ) : null;
 
-  const selectedUserDetail = selectedUser && selectedInference ? (
+  const selectedUserDetail = selectedUser && selectedInference  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>Identity</h4>
@@ -1317,31 +1310,31 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Rater signal</h4>
         <p>
-          Overall: {formatDecimal(selectedRaterSignalProfile?.overallSignal ?? 0)} | Evidence:{' '}
-          {formatPercent(selectedRaterSignalProfile?.signalEvidence ?? 0)}
+          Overall: {formatDecimal(selectedRaterSignalProfile ?.overallSignal  ??  0)} | Evidence:{' '}
+          {formatPercent(selectedRaterSignalProfile ?.signalEvidence  ??  0)}
         </p>
-        <p className="muted">Top cohort: {cohortLabels.full(selectedRaterSignalProfile?.topCohortId ?? null)}</p>
+        <p className="muted">Top cohort: {cohortLabels.full(selectedRaterSignalProfile ?.topCohortId  ??  null)}</p>
       </section>
       <section className="detail-block">
         <h4>Hidden taste truth</h4>
-        <p>Hidden taste cohort: {selectedUser.hiddenTasteCohortId ? cohortLabels.full(selectedUser.hiddenTasteCohortId) : 'none'}</p>
-        <p>Hidden taste kind: {selectedUser.hiddenTasteCohortKind ?? 'n/a'}</p>
+        <p>Hidden taste cohort: {selectedUser.hiddenTasteCohortId  ?  cohortLabels.full(selectedUser.hiddenTasteCohortId) : 'none'}</p>
+        <p>Hidden taste kind: {selectedUser.hiddenTasteCohortKind  ??  'n/a'}</p>
         <p className="muted">Hidden preference vector: {summarizeWeightedVector(selectedUser.hiddenTastePreferenceVector)}</p>
       </section>
       <section className="detail-block">
         <h4>Diagnosis</h4>
-        <p>{renderPrimarySignalTitle(selectedPrimarySignal, cohortLabels.full) ?? selectedInference.diagnosis.message}</p>
-        <p className="muted">{selectedPrimarySignal?.message ?? selectedInference.diagnosis.message}</p>
+        <p>{renderPrimarySignalTitle(selectedPrimarySignal, cohortLabels.full)  ??  selectedInference.diagnosis.message}</p>
+        <p className="muted">{selectedPrimarySignal ?.message  ??  selectedInference.diagnosis.message}</p>
       </section>
       <section className="detail-block">
         <h4>Reviewer checksum</h4>
         <p>
           Hidden generator archetype:{' '}
-          {selectedUser.hiddenReviewerArchetype ? archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
+          {selectedUser.hiddenReviewerArchetype  ?  archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
         </p>
         <p>
           Recovery status:{' '}
-          {selectedUserReviewerReport ? (
+          {selectedUserReviewerReport  ?  (
             <Badge tone={reviewerRecoveryTone(selectedUserReviewerReport.recoveryStatus)}>
               {selectedUserReviewerReport.recoveryStatus}
             </Badge>
@@ -1350,21 +1343,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           )}
         </p>
         <p className="muted">
-          Analyst flags: {selectedUserReviewerReport?.analystFlags.join(' � ') ?? 'n/a'}
+          Analyst flags: {selectedUserReviewerReport ?.analystFlags.join('  ·  ')  ??  'n/a'}
         </p>
         <p className="muted">Hidden labels are debug checksums only. They do not feed the model.</p>
       </section>
       <section className="detail-block">
         <h4>Debug</h4>
-        <p>Hidden seed: {selectedUser.hiddenSeedCohortId ? cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}</p>
-        <p>Hidden behavior profile: {selectedUser.hiddenBehaviorProfile ?? 'n/a'}</p>
-        <p>Tag alignment: {selectedUser.hiddenTagAlignment ?? 'n/a'}</p>
-        <p>Rating alignment: {selectedUser.hiddenRatingAlignment ?? 'n/a'}</p>
+        <p>Hidden seed: {selectedUser.hiddenSeedCohortId  ?  cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}</p>
+        <p>Hidden behavior profile: {selectedUser.hiddenBehaviorProfile  ??  'n/a'}</p>
+        <p>Tag alignment: {selectedUser.hiddenTagAlignment  ??  'n/a'}</p>
+        <p>Rating alignment: {selectedUser.hiddenRatingAlignment  ??  'n/a'}</p>
       </section>
     </div>
   ) : null;
 
-  const selectedIslandDetail = selectedIsland ? (
+  const selectedIslandDetail = selectedIsland  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>Island</h4>
@@ -1376,7 +1369,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <p>User: {formatRating(selectedComparisonUserRating)}</p>
         <p>Cohort: {formatRating(selectedComparisonCohortRating)}</p>
       </section>
-      {selectedIslandTruthComparison ? <SelectedIslandTruthComparison report={selectedIslandTruthComparison} /> : null}
+      {selectedIslandTruthComparison  ?  <SelectedIslandTruthComparison report={selectedIslandTruthComparison} /> : null}
       <section className="detail-block">
         <h4>Cohort affinity</h4>
         <ReportTable
@@ -1394,7 +1387,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           {selectedIslandRows.map(({ cohort, rating }) => (
             <div key={cohort.id} className="detail-mini-table__row">
               <span>{cohort.label}</span>
-              <Badge tone={rating === 1 ? 'success' : rating === -1 ? 'danger' : 'warning'}>
+              <Badge tone={rating === 1  ?  'success' : rating === -1  ?  'danger' : 'warning'}>
                 {formatRating(rating)}
               </Badge>
             </div>
@@ -1404,7 +1397,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   ) : null;
 
-  const selectedCohortDetail = selectedComparisonCohort ? (
+  const selectedCohortDetail = selectedComparisonCohort  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>Cohort</h4>
@@ -1423,21 +1416,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
       <section className="detail-block">
         <h4>Source</h4>
-        <p>{selectedComparisonCohort.source === 'meta_moderator' ? 'Trusted seed cohort anchor' : 'Analyst-defined cohort'}</p>
+        <p>{selectedComparisonCohort.source === 'meta_moderator'  ?  'Trusted seed cohort anchor' : 'Analyst-defined cohort'}</p>
       </section>
     </div>
   ) : null;
 
-  const selectedPseudoDetail = drawerState?.type === 'pseudo'
-    ? dataset.pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key) ?? null
+  const selectedPseudoDetail = drawerState ?.type === 'pseudo'
+     ?  dataset.pseudoCohortAnalysis.allReports.find((report) => report.key === drawerState.key)  ??  null
     : null;
 
   const selectedRecommendation = selectedRecommendationDetail;
-  const recommendationDrawerContent = selectedRecommendation ? (
+  const recommendationDrawerContent = selectedRecommendation  ?  (
     <div className="detail-stack">
       <section className="detail-block">
-        <h4>{dataset.islands.find((island) => island.id === selectedRecommendation.islandId)?.label ?? selectedRecommendation.islandId}</h4>
-        <p className="muted">{selectedRecommendation.recommendationKind === 'SAFE_FIT' ? 'Safe fit' : 'Discovery probe'}</p>
+        <h4>{dataset.islands.find((island) => island.id === selectedRecommendation.islandId) ?.label  ??  selectedRecommendation.islandId}</h4>
+        <p className="muted">{selectedRecommendation.recommendationKind === 'SAFE_FIT'  ?  'Safe fit' : 'Discovery probe'}</p>
         <p>{selectedRecommendation.explanation}</p>
       </section>
       <section className="detail-block">
@@ -1454,7 +1447,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <div key={entry.cohortId} className="detail-mini-table__row">
               <span>{cohortLabels.full(entry.cohortId)}</span>
               <span className="muted">
-                {formatSignedDecimal(entry.affinity)} � confidence {formatPercent(entry.confidence)} � evidence {formatDecimal(entry.effectiveWeight)}
+                {formatSignedDecimal(entry.affinity)}  ·  confidence {formatPercent(entry.confidence)}  ·  evidence {formatDecimal(entry.effectiveWeight)}
               </span>
             </div>
           ))}
@@ -1470,7 +1463,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   ) : null;
 
-  const pseudoDrawerContent = selectedPseudoDetail ? (
+  const pseudoDrawerContent = selectedPseudoDetail  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>{selectedPseudoDetail.tags.join(' | ')}</h4>
@@ -1492,15 +1485,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   ) : null;
 
-  const selectedAffinityReport = drawerState?.type === 'affinity'
-    ? dataset.islandAffinityReports.get(drawerState.islandId) ?? null
+  const selectedAffinityReport = drawerState ?.type === 'affinity'
+     ?  dataset.islandAffinityReports.get(drawerState.islandId)  ??  null
     : null;
 
-  const selectedAffinityCohort = drawerState?.type === 'affinity'
-    ? dataset.cohorts.find((cohort) => cohort.id === drawerState.cohortId) ?? null
+  const selectedAffinityCohort = drawerState ?.type === 'affinity'
+     ?  dataset.cohorts.find((cohort) => cohort.id === drawerState.cohortId)  ??  null
     : null;
 
-  const affinityDrawerContent = selectedAffinityDetail && selectedAffinityReport && selectedAffinityCohort ? (
+  const affinityDrawerContent = selectedAffinityDetail && selectedAffinityReport && selectedAffinityCohort  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>{selectedAffinityCohort.label}</h4>
@@ -1524,11 +1517,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Rater contributions</h4>
         <div className="detail-mini-table">
-          {selectedAffinityDetail.contributions.length > 0 ? (
+          {selectedAffinityDetail.contributions.length > 0  ?  (
             selectedAffinityDetail.contributions.map((contribution) => (
               <div key={`${contribution.userId}-${contribution.rating}-${contribution.raterSignal}`} className="detail-mini-table__row">
                 <span>{contribution.userId}</span>
-                <Badge tone={contribution.rating === 1 ? 'success' : contribution.rating === -1 ? 'danger' : 'warning'}>
+                <Badge tone={contribution.rating === 1  ?  'success' : contribution.rating === -1  ?  'danger' : 'warning'}>
                   {formatRating(contribution.rating)}
                 </Badge>
                 <span className="muted">{formatDecimal(contribution.raterSignal)}</span>
@@ -1543,7 +1536,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     </div>
   ) : null;
 
-  const reviewerDrawerContent = selectedReviewerReport ? (
+  const reviewerDrawerContent = selectedReviewerReport  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>{selectedReviewerReport.label}</h4>
@@ -1558,7 +1551,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Inferred behavior</h4>
         <p>Diagnosis: <Badge tone={diagnosisTone(selectedReviewerReport.inferredDiagnosisType)}>{selectedReviewerReport.inferredDiagnosisType}</Badge></p>
-        <p>Inferred cohort: {selectedReviewerReport.inferredCohortId ? cohortLabels.full(selectedReviewerReport.inferredCohortId) : 'none'}</p>
+        <p>Inferred cohort: {selectedReviewerReport.inferredCohortId  ?  cohortLabels.full(selectedReviewerReport.inferredCohortId) : 'none'}</p>
         <p>Recovery status: <Badge tone={reviewerRecoveryTone(selectedReviewerReport.recoveryStatus)}>{selectedReviewerReport.recoveryStatus}</Badge></p>
       </section>
       <section className="detail-block">
@@ -1572,7 +1565,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <section className="detail-block">
         <h4>Analyst flags</h4>
         <div className="badge-row">
-          {selectedReviewerReport.analystFlags.length > 0 ? (
+          {selectedReviewerReport.analystFlags.length > 0  ?  (
             selectedReviewerReport.analystFlags.map((flag) => (
               <Badge key={flag} tone="neutral">
                 {flag}
@@ -1582,12 +1575,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <span className="muted">No flags yet.</span>
           )}
         </div>
-        <p className="muted">Review candidate: {selectedReviewerReport.reviewCandidate ? 'yes' : 'no'}</p>
+        <p className="muted">Review candidate: {selectedReviewerReport.reviewCandidate  ?  'yes' : 'no'}</p>
       </section>
     </div>
   ) : null;
 
-  const modelExplanation = selectedInference ? (
+  const modelExplanation = selectedInference  ?  (
     <div className="stack">
       <div className="summary-header">
         <div>
@@ -1608,7 +1601,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         labelForCohort={cohortLabels.full}
       />
 
-      {behaviorIsNonInformative ? (
+      {behaviorIsNonInformative  ?  (
         <div className="notice notice--warning">
           <strong>Behavior distribution is non-informative.</strong>
           <p>
@@ -1635,13 +1628,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <span className="muted">
             Suggested cohort:{' '}
             {selectedInference.diagnosis.suggestedCohortId
-              ? cohortLabels.full(selectedInference.diagnosis.suggestedCohortId)
+               ?  cohortLabels.full(selectedInference.diagnosis.suggestedCohortId)
               : 'none'}
           </span>
           <span className="muted">
             Suggested tags:{' '}
-            {selectedInference.diagnosis.suggestedTags?.length
-              ? selectedInference.diagnosis.suggestedTags.join(', ')
+            {selectedInference.diagnosis.suggestedTags ?.length
+               ?  selectedInference.diagnosis.suggestedTags.join(', ')
               : 'none'}
           </span>
         </div>
@@ -1651,7 +1644,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     <EmptyState title="No user selected" description="Choose a user to inspect declared and behavioral fit." />
   );
 
-  const islandComparison = selectedUser && selectedComparisonCohort ? (
+  const islandComparison = selectedUser && selectedComparisonCohort  ?  (
     <ReportTable
       columns={[
         {
@@ -1679,17 +1672,17 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         }
       ]}
       rows={dataset.islands.map((island) => {
-        const userRating = selectedUser.ratings[island.id] ?? null;
-        const cohortRating = selectedComparisonCohort.ratings[island.id] ?? null;
+        const userRating = selectedUser.ratings[island.id]  ??  null;
+        const cohortRating = selectedComparisonCohort.ratings[island.id]  ??  null;
         const match =
           userRating === null && cohortRating === null
-            ? 'Both unrated'
+             ?  'Both unrated'
             : userRating === null
-              ? 'User unrated'
+               ?  'User unrated'
               : cohortRating === null
-                ? 'Cohort unrated'
+                 ?  'Cohort unrated'
             : userRating === cohortRating
-              ? 'Match'
+               ?  'Match'
               : 'Mismatch';
 
         return {
@@ -1767,7 +1760,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   };
 
   const exportCurrentSimulationJson = () => {
-    const scenarioPreset = scenarioPresetSource ?? activeScenarioPresetMetadata ?? null;
+    const scenarioPreset = scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  null;
     const savedScenario = exportSavedWayfarerScenario({
       label: `Wayfarer turn ${simulationState.currentTurn}`,
       createdAt: new Date().toISOString(),
@@ -1801,7 +1794,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       turnModeLabel: TURN_MODE_LABELS[turnMode],
       previousTurn: simulationState.currentTurn,
       currentTurn: simulationState.currentTurn,
-      latestTurnSummary: simulationState.turnHistory[simulationState.turnHistory.length - 1] ?? null,
+      latestTurnSummary: simulationState.turnHistory[simulationState.turnHistory.length - 1]  ??  null,
       exportFileName: fileName
     });
   };
@@ -1842,7 +1835,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setExecutionProgress(0);
     setIsExecutingScenario(false);
     setRunPresentationSource('imported');
-    setScenarioPresetSource(scenario.scenarioPreset ?? (importedPresetMatch ? scenarioPresetMetadataFromPreset(importedPresetMatch) : null));
+    setScenarioPresetSource(scenario.scenarioPreset  ??  (importedPresetMatch  ?  scenarioPresetMetadataFromPreset(importedPresetMatch) : null));
     setSeed(scenario.generatorConfig.seed);
     setNumUsers(scenario.generatorConfig.numUsers);
     setNumIslands(scenario.generatorConfig.numIslands);
@@ -1867,21 +1860,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setScenarioError('');
     setScenarioMessage(
       scenario.scenarioPreset
-        ? `Imported ${scenario.label} from ${scenario.scenarioPreset.label}`
+         ?  `Imported ${scenario.label} from ${scenario.scenarioPreset.label}`
         : `Imported ${scenario.label}`
     );
     setRecentAction({
       kind: 'scenario-imported',
-      scenarioLabel: scenario.scenarioPreset?.label ?? importedPresetMatch?.label ?? 'Custom / imported',
+      scenarioLabel: scenario.scenarioPreset ?.label  ??  importedPresetMatch ?.label  ??  'Custom / imported',
       turnModeLabel: TURN_MODE_LABELS[scenario.turnPolicy.turnMode],
       previousTurn: restoredState.currentTurn,
       currentTurn: restoredState.currentTurn,
-      latestTurnSummary: restoredState.turnHistory[restoredState.turnHistory.length - 1] ?? null
+      latestTurnSummary: restoredState.turnHistory[restoredState.turnHistory.length - 1]  ??  null
     });
   };
 
   const handleScenarioFileChange = async (event: { target: HTMLInputElement; currentTarget: HTMLInputElement }) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files ?.[0];
     event.currentTarget.value = '';
 
     if (!file) {
@@ -1892,7 +1885,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   };
 
   const openScenarioFilePicker = () => {
-    scenarioFileInputRef.current?.click();
+    scenarioFileInputRef.current ?.click();
   };
 
   const executeScenario = async () => {
@@ -1900,13 +1893,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       return;
     }
 
-    const nextSeed = executionSeedMode === 'random' ? Math.floor(Math.random() * 1_000_000_000) : seed;
-    const selectedScenarioPresetSource = scenarioPresetSource ?? activeScenarioPresetMetadata ?? null;
+    const nextSeed = executionSeedMode === 'random'  ?  Math.floor(Math.random() * 1_000_000_000) : seed;
+    const selectedScenarioPresetSource = scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  null;
     const resolvedControls: ScenarioPresetControls = {
       ...currentScenarioControls,
       seed: nextSeed
     };
-    const executionLabel = selectedScenarioPresetSource?.label ?? 'Custom / imported';
+    const executionLabel = selectedScenarioPresetSource ?.label  ??  'Custom / imported';
     const executionToken = scenarioExecutionTokenRef.current + 1;
     scenarioExecutionTokenRef.current = executionToken;
 
@@ -1964,14 +1957,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       setScenarioMessage(`Executed ${executionLabel} with seed ${nextSeed} for ${turnsToRun} turns.`);
       setExecutionStatus('Scenario execution complete.');
       setExecutionProgress(1);
-      setRunPresentationSource(nextState.currentTurn > 0 ? 'executed' : 'cold-load');
+      setRunPresentationSource(nextState.currentTurn > 0  ?  'executed' : 'cold-load');
       setRecentAction({
         kind: 'scenario-executed',
         scenarioLabel: executionLabel,
         turnModeLabel: TURN_MODE_LABELS[resolvedControls.turnPolicy.turnMode],
         previousTurn: 0,
         currentTurn: nextState.currentTurn,
-        latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1] ?? null,
+        latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1]  ??  null,
         batchSize: turnsToRun
       });
     } finally {
@@ -2003,7 +1996,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         turnModeLabel: TURN_MODE_LABELS[turnMode],
         previousTurn: state.currentTurn,
         currentTurn: nextState.currentTurn,
-        latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1] ?? null
+        latestTurnSummary: nextState.turnHistory[nextState.turnHistory.length - 1]  ??  null
       });
       if (nextState.currentTurn > 0) {
         setRunPresentationSource('executed');
@@ -2039,7 +2032,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         turnModeLabel: TURN_MODE_LABELS[turnMode],
         previousTurn: state.currentTurn,
         currentTurn: next.currentTurn,
-        latestTurnSummary: next.turnHistory[next.turnHistory.length - 1] ?? null,
+        latestTurnSummary: next.turnHistory[next.turnHistory.length - 1]  ??  null,
         batchSize: turnsToRun
       });
       if (next.currentTurn > 0) {
@@ -2214,28 +2207,28 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     () => resolveScenarioPresetFromControls(currentScenarioControls),
     [currentScenarioControls]
   );
-  const isGoldenDemoPath = scenarioPresetSource?.id === 'golden-demo' || activeScenarioPreset?.id === 'golden-demo';
+  const isGoldenDemoPath = scenarioPresetSource ?.id === 'golden-demo' || activeScenarioPreset ?.id === 'golden-demo';
   const hasGoldenDemoReportAccess = isGoldenDemoPath && isMeaningfulRunLoaded;
   const goldenDemoReport = useMemo(
     () =>
       hasGoldenDemoReportAccess
-        ? buildGoldenDemoReport({
+         ?  buildGoldenDemoReport({
             state: simulationState,
-            scenario: activeScenarioPreset ?? INITIAL_SCENARIO_PRESET
+            scenario: activeScenarioPreset  ??  INITIAL_SCENARIO_PRESET
           })
         : null,
     [activeScenarioPreset, hasGoldenDemoReportAccess, simulationState]
   );
-  const activeScenarioPresetMetadata = activeScenarioPreset ? scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
-  const hasScenarioSelection = Boolean(scenarioPresetSource ?? activeScenarioPresetMetadata ?? importedScenario);
+  const activeScenarioPresetMetadata = activeScenarioPreset  ?  scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
+  const hasScenarioSelection = Boolean(scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  importedScenario);
   const standardScenarioControlsDisabled = isExecutingScenario || !hasScenarioSelection;
   const scenarioPresetDisplay =
-    activeScenarioPreset ?? (scenarioPresetSource ? (getScenarioPreset(scenarioPresetSource.id as ScenarioPresetId) ?? null) : null);
+    activeScenarioPreset  ??  (scenarioPresetSource  ?  (getScenarioPreset(scenarioPresetSource.id as ScenarioPresetId)  ??  null) : null);
   const scenarioPresetSourceNote =
     scenarioPresetSource && (!activeScenarioPresetMetadata || scenarioPresetSource.id !== activeScenarioPresetMetadata.id)
-      ? scenarioPresetSource
+       ?  scenarioPresetSource
       : null;
-  const currentScenarioLabel = scenarioPresetDisplay?.label ?? scenarioPresetSource?.label ?? 'Custom / imported';
+  const currentScenarioLabel = scenarioPresetDisplay ?.label  ??  scenarioPresetSource ?.label  ??  'Custom / imported';
   const primaryWorkflowHelperCopy = useMemo(() => {
     if (!hasScenarioSelection) {
       return 'Select a scenario or import valid data to enable scenario inspection controls.';
@@ -2260,7 +2253,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       setDrilldownTargetsCollapsed(true);
       setPinnedTrayCollapsed(false);
       setShowDebug(false);
-      setGuidedPathId(presentationState.runState === 'meaningful-run' ? 'portfolio-reviewer' : 'run-start');
+      setGuidedPathId(presentationState.runState === 'meaningful-run'  ?  'portfolio-reviewer' : 'run-start');
       return;
     }
 
@@ -2276,11 +2269,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return advancePolicyTurn(state, currentTurnPolicy);
   };
   const timingTotalMs = useMemo(() => turnTimingLog.reduce((sum, row) => sum + row.durationMs, 0), [turnTimingLog]);
-  const timingAverageMs = turnTimingLog.length > 0 ? timingTotalMs / turnTimingLog.length : 0;
+  const timingAverageMs = turnTimingLog.length > 0  ?  timingTotalMs / turnTimingLog.length : 0;
   const slowestTimingRow = useMemo(
     () =>
       turnTimingLog.reduce<TurnTimingRow | null>(
-        (slowest, row) => (!slowest || row.durationMs > slowest.durationMs ? row : slowest),
+        (slowest, row) => (!slowest || row.durationMs > slowest.durationMs  ?  row : slowest),
         null
       ),
     [turnTimingLog]
@@ -2289,7 +2282,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const handleInspectTopRoute = () => {
     setDrawerState(
       selectedUser && selectedUserRecommendations[0]
-        ? {
+         ?  {
             type: 'recommendation',
             userId: selectedUser.id,
             islandId: selectedUserRecommendations[0].islandId
@@ -2315,45 +2308,45 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             subtitle="Current state and most recent turn output."
             collapsed={turnSummaryCollapsed}
             onToggleCollapsed={() => setTurnSummaryCollapsed((value) => !value)}
-            collapseLabel={turnSummaryCollapsed ? 'Expand Turn Summary' : 'Collapse Turn Summary'}
+            collapseLabel={turnSummaryCollapsed  ?  'Expand Turn Summary' : 'Collapse Turn Summary'}
           />
-          {!turnSummaryCollapsed ? <div className="metric-grid metric-grid--compact">
+          {!turnSummaryCollapsed  ?  <div className="metric-grid metric-grid--compact">
             <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
             <MetricCard
               label="Mode"
               value={
-                currentTurnSummary?.mode === 'guided'
-                  ? TURN_MODE_LABELS.guided
-                  : currentTurnSummary?.mode === 'mixed'
-                    ? TURN_MODE_LABELS.mixed
+                currentTurnSummary ?.mode === 'guided'
+                   ?  TURN_MODE_LABELS.guided
+                  : currentTurnSummary ?.mode === 'mixed'
+                     ?  TURN_MODE_LABELS.mixed
                     : TURN_MODE_LABELS.organic
               }
               helper="How the most recent turn created rating events."
             />
             <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
-            <MetricCard label="Ratings this turn" value={currentTurnSummary?.ratingsCreated ?? 0} />
-            <MetricCard label="Organic events this turn" value={currentTurnSummary?.organicRatingsCreated ?? 0} />
-            <MetricCard label="Guided events this turn" value={currentTurnSummary?.guidedRatingsCreated ?? 0} />
+            <MetricCard label="Ratings this turn" value={currentTurnSummary ?.ratingsCreated  ??  0} />
+            <MetricCard label="Organic events this turn" value={currentTurnSummary ?.organicRatingsCreated  ??  0} />
+            <MetricCard label="Guided events this turn" value={currentTurnSummary ?.guidedRatingsCreated  ??  0} />
             <MetricCard
               label="Participating users this turn"
-              value={currentTurnSummary?.participatingUserIds.length ?? 0}
+              value={currentTurnSummary ?.participatingUserIds.length  ??  0}
             />
-            <MetricCard label="New islands rated" value={currentTurnSummary?.newlyRatedIslandIds.length ?? 0} />
-            <MetricCard label="Safe fits routed" value={currentTurnSummary?.recommendationKinds.SAFE_FIT ?? 0} />
+            <MetricCard label="New islands rated" value={currentTurnSummary ?.newlyRatedIslandIds.length  ??  0} />
+            <MetricCard label="Safe fits routed" value={currentTurnSummary ?.recommendationKinds.SAFE_FIT  ??  0} />
             <MetricCard
               label="Discovery probes"
-              value={currentTurnSummary?.recommendationKinds.DISCOVERY_PROBE ?? 0}
+              value={currentTurnSummary ?.recommendationKinds.DISCOVERY_PROBE  ??  0}
             />
           </div> : null}
-          {!turnSummaryCollapsed ? <div className="summary-inline">
-            {(dataset.turnHistory.slice(-3) ?? []).map((turn) => (
+          {!turnSummaryCollapsed  ?  <div className="summary-inline">
+            {(dataset.turnHistory.slice(-3)  ??  []).map((turn) => (
               <Badge key={turn.turn} tone="neutral">
                 Turn {turn.turn}:{' '}
                 {turn.mode === 'guided'
-                  ? TURN_MODE_LABELS.guided
+                   ?  TURN_MODE_LABELS.guided
                   : turn.mode === 'mixed'
-                    ? TURN_MODE_LABELS.mixed
-                    : TURN_MODE_LABELS.organic} �{' '}
+                     ?  TURN_MODE_LABELS.mixed
+                    : TURN_MODE_LABELS.organic}  · {' '}
                 {turn.ratingsCreated} ratings
               </Badge>
             ))}
@@ -2391,7 +2384,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       title: 'Recovery',
       panels: [
         <Panel key="selected-user" id="selected-user-summary" title="Selected User Summary" className="panel--wide" collapsible>
-          {selectedUser && selectedInference ? selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
+          {selectedUser && selectedInference  ?  selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>,
         <HiddenCohortRecoveryPanel key="hidden-cohort-recovery" id="hidden-cohort-recovery" report={hiddenCohortRecoveryReport} />,
         <Panel key="reviewer-archetype" id="reviewer-archetype-recovery" title="Reviewer Archetype Recovery" className="panel--wide" collapsible defaultCollapsed>
@@ -2419,12 +2412,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           onToggleCollapsed={() => setSelectedIslandCollapsed((value) => !value)}
           onPinIsland={handlePinIsland}
           onChooseIsland={() => setModalKind('island')}
-          islandLabel={selectedIsland?.label ?? 'No island selected'}
+          islandLabel={selectedIsland ?.label  ??  'No island selected'}
           hasSelectedIsland={Boolean(selectedIsland)}
           summary={selectedIslandSummary}
         />,
         ...(isNoviceMode
-          ? []
+           ?  []
           : [
               <Panel key="model-explanation" id="model-explanation" title="Model Explanation" className="panel--wide" collapsible>
                 {modelExplanation}
@@ -2476,52 +2469,52 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     debug: {
       title: 'Debug',
       panels: showDebug
-        ? [
+         ?  [
             <Panel key="debug-data" id="debug-data" title="Debug Data" className="panel--wide" collapsible>
-              {selectedUser && selectedInference ? (
+              {selectedUser && selectedInference  ?  (
                 <div className="debug-grid">
                   <MetricCard
                     label="Hidden seed"
-                    value={selectedUser.hiddenSeedCohortId ? cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}
+                    value={selectedUser.hiddenSeedCohortId  ?  cohortLabels.full(selectedUser.hiddenSeedCohortId) : 'none'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
                     label="Hidden generator archetype"
-                    value={selectedUser.hiddenReviewerArchetype ? archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
+                    value={selectedUser.hiddenReviewerArchetype  ?  archetypeLabel(selectedUser.hiddenReviewerArchetype) : 'none'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
                     label="Hidden tag alignment"
-                    value={selectedUser.hiddenTagAlignment ?? 'n/a'}
+                    value={selectedUser.hiddenTagAlignment  ??  'n/a'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
                     label="Hidden behavior profile"
-                    value={selectedUser.hiddenBehaviorProfile ?? 'n/a'}
+                    value={selectedUser.hiddenBehaviorProfile  ??  'n/a'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
                     label="Hidden taste cohort"
-                    value={selectedUser.hiddenTasteCohortId ? cohortLabels.full(selectedUser.hiddenTasteCohortId) : 'none'}
+                    value={selectedUser.hiddenTasteCohortId  ?  cohortLabels.full(selectedUser.hiddenTasteCohortId) : 'none'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
                     label="Hidden taste kind"
-                    value={selectedUser.hiddenTasteCohortKind ?? 'n/a'}
+                    value={selectedUser.hiddenTasteCohortKind  ??  'n/a'}
                     helper="Debug and validation only."
                   />
                   <MetricCard
                     label="Hidden vs inferred"
                     value={
                       selectedUser.hiddenSeedCohortId === selectedInference.behaviorTop.cohortId
-                        ? 'Recovered hidden seed'
+                         ?  'Recovered hidden seed'
                         : 'Different visible fit'
                     }
                     helper="Hidden data is not a model input."
                   />
                   <MetricCard
                     label="Recovery status"
-                    value={selectedUserReviewerReport?.recoveryStatus ?? 'n/a'}
+                    value={selectedUserReviewerReport ?.recoveryStatus  ??  'n/a'}
                     helper="Debug checksum status for the selected user."
                   />
                 </div>
@@ -2538,24 +2531,24 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
   const pinnedDrilldownContent =
     pinnedDrilldownKind === 'user'
-      ? selectedUserDetail
+       ?  selectedUserDetail
       : pinnedDrilldownKind === 'island'
-        ? selectedIslandDetail
+         ?  selectedIslandDetail
         : pinnedDrilldownKind === 'cohort'
-          ? selectedCohortDetail
+           ?  selectedCohortDetail
           : null;
 
   const pinnedDrilldownTitle =
     pinnedDrilldownKind === 'user'
-      ? `Pinned user: ${selectedUser?.label ?? 'none'}`
+       ?  `Pinned user: ${selectedUser ?.label  ??  'none'}`
       : pinnedDrilldownKind === 'island'
-        ? `Pinned island: ${selectedIsland?.label ?? 'none'}`
+         ?  `Pinned island: ${selectedIsland ?.label  ??  'none'}`
       : pinnedDrilldownKind === 'cohort'
-        ? `Pinned cohort: ${selectedComparisonLabel}`
+         ?  `Pinned cohort: ${selectedComparisonLabel}`
         : 'Pinned reference';
 
-  const pinnedTraySpace = pinnedTrayCollapsed ? 92 : 456;
-  const instructionTraySpace = showInstructionTray ? (guidanceOpen ? 456 : 92) : 0;
+  const pinnedTraySpace = pinnedTrayCollapsed  ?  92 : 456;
+  const instructionTraySpace = showInstructionTray  ?  (guidanceOpen  ?  456 : 92) : 0;
 
   return (
     <main
@@ -2589,7 +2582,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           <div className="topbar__mode" role="group" aria-label="Guidance mode">
             <button
               type="button"
-              className={`segmented-button${guidanceMode === 'novice' ? ' segmented-button--active' : ''}`}
+              className={`segmented-button${guidanceMode === 'novice'  ?  ' segmented-button--active' : ''}`}
               aria-pressed={guidanceMode === 'novice'}
               onClick={() => setGuidanceMode('novice')}
             >
@@ -2597,7 +2590,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             </button>
             <button
               type="button"
-              className={`segmented-button${guidanceMode === 'expert' ? ' segmented-button--active' : ''}`}
+              className={`segmented-button${guidanceMode === 'expert'  ?  ' segmented-button--active' : ''}`}
               aria-pressed={guidanceMode === 'expert'}
               onClick={() => setGuidanceMode('expert')}
             >
@@ -2619,31 +2612,31 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <section
         id="primary-workflow"
-        className={`panel stage-panel${primaryWorkflowCollapsed ? ' stage-panel__sticky' : ''}`}
+        className={`panel stage-panel${primaryWorkflowCollapsed  ?  ' stage-panel__sticky' : ''}`}
         aria-label="Primary workflow"
       >
         <div className="stage-panel__lead">
           <div>
             <p className="eyebrow">Primary workflow</p>
-            {!primaryWorkflowCollapsed ? (
+            {!primaryWorkflowCollapsed  ?  (
               <h2>
                 {presentationState.runState === 'no-run'
-                  ? 'Choose a scenario or load a saved run.'
+                   ?  'Choose a scenario or load a saved run.'
                   : presentationState.runState === 'bootstrap-only'
-                    ? 'Loaded baseline only. Execute to inspect the proof path.'
+                     ?  'Loaded baseline only. Execute to inspect the proof path.'
                     : 'Inspect the current state, then advance one turn.'}
               </h2>
             ) : null}
-            {!primaryWorkflowCollapsed ? (
+            {!primaryWorkflowCollapsed  ?  (
               <p className="muted">
                 {presentationState.runState === 'no-run'
-                  ? 'Preset selection sets up the run, but a meaningful run only exists after execution or import.'
+                   ?  'Preset selection sets up the run, but a meaningful run only exists after execution or import.'
                   : presentationState.runState === 'bootstrap-only'
-                    ? 'This state is a baseline snapshot, not the review path.'
+                     ?  'This state is a baseline snapshot, not the review path.'
                     : 'Keep the portfolio demo centered on one analyst target, one routed surface, and one turn-step at a time.'}
               </p>
             ) : null}
-            {!primaryWorkflowCollapsed && showAnalysisDashboard ? (
+            {!primaryWorkflowCollapsed && showAnalysisDashboard  ?  (
               <p className="muted">For a concrete proof example, select an island and inspect Truth Alignment.</p>
             ) : null}
           </div>
@@ -2651,16 +2644,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             type="button"
             className="icon-button collapsible-panel__toggle"
             onClick={() => setPrimaryWorkflowCollapsed((value) => !value)}
-            aria-label={primaryWorkflowCollapsed ? 'Expand Primary workflow' : 'Collapse Primary workflow'}
+            aria-label={primaryWorkflowCollapsed  ?  'Expand Primary workflow' : 'Collapse Primary workflow'}
           >
             <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-              {primaryWorkflowCollapsed ? 'v' : '^'}
+              {primaryWorkflowCollapsed  ?  'v' : '^'}
             </span>
           </button>
         </div>
 
         <div className="stage-panel__workspace">
-          {!primaryWorkflowCollapsed ? (
+          {!primaryWorkflowCollapsed  ?  (
             <div className="stage-panel__workspace-main">
               <div className="control-strip__preset">
                 <div className="control-strip__preset-main">
@@ -2675,7 +2668,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                           />
                         </span>
                         <select
-                          value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
+                          value={scenarioPresetSource ?.id  ??  activeScenarioPreset ?.id  ??  'custom'}
                           onChange={(event) => {
                             const nextPresetId = event.target.value as ScenarioPresetId | 'custom';
                             if (nextPresetId !== 'custom') {
@@ -2696,8 +2689,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
                       <div className="control-strip__notes control-strip__notes--inline control-strip__notes--setup">
                         <p className="muted">{primaryWorkflowHelperCopy}</p>
-                        {scenarioMessage ? <p className="muted">{scenarioMessage}</p> : null}
-                        {scenarioError ? <p className="text-danger">{scenarioError}</p> : null}
+                        {scenarioMessage  ?  <p className="muted">{scenarioMessage}</p> : null}
+                        {scenarioError  ?  <p className="text-danger">{scenarioError}</p> : null}
                       </div>
                     </div>
 
@@ -2714,7 +2707,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                         Generate a fresh dataset from the selected setup, then run {turnsToRun} turns to the next inspection
                         state.
                       </p>
-                      {isExecutingScenario ? (
+                      {isExecutingScenario  ?  (
                         <ProgressBar value={executionProgress} label={executionStatus || 'Executing scenario'} tone="accent" />
                       ) : null}
                     </div>
@@ -2726,12 +2719,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                       </span>
                     </div>
                     <div className="control-strip__preset-copy">
-                      <p>{scenarioPresetDisplay?.goodFor ?? 'Custom / imported scenario with no named preset match.'}</p>
+                      <p>{scenarioPresetDisplay ?.goodFor  ??  'Custom / imported scenario with no named preset match.'}</p>
                       <p className="muted">
-                        {scenarioPresetDisplay?.description ??
+                        {scenarioPresetDisplay ?.description  ?? 
                           'This scenario has been edited away from a named preset, or it was imported as a custom case.'}
                       </p>
-                      {scenarioPresetSourceNote ? <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
+                      {scenarioPresetSourceNote  ?  <p className="muted">Based on: {scenarioPresetSourceNote.label}</p> : null}
                     </div>
                   </div>
                 </div>
@@ -2776,7 +2769,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                       Reset Simulation
                     </button>
                     <button type="button" className="button button--ghost" onClick={() => setShowDebug((value) => !value)} disabled={isExecutingScenario}>
-                      {showDebug ? 'Hide debug' : 'Show debug'}
+                      {showDebug  ?  'Hide debug' : 'Show debug'}
                     </button>
                   </div>
                 </div>
@@ -2792,7 +2785,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 onChange={handleScenarioFileChange}
               />
 
-              {!isNoviceMode ? (
+              {!isNoviceMode  ?  (
                 <div className="stage-panel__expert-controls">
                   <div className="section-heading section-heading--collapse-row">
                     <h3>Expert scenario tuning</h3>
@@ -2965,47 +2958,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               {openSelectionButton('island', 'Choose island', 'button button--ghost', standardScenarioControlsDisabled)}
             </div>
           </div>
-        </div><section className="inspection-shell" aria-label="Inspection / dashboard panels">
-        {showAnalysisDashboard ? (
-          <section className={`dashboard-shell dashboard-shell--${guidanceMode}`} aria-label="Analyst dashboard">
-          {visibleDashboardSections.map((sectionKey) => {
-            if (sectionKey === 'debug' && !showDebug) {
-              return null;
-            }
-
-            const section = dashboardSections[sectionKey];
-
-            return (
-              <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
-                {sectionKey !== 'routing' && sectionKey !== 'recovery' && sectionKey !== 'overview' ? (
-                <ModulePanelHeader
-                  eyebrow={section.title}
-                  title="Debug checksums"
-                  subtitle="Checksums, hidden metadata, and debug-only fields"
-                  collapsed={sectionKey === 'debug' && debugCollapsed}
-                  onToggleCollapsed={() => {
-                    if (sectionKey === 'debug') setDebugCollapsed((value) => !value);
-                  }}
-                  collapseLabel={
-                    sectionKey === 'debug' && debugCollapsed
-                      ? `Expand ${section.title}`
-                      : `Collapse ${section.title}`
-                  }
-                />
-                ) : null}
-                {sectionKey === 'routing' || sectionKey === 'recovery' || sectionKey === 'overview' ? (
-                  <div className="dashboard-section__panels">{section.panels}</div>
-                ) : !(sectionKey === 'debug' && debugCollapsed) ? (
-                  <div className="dashboard-section__panels">{section.panels}</div>
-                ) : null}
-              </section>
-            );
-          })}
-          </section>
-        ) : null}
-      </section>
+        </div>
       </div>
+
       </section>
+
+      <InspectionShell
+        showAnalysisDashboard={showAnalysisDashboard}
+        guidanceMode={guidanceMode}
+        visibleDashboardSections={visibleDashboardSections}
+        dashboardSections={dashboardSections}
+        showDebug={showDebug}
+        debugCollapsed={debugCollapsed}
+        onToggleDebugCollapsed={() => setDebugCollapsed((value) => !value)}
+      />
 
       <section className="top-stack" aria-label="Controls and drilldown">
         <CollapsiblePanel
@@ -3045,7 +3011,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 <h3>Participation settings</h3>
               </div>
               <div className="control-strip__fields control-strip__fields--dynamic">
-                {participationModel === 'fixed-count' ? (
+                {participationModel === 'fixed-count'  ?  (
                   <label className="control">
                     {labeledControl('Participating Users / Turn', 'Exactly this many users are selected to act when the turn advances.')}
                     <input
@@ -3073,13 +3039,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </div>
             </section>
 
-            {turnModeVisibility.showOrganic ? (
+            {turnModeVisibility.showOrganic  ?  (
               <section className="policy-subgroup">
                 <div className="section-heading">
                   <h3>Organic Exploration</h3>
                 </div>
                 <div className="control-strip__fields control-strip__fields--dynamic">
-                  {organicRatingCountModel === 'fixed-count' ? (
+                  {organicRatingCountModel === 'fixed-count'  ?  (
                     <label className="control">
                       {labeledControl('Organic Ratings / User', 'How many unrated islands each participating user rates during organic exploration.')}
                       <input
@@ -3107,13 +3073,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               </section>
             ) : null}
 
-            {turnModeVisibility.showGuided ? (
+            {turnModeVisibility.showGuided  ?  (
               <section className="policy-subgroup">
                 <div className="section-heading">
                   <h3>Guided Discovery</h3>
                 </div>
                 <div className="control-strip__fields control-strip__fields--dynamic">
-                  {guidedRatingCountModel === 'fixed-count' ? (
+                  {guidedRatingCountModel === 'fixed-count'  ?  (
                     <label className="control">
                       {labeledControl(
                         'Guided Recommendations / User',
@@ -3160,7 +3126,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                       </select>
                     </label>
                   </section>
-                  {routingRiskProfile === 'custom' ? (
+                  {routingRiskProfile === 'custom'  ?  (
                     <>
                       <label className="control">
                         {labeledControl(
@@ -3217,10 +3183,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </CollapsiblePanel>
       </section>
 
-      {showInstructionTray ? (
+      {showInstructionTray  ?  (
         <Tray
           collapsed={!guidanceOpen}
-          title={isNoviceMode ? 'Guided paths' : 'Curator notes'}
+          title={isNoviceMode  ?  'Guided paths' : 'Curator notes'}
           className="tray--instruction tray--left"
           side="left"
           style={{
@@ -3229,8 +3195,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             right: 'auto',
             height: 'calc(100vh - 36px)'
           }}
-          toggleCollapsedLabel={isNoviceMode ? 'Open guided paths' : 'Open curator notes'}
-          toggleExpandedLabel={isNoviceMode ? 'Collapse guided paths' : 'Collapse curator notes'}
+          toggleCollapsedLabel={isNoviceMode  ?  'Open guided paths' : 'Open curator notes'}
+          toggleExpandedLabel={isNoviceMode  ?  'Collapse guided paths' : 'Collapse curator notes'}
           onToggle={() => setGuidanceOpen((value) => !value)}
         >
           <div className="summary-header">
@@ -3247,21 +3213,23 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   type="button"
                   className="icon-button collapsible-panel__toggle"
                   onClick={() => setGuidedStoryCollapsed((value) => !value)}
-                  aria-label={guidedStoryCollapsed ? 'Expand Guided path overview' : 'Collapse Guided path overview'}
+                  aria-label={guidedStoryCollapsed  ?  'Expand Guided path overview' : 'Collapse Guided path overview'}
                 >
                   <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                    {guidedStoryCollapsed ? 'v' : '^'}
+                    {guidedStoryCollapsed  ?  'v' : '^'}
                   </span>
                 </button>
               </div>
-              {!guidedStoryCollapsed ? (
+              {!guidedStoryCollapsed  ?  (
                 <>
                   <h4>System framing</h4>
                   <p className="detail-block__title">{selectedGuidedPath.framing.system}</p>
                   <h4>Experience framing</h4>
                   <p className="detail-block__title">{selectedGuidedPath.framing.experience}</p>
                   <p className="muted">Recommended preset: {selectedGuidedPath.recommendedPreset}</p>
-                  <p className="muted">Recommended ordering: {DASHBOARD_ORDERING_LABELS[selectedGuidedPath.recommendedOrdering]}</p>
+                  {selectedGuidedPath.recommendedPath ? (
+                    <p className="muted">Recommended path: {selectedGuidedPath.recommendedPath}</p>
+                  ) : null}
                 </>
               ) : null}
             </section>
@@ -3275,21 +3243,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                   type="button"
                   className="icon-button collapsible-panel__toggle"
                   onClick={() => setGuidedProofCollapsed((value) => !value)}
-                  aria-label={guidedProofCollapsed ? 'Expand Path steps' : 'Collapse Path steps'}
+                  aria-label={guidedProofCollapsed  ?  'Expand Path steps' : 'Collapse Path steps'}
                 >
                   <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                    {guidedProofCollapsed ? 'v' : '^'}
+                    {guidedProofCollapsed  ?  'v' : '^'}
                   </span>
                 </button>
               </div>
-              {!guidedProofCollapsed ? <div className="detail-block__foldout-grid">
+              {!guidedProofCollapsed  ?  <div className="detail-block__foldout-grid">
                 <section className="detail-block detail-block--foldout-section">
                   <h4>Steps</h4>
                   <ol className="instruction-list">
                     {selectedGuidedPath.steps.map((step) => (
                       <li key={step.title}>
                         <strong>{step.title}:</strong> {step.instruction}
-                        {step.why ? <span className="muted"> {step.why}</span> : null}
+                        {step.why  ?  <span className="muted"> {step.why}</span> : null}
                       </li>
                     ))}
                   </ol>
@@ -3332,7 +3300,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         }}
         secondaryActionLabel="Clear pinned drilldown"
       >
-        {pinnedDrilldownContent ? (
+        {pinnedDrilldownContent  ?  (
           <section className="detail-block">
             <div className="section-heading section-heading--collapse-row">
               <h4>Pinned details</h4>
@@ -3340,14 +3308,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                 type="button"
                 className="icon-button collapsible-panel__toggle"
                 onClick={() => setPinnedDetailCollapsed((value) => !value)}
-                aria-label={pinnedDetailCollapsed ? 'Expand pinned details' : 'Collapse pinned details'}
+                aria-label={pinnedDetailCollapsed  ?  'Expand pinned details' : 'Collapse pinned details'}
               >
                 <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                  {pinnedDetailCollapsed ? 'v' : '^'}
+                  {pinnedDetailCollapsed  ?  'v' : '^'}
                 </span>
               </button>
             </div>
-            {!pinnedDetailCollapsed ? pinnedDrilldownContent : <p className="muted">Pinned drilldown is collapsed.</p>}
+            {!pinnedDetailCollapsed  ?  pinnedDrilldownContent : <p className="muted">Pinned drilldown is collapsed.</p>}
           </section>
         ) : (
           <EmptyState
@@ -3358,7 +3326,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </Tray>
 
       <Modal open={showTimingLog} title="Turn timing log" onClose={() => setShowTimingLog(false)}>
-        {turnTimingLog.length === 0 ? (
+        {turnTimingLog.length === 0  ?  (
           <EmptyState title="No turn timings recorded yet." description="Advance turns to capture per-turn wall-clock timings." />
         ) : (
           <div className="detail-stack">
@@ -3367,7 +3335,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
               <MetricCard label="Average ms/turn" value={`${timingAverageMs.toFixed(2)} ms`} />
               <MetricCard
                 label="Slowest turn"
-                value={slowestTimingRow ? `Turn ${slowestTimingRow.turn} (${slowestTimingRow.durationMs.toFixed(2)} ms)` : 'n/a'}
+                value={slowestTimingRow  ?  `Turn ${slowestTimingRow.turn} (${slowestTimingRow.durationMs.toFixed(2)} ms)` : 'n/a'}
               />
             </div>
             <div className="report-table-wrap">
@@ -3443,7 +3411,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         title="Select Pseudo-Cohort Report"
         searchPlaceholder="Search report rows"
         options={pseudoReportOptions}
-        selectedId={drawerState?.type === 'pseudo' ? drawerState.key : null}
+        selectedId={drawerState ?.type === 'pseudo'  ?  drawerState.key : null}
         onSelect={(id) => {
           setDrawerState({ type: 'pseudo', key: id });
           setModalKind(null);
@@ -3452,35 +3420,35 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       />
 
       <Drawer
-        open={drawerState?.type === 'user'}
-        title={drawerState?.type === 'user' ? `User detail: ${selectedUser?.label ?? drawerState.id}` : 'User detail'}
+        open={drawerState ?.type === 'user'}
+        title={drawerState ?.type === 'user'  ?  `User detail: ${selectedUser ?.label  ??  drawerState.id}` : 'User detail'}
         onClose={() => setDrawerState(null)}
       >
         {selectedUserDetail}
       </Drawer>
 
       <Drawer
-        open={drawerState?.type === 'island'}
-        title={drawerState?.type === 'island' ? `Island detail: ${selectedIsland?.label ?? drawerState.id}` : 'Island detail'}
+        open={drawerState ?.type === 'island'}
+        title={drawerState ?.type === 'island'  ?  `Island detail: ${selectedIsland ?.label  ??  drawerState.id}` : 'Island detail'}
         onClose={() => setDrawerState(null)}
       >
         {selectedIslandDetail}
       </Drawer>
 
       <Drawer
-        open={drawerState?.type === 'pseudo'}
-        title={drawerState?.type === 'pseudo' ? 'Pseudo-cohort detail' : 'Pseudo-cohort detail'}
+        open={drawerState ?.type === 'pseudo'}
+        title={drawerState ?.type === 'pseudo'  ?  'Pseudo-cohort detail' : 'Pseudo-cohort detail'}
         onClose={() => setDrawerState(null)}
       >
         {pseudoDrawerContent}
       </Drawer>
 
       <Drawer
-        open={drawerState?.type === 'recommendation'}
+        open={drawerState ?.type === 'recommendation'}
         title={
-          drawerState?.type === 'recommendation'
-            ? `Recommendation detail: ${
-                dataset.islands.find((island) => island.id === drawerState.islandId)?.label ?? drawerState.islandId
+          drawerState ?.type === 'recommendation'
+             ?  `Recommendation detail: ${
+                dataset.islands.find((island) => island.id === drawerState.islandId) ?.label  ??  drawerState.islandId
               }`
             : 'Recommendation detail'
         }
@@ -3490,11 +3458,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </Drawer>
 
       <Drawer
-        open={drawerState?.type === 'affinity'}
+        open={drawerState ?.type === 'affinity'}
         title={
-          drawerState?.type === 'affinity'
-            ? `Affinity detail: ${dataset.islands.find((island) => island.id === drawerState.islandId)?.label ?? drawerState.islandId} / ${
-                selectedAffinityCohort?.label ?? drawerState.cohortId
+          drawerState ?.type === 'affinity'
+             ?  `Affinity detail: ${dataset.islands.find((island) => island.id === drawerState.islandId) ?.label  ??  drawerState.islandId} / ${
+                selectedAffinityCohort ?.label  ??  drawerState.cohortId
               }`
             : 'Affinity detail'
         }
@@ -3504,24 +3472,24 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </Drawer>
 
       <Drawer
-        open={drawerState?.type === 'reviewer'}
-        title={drawerState?.type === 'reviewer' ? `Reviewer checksum: ${selectedReviewerReport?.label ?? drawerState.userId}` : 'Reviewer checksum'}
+        open={drawerState ?.type === 'reviewer'}
+        title={drawerState ?.type === 'reviewer'  ?  `Reviewer checksum: ${selectedReviewerReport ?.label  ??  drawerState.userId}` : 'Reviewer checksum'}
         onClose={() => setDrawerState(null)}
       >
         {reviewerDrawerContent}
       </Drawer>
 
       <Drawer
-        open={drawerState?.type === 'golden-demo-report'}
+        open={drawerState ?.type === 'golden-demo-report'}
         title="Current-state Golden Demo report"
         onClose={() => setDrawerState(null)}
       >
-        {goldenDemoReport ? (
+        {goldenDemoReport  ?  (
           <div className="detail-stack">
             <section className="detail-block">
               <h4>{goldenDemoReport.title}</h4>
               <p className="muted">
-                Current-state Golden Demo report � {goldenDemoReport.scenario.label} � seed {goldenDemoReport.scenario.seed}
+                Current-state Golden Demo report  ·  {goldenDemoReport.scenario.label}  ·  seed {goldenDemoReport.scenario.seed}
               </p>
             </section>
             <section className="detail-block">
@@ -3541,11 +3509,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
       <Suspense fallback={null}>
         <ReviewerArchetypeRecoveryModal
-        open={drawerState?.type === 'reviewer-recovery'}
+        open={drawerState ?.type === 'reviewer-recovery'}
         onClose={() => setDrawerState(null)}
         analysis={reviewerArchetypeAnalysis}
         cohortRows={reviewerCohortRows}
-        cohortLabel={(cohortId) => cohortLabels.full(cohortId ?? null)}
+        cohortLabel={(cohortId) => cohortLabels.full(cohortId  ??  null)}
         reviewerRecoveryTone={reviewerRecoveryTone}
         onOpenReviewer={(userId) => setDrawerState({ type: 'reviewer', userId })}
       />
@@ -3576,4 +3544,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
 
 
-import { type RecentActionState } from './ui/recentActionSummary';
+
+
+

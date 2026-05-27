@@ -33,6 +33,7 @@ export interface GuidedPath {
   title: string;
   recommendedPreset: ScenarioPresetId;
   recommendedOrdering: DashboardOrderingPreset;
+  recommendedPath?: string;
   framing: {
     system: string;
     experience: string;
@@ -62,6 +63,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     title: 'Run Start',
     recommendedPreset: 'golden-demo',
     recommendedOrdering: 'overview-first',
+    recommendedPath: 'Run context → Turn Summary / Recap → Recovery → Truth Alignment → Report',
     framing: {
       system: 'Start from a clean prompt to choose a scenario or load an existing run.',
       experience: 'Cold-load first-contact path for starting or importing a meaningful run.'
@@ -104,6 +106,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     title: 'Portfolio Reviewer',
     recommendedPreset: 'golden-demo',
     recommendedOrdering: 'recovery-first',
+    recommendedPath: 'Run context → Turn Summary / Recap → Recovery → Truth Alignment → Report',
     framing: {
       system: 'Show the proof path a reviewer needs after a meaningful run is loaded.',
       experience: 'Portfolio review flow centered on claim, run context, evidence, recovery, and report.'
@@ -111,7 +114,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     steps: [
       {
         title: 'Read the run context',
-        instruction: 'Open Scenario Setup / Run Context and confirm the active preset, seed, and turn policy.',
+        instruction: 'Open Run Context and confirm the active preset, seed, and turn policy.',
         targetModuleId: 'turn-summary',
         why: 'This anchors the loaded run before reading evidence.'
       },
@@ -152,6 +155,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     title: 'Navigation Tutorial',
     recommendedPreset: 'small-smoke-test',
     recommendedOrdering: 'overview-first',
+    recommendedPath: 'Run context → Turn Summary → Selected User → Selected Island',
     framing: {
       system: 'Teach a newcomer how to navigate the console on a simple stable frame.',
       experience: 'Hand-holding tutorial for learning the main surfaces and how they update.'
@@ -159,7 +163,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     steps: [
       {
         title: 'Start at setup',
-        instruction: 'Open Scenario Setup / Run Context and confirm the active scenario preset, seed, and turn policy.',
+        instruction: 'Open Run Context and confirm the active scenario preset, seed, and turn policy.',
         targetModuleId: 'system-health',
         why: 'This anchors the tutorial in the current run context before any interpretation.'
       },
@@ -218,6 +222,7 @@ export const GUIDED_PATHS: GuidedPath[] = [
     title: 'Analyst Workflow',
     recommendedPreset: 'golden-demo',
     recommendedOrdering: 'recovery-first',
+    recommendedPath: 'Run context → Turn Summary / Recap → Recovery → Routing → Debug',
     framing: {
       system: 'Expose the app surfaces used for deeper analysis and evidence review.',
       experience: 'Analyst deep-dive for understanding why the current read holds or breaks.'
