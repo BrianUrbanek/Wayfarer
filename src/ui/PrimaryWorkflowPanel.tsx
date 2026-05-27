@@ -1,10 +1,11 @@
-import type { ChangeEvent, ReactNode, RefObject } from 'react';
+import type { ChangeEvent, RefObject } from 'react';
 import { Badge } from './components/Badge';
 import { InfoTip } from './components/InfoTip';
 import { ProgressBar } from './components/ProgressBar';
 import type { ScenarioPresetMetadata } from '../model/scenarioPresets';
 import { PARTICIPATION_MODEL_LABELS, RATING_COUNT_MODEL_LABELS, ROUTING_RISK_PROFILE_LABELS, TURN_MODE_LABELS, type ParticipationModel, type RatingCountModel, type RoutingRiskProfile, type TurnMode } from '../model/turnPolicy';
 import type { ScenarioPresetId, ScenarioPreset } from '../model/scenarioPresets';
+import { ExpertScenarioTuning, type ExpertScenarioTuningProps } from './ExpertScenarioTuning';
 
 type ScenarioPresetOption = {
   id: ScenarioPresetId;
@@ -48,7 +49,8 @@ interface PrimaryWorkflowPanelProps {
   standardScenarioControlsDisabled: boolean;
   scenarioFileInputRef: RefObject<HTMLInputElement>;
   onScenarioFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  expertScenarioTuning?: ReactNode;
+  showExpertScenarioTuning: boolean;
+  expertScenarioTuningProps: ExpertScenarioTuningProps;
   onChooseUser: () => void;
   onChooseIsland: () => void;
   canOpenGoldenDemoReport: boolean;
@@ -91,7 +93,8 @@ export function PrimaryWorkflowPanel({
   standardScenarioControlsDisabled,
   scenarioFileInputRef,
   onScenarioFileChange,
-  expertScenarioTuning,
+  showExpertScenarioTuning,
+  expertScenarioTuningProps,
   onChooseUser,
   onChooseIsland,
   canOpenGoldenDemoReport
@@ -154,13 +157,13 @@ export function PrimaryWorkflowPanel({
                           text="These scenarios are defined in src/data/scenario-catalog.json. Edit that JSON to change the named presets."
                         />
                       </span>
-                      <select
-                        value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
-                        onChange={(event) => onScenarioPresetChange(event.target.value as ScenarioPresetId | 'custom')}
-                        >
-                          <option value="custom" disabled>
-                            Custom / imported
-                          </option>
+                    <select
+                      value={scenarioPresetSource?.id ?? activeScenarioPreset?.id ?? 'custom'}
+                      onChange={(event) => onScenarioPresetChange(event.target.value as ScenarioPresetId | 'custom')}
+                    >
+                      <option value="custom" disabled>
+                        Custom / imported
+                      </option>
                         {scenarioPresetOptions.map((preset) => (
                           <option key={preset.id} value={preset.id}>
                             {preset.label}
@@ -258,7 +261,7 @@ export function PrimaryWorkflowPanel({
               onChange={onScenarioFileChange}
             />
 
-            {expertScenarioTuning ?? null}
+            {showExpertScenarioTuning ? <ExpertScenarioTuning {...expertScenarioTuningProps} /> : null}
           </div>
         ) : null}
 

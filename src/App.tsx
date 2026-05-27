@@ -39,7 +39,6 @@ import { getGuidedPath, GUIDED_PATHS, type DashboardPanelGroupKey, type Guidance
 import {
   DEFAULT_TURN_POLICY,
   getTurnModeVisibility,
-  PARTICIPATION_MODEL_LABELS,
   RATING_COUNT_MODEL_LABELS,
   ROUTING_RISK_PROFILE_LABELS,
   resolveRoutingRiskProfileValues,
@@ -2650,141 +2649,29 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         standardScenarioControlsDisabled={standardScenarioControlsDisabled}
         scenarioFileInputRef={scenarioFileInputRef}
         onScenarioFileChange={handleScenarioFileChange}
-        expertScenarioTuning={
-          !isNoviceMode ? (
-            <div className="stage-panel__expert-controls">
-              <div className="section-heading section-heading--collapse-row">
-                <h3>Expert scenario tuning</h3>
-              </div>
-              <div className="stack">
-                <div className="control-strip__fields">
-                  <label className="control">
-                    {labeledControl('Seed', 'Controls the reproducible random number stream for the generated world and turns.')}
-                    <input type="number" value={seed} onChange={(event) => setSeed(Number(event.target.value))} min={0} step={1} />
-                  </label>
-                  <label className="control">
-                    {labeledControl('Users', 'How many synthetic users the generator creates.')}
-                    <input
-                      type="number"
-                      value={numUsers}
-                      onChange={(event) => setNumUsers(Number(event.target.value))}
-                      min={1}
-                      max={400}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl('Islands', 'How many synthetic islands exist in the generated world.')}
-                    <input
-                      type="number"
-                      value={numIslands}
-                      onChange={(event) => setNumIslands(Number(event.target.value))}
-                      min={4}
-                      max={96}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Bootstrap Ratings / User',
-                      'Initial sparse rating events created at Turn 0. These are evidence, not signal.'
-                    )}
-                    <input
-                      type="number"
-                      value={bootstrapRatingsPerUser}
-                      onChange={(event) => setBootstrapRatingsPerUser(Number(event.target.value))}
-                      min={1}
-                      max={12}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Tag Alignment (Legacy)',
-                      'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
-                    )}
-                    <select
-                      value={JSON.stringify(tagAlignmentDistribution)}
-                      onChange={(event) => setTagAlignmentDistribution(JSON.parse(event.target.value) as typeof tagAlignmentDistribution)}
-                      aria-label="Tag Alignment Legacy Metadata"
-                    >
-                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
-                    </select>
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Rating Alignment (Legacy)',
-                      'Deprecated: no longer mutates reviewer archetype generation. Kept only for legacy scenario metadata compatibility.'
-                    )}
-                    <select
-                      value={JSON.stringify(ratingAlignmentDistribution)}
-                      onChange={(event) => setRatingAlignmentDistribution(JSON.parse(event.target.value) as typeof ratingAlignmentDistribution)}
-                      aria-label="Rating Alignment Legacy Metadata"
-                    >
-                      <option value={JSON.stringify({ kind: 'uniform', min: 2, max: 10 })}>Uniform 2-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 6, max: 10 })}>Uniform 6-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 8, max: 10 })}>Uniform 8-10</option>
-                      <option value={JSON.stringify({ kind: 'uniform', min: 0, max: 5 })}>Uniform 0-5</option>
-                    </select>
-                  </label>
-                  <p className="muted">
-                    Reviewer archetype profile alignment is authoritative. Legacy alignment controls are metadata-only and do not alter generated user behavior.
-                  </p>
-                  <label className="control">
-                    {labeledControl('Turn Mode', 'Choose Organic Exploration, Guided Discovery, or Mixed. This stays visible in setup.')}
-                    <select value={turnMode} onChange={(event) => setTurnMode(event.target.value as TurnMode)}>
-                      {Object.entries(TURN_MODE_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Participation Model',
-                      'Choose whether the turn uses a fixed number of participating users or a chance-per-user rule.'
-                    )}
-                    <select value={participationModel} onChange={(event) => setParticipationModel(event.target.value as ParticipationModel)}>
-                      {Object.entries(PARTICIPATION_MODEL_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="control">
-                    {labeledControl('Turns to Run', 'How many turns are advanced when you click Take X Turns.')}
-                    <input
-                      type="number"
-                      value={turnsToRun}
-                      onChange={(event) => setTurnsToRun(Number(event.target.value))}
-                      min={1}
-                      max={20}
-                      step={1}
-                    />
-                  </label>
-                  <label className="control">
-                    {labeledControl(
-                      'Seed on execute',
-                      'Choose whether Execute Scenario uses a fresh random seed or the current seed value.'
-                    )}
-                    <select
-                      value={executionSeedMode}
-                      onChange={(event) => setExecutionSeedMode(event.target.value as ScenarioExecutionSeedMode)}
-                    >
-                      <option value="random">Fresh random seed</option>
-                      <option value="fixed">Current seed</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-            </div>
-          ) : null
-        }
+        showExpertScenarioTuning={!isNoviceMode}
+        expertScenarioTuningProps={{
+          seed,
+          onSeedChange: setSeed,
+          numUsers,
+          onNumUsersChange: setNumUsers,
+          numIslands,
+          onNumIslandsChange: setNumIslands,
+          bootstrapRatingsPerUser,
+          onBootstrapRatingsPerUserChange: setBootstrapRatingsPerUser,
+          tagAlignmentDistribution,
+          onTagAlignmentDistributionChange: setTagAlignmentDistribution,
+          ratingAlignmentDistribution,
+          onRatingAlignmentDistributionChange: setRatingAlignmentDistribution,
+          turnMode,
+          onTurnModeChange: setTurnMode,
+          participationModel,
+          onParticipationModelChange: setParticipationModel,
+          turnsToRun,
+          onTurnsToRunChange: setTurnsToRun,
+          executionSeedMode,
+          onExecutionSeedModeChange: setExecutionSeedMode
+        }}
         onChooseUser={() => setModalKind('user')}
         onChooseIsland={() => setModalKind('island')}
         canOpenGoldenDemoReport={Boolean(goldenDemoReport)}
