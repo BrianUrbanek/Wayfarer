@@ -1064,6 +1064,11 @@ select {
   font-size: 0.88rem;
 }
 
+.guided-path-step__focus--primary {
+  border-color: rgba(141, 164, 255, 0.28);
+  background: rgba(141, 164, 255, 0.08);
+}
+
 .guided-path-step__focus svg {
   width: 12px;
   height: 12px;

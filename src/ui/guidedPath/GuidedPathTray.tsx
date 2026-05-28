@@ -79,7 +79,6 @@ export function GuidedPathTray({ collapsed, onToggleCollapsed, path, controller,
                     <button type="button" className="guided-path-step__summary" onClick={() => controller.select(step.id)} aria-current={isActive ? 'step' : undefined}>
                       <div className="guided-path-step__summary-copy">
                         <strong>{step.title}</strong>
-                        {isActive ? <span className="muted">{step.body}</span> : null}
                       </div>
                       <span className="guided-path-step__summary-meta muted">
                         <span>{isActive ? 'Active' : isCompleted ? 'Completed' : 'Upcoming'}</span>
@@ -94,7 +93,7 @@ export function GuidedPathTray({ collapsed, onToggleCollapsed, path, controller,
                           {step.targetId ? (
                             <button
                               type="button"
-                              className="button button--ghost guided-path-step__focus"
+                              className="button button--ghost guided-path-step__focus guided-path-step__focus--primary"
                               onClick={() => void onShowTarget(step.targetId!)}
                             >
                               <FocusGlyph />
