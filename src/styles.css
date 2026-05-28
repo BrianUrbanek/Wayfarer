@@ -954,19 +954,44 @@ select {
   padding: 12px;
   display: grid;
   gap: 10px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
 .guided-path-step--active {
-  border-color: rgba(103, 215, 199, 0.5);
-  box-shadow: 0 0 0 1px rgba(103, 215, 199, 0.14), 0 12px 24px rgba(6, 12, 24, 0.18);
+  border-color: rgba(141, 164, 255, 0.42);
+  background: rgba(141, 164, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(141, 164, 255, 0.14),
+    0 10px 20px rgba(6, 12, 24, 0.16);
+  transform: translateY(-1px);
 }
 
 .guided-path-step--completed {
-  border-color: rgba(115, 226, 167, 0.22);
+  border-color: rgba(115, 226, 167, 0.2);
+  background: rgba(115, 226, 167, 0.03);
+  opacity: 0.97;
 }
 
 .guided-path-step--upcoming {
-  opacity: 0.92;
+  opacity: 0.88;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.guided-path-step--active .badge {
+  box-shadow: 0 0 0 1px rgba(141, 164, 255, 0.18);
+}
+
+.guided-path-step--completed .badge {
+  background: rgba(115, 226, 167, 0.08);
+}
+
+.guided-path-step--upcoming .badge {
+  opacity: 0.8;
 }
 
 .guided-path-step__header {
@@ -1041,14 +1066,18 @@ select {
 }
 
 .guided-target--active {
-  border-color: rgba(103, 215, 199, 0.55) !important;
+  outline: 1px solid rgba(141, 164, 255, 0.65);
+  outline-offset: 3px;
   box-shadow:
-    0 0 0 1px rgba(103, 215, 199, 0.2),
-    0 0 0 6px rgba(103, 215, 199, 0.08),
-    0 18px 34px rgba(6, 12, 24, 0.2);
+    0 0 0 1px rgba(141, 164, 255, 0.14),
+    0 0 0 7px rgba(141, 164, 255, 0.08),
+    0 0 28px rgba(141, 164, 255, 0.18),
+    0 18px 34px rgba(6, 12, 24, 0.18);
   transition:
+    outline-color 180ms ease,
+    outline-offset 180ms ease,
     box-shadow 180ms ease,
-    border-color 180ms ease;
+    transform 180ms ease;
 }
 
 .dashboard-section--overview {
