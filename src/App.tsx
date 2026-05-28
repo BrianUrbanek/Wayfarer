@@ -463,7 +463,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   });
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
   const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
-  const turnSummaryTargetRef = useRef<HTMLElement | null>(null);
+  const turnSummaryTargetRef = useRef<HTMLElement>(null);
+  const turnRecapTargetRef = useRef<HTMLDivElement>(null);
+  const primaryWorkflowTargetRef = useRef<HTMLElement>(null);
+  const executeScenarioTargetRef = useRef<HTMLButtonElement>(null);
+  const demoReportTargetRef = useRef<HTMLButtonElement>(null);
+  const selectedUserSummaryTargetRef = useRef<HTMLElement>(null);
+  const hiddenCohortRecoveryTargetRef = useRef<HTMLDivElement>(null);
+  const selectedIslandTargetRef = useRef<HTMLElement>(null);
+  const selectedIslandTruthTargetRef = useRef<HTMLDivElement>(null);
+  const discoveryRoutingTargetRef = useRef<HTMLElement>(null);
   const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
   const [discoveryRoutingCollapsed, setDiscoveryRoutingCollapsed] = useState(true);
   const [selectedIslandCollapsed, setSelectedIslandCollapsed] = useState(false);
@@ -1369,7 +1378,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <p>User: {formatRating(selectedComparisonUserRating)}</p>
         <p>Cohort: {formatRating(selectedComparisonCohortRating)}</p>
       </section>
-      {selectedIslandTruthComparison  ?  <SelectedIslandTruthComparison report={selectedIslandTruthComparison} /> : null}
+      {selectedIslandTruthComparison  ?  <SelectedIslandTruthComparison report={selectedIslandTruthComparison} panelRef={selectedIslandTruthTargetRef} /> : null}
       <section className="detail-block">
         <h4>Cohort affinity</h4>
         <ReportTable
@@ -2259,6 +2268,86 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   }, [registerGuidedTarget, turnSummaryTargetRef]);
 
   useEffect(() => {
+    const unregisterPrimaryWorkflowTarget = registerGuidedTarget('primary-workflow', {
+      elementRef: primaryWorkflowTargetRef,
+      expand: () => setPrimaryWorkflowCollapsed(false)
+    });
+
+    return unregisterPrimaryWorkflowTarget;
+  }, [registerGuidedTarget, primaryWorkflowTargetRef]);
+
+  useEffect(() => {
+    const unregisterExecuteScenarioTarget = registerGuidedTarget('execute-scenario', {
+      elementRef: executeScenarioTargetRef,
+      expand: () => setPrimaryWorkflowCollapsed(false)
+    });
+
+    return unregisterExecuteScenarioTarget;
+  }, [registerGuidedTarget, executeScenarioTargetRef]);
+
+  useEffect(() => {
+    const unregisterTurnRecapTarget = registerGuidedTarget('turn-recap', {
+      elementRef: turnRecapTargetRef
+    });
+
+    return unregisterTurnRecapTarget;
+  }, [registerGuidedTarget, turnRecapTargetRef]);
+
+  useEffect(() => {
+    const unregisterSelectedUserSummaryTarget = registerGuidedTarget('selected-user-summary', {
+      elementRef: selectedUserSummaryTargetRef
+    });
+
+    return unregisterSelectedUserSummaryTarget;
+  }, [registerGuidedTarget, selectedUserSummaryTargetRef]);
+
+  useEffect(() => {
+    const unregisterHiddenCohortRecoveryTarget = registerGuidedTarget('hidden-cohort-recovery', {
+      elementRef: hiddenCohortRecoveryTargetRef
+    });
+
+    return unregisterHiddenCohortRecoveryTarget;
+  }, [registerGuidedTarget, hiddenCohortRecoveryTargetRef]);
+
+  useEffect(() => {
+    const unregisterSelectedIslandTarget = registerGuidedTarget('selected-island', {
+      elementRef: selectedIslandTargetRef,
+      expand: () => setSelectedIslandCollapsed(false)
+    });
+
+    return unregisterSelectedIslandTarget;
+  }, [registerGuidedTarget, selectedIslandTargetRef]);
+
+  useEffect(() => {
+    const unregisterSelectedIslandTruthTarget = registerGuidedTarget('selected-island-truth', {
+      elementRef: selectedIslandTruthTargetRef,
+      expand: () => setSelectedIslandCollapsed(false)
+    });
+
+    return unregisterSelectedIslandTruthTarget;
+  }, [registerGuidedTarget, selectedIslandTruthTargetRef]);
+
+  useEffect(() => {
+    const unregisterDiscoveryRoutingTarget = registerGuidedTarget('discovery-routing', {
+      elementRef: discoveryRoutingTargetRef,
+      expand: () => setDiscoveryRoutingCollapsed(false)
+    });
+
+    return unregisterDiscoveryRoutingTarget;
+  }, [registerGuidedTarget, discoveryRoutingTargetRef]);
+
+  useEffect(() => {
+    const unregisterDemoReportTarget = registerGuidedTarget('demo-report', {
+      elementRef: demoReportTargetRef,
+      expand: () => {
+        setDrawerState({ type: 'golden-demo-report' });
+      }
+    });
+
+    return unregisterDemoReportTarget;
+  }, [registerGuidedTarget, demoReportTargetRef]);
+
+  useEffect(() => {
     if (guidanceMode === 'novice') {
       setGuidanceOpen(true);
       setDynamicSettingsCollapsed(true);
@@ -2371,7 +2460,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             ))}
           </div> : null}
         </Panel>,
-        <TurnRecapPanel key="turn-recap" id="turn-recap" report={turnRecapReport} />,
+        <TurnRecapPanel key="turn-recap" panelRef={turnRecapTargetRef} id="turn-recap" report={turnRecapReport} />,
         <Panel key="population-summary" id="population-summary" title="Population Summary" className="panel--full" collapsible defaultCollapsed>
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
@@ -2399,13 +2488,20 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <ConfidenceGrowthPanel key="confidence-growth" rows={confidenceGrowthRows} collapsed />
       ]
     },
-    recovery: {
+      recovery: {
       title: 'Recovery',
       panels: [
-        <Panel key="selected-user" id="selected-user-summary" title="Selected User Summary" className="panel--wide" collapsible>
+        <Panel
+          key="selected-user"
+          ref={selectedUserSummaryTargetRef}
+          id="selected-user-summary"
+          title="Selected User Summary"
+          className="panel--wide"
+          collapsible
+        >
           {selectedUser && selectedInference  ?  selectedUserSummary : <EmptyState title="No user selected" description="Open the user picker to inspect an individual user." />}
         </Panel>,
-        <HiddenCohortRecoveryPanel key="hidden-cohort-recovery" id="hidden-cohort-recovery" report={hiddenCohortRecoveryReport} />,
+        <HiddenCohortRecoveryPanel key="hidden-cohort-recovery" panelRef={hiddenCohortRecoveryTargetRef} id="hidden-cohort-recovery" report={hiddenCohortRecoveryReport} />,
         <Panel key="reviewer-archetype" id="reviewer-archetype-recovery" title="Reviewer Archetype Recovery" className="panel--wide" collapsible defaultCollapsed>
           {reviewerArchetypeSummary}
         </Panel>
@@ -2416,6 +2512,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       panels: [
         <DiscoveryRoutingPanel
           key="discovery-routing"
+          panelRef={discoveryRoutingTargetRef}
           id="discovery-routing"
           collapsed={discoveryRoutingCollapsed}
           onToggleCollapsed={() => setDiscoveryRoutingCollapsed((value) => !value)}
@@ -2426,6 +2523,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         />,
         <SelectedIslandPanel
           key="selected-island"
+          panelRef={selectedIslandTargetRef}
           id="selected-island"
           collapsed={selectedIslandCollapsed}
           onToggleCollapsed={() => setSelectedIslandCollapsed((value) => !value)}
@@ -2630,6 +2728,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
 
       <PrimaryWorkflowPanel
+        panelRef={primaryWorkflowTargetRef}
+        executeScenarioRef={executeScenarioTargetRef}
+        demoReportRef={demoReportTargetRef}
         collapsed={primaryWorkflowCollapsed}
         onToggleCollapsed={() => setPrimaryWorkflowCollapsed((value) => !value)}
         runState={presentationState.runState}

@@ -1,4 +1,4 @@
-import type { ChangeEvent, RefObject } from 'react';
+import { type ChangeEvent, type RefObject } from 'react';
 import { Badge } from './components/Badge';
 import { InfoTip } from './components/InfoTip';
 import { ProgressBar } from './components/ProgressBar';
@@ -13,6 +13,9 @@ type ScenarioPresetOption = {
 };
 
 interface PrimaryWorkflowPanelProps {
+  panelRef?: RefObject<HTMLElement>;
+  executeScenarioRef?: RefObject<HTMLButtonElement>;
+  demoReportRef?: RefObject<HTMLButtonElement>;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   runState: 'no-run' | 'bootstrap-only' | 'meaningful-run';
@@ -57,6 +60,9 @@ interface PrimaryWorkflowPanelProps {
 }
 
 export function PrimaryWorkflowPanel({
+  panelRef,
+  executeScenarioRef,
+  demoReportRef,
   collapsed,
   onToggleCollapsed,
   runState,
@@ -101,6 +107,7 @@ export function PrimaryWorkflowPanel({
 }: PrimaryWorkflowPanelProps) {
   return (
     <section
+      ref={panelRef}
       id="primary-workflow"
       className={`panel stage-panel${collapsed ? ' stage-panel__sticky' : ''}`}
       aria-label="Primary workflow"
@@ -180,7 +187,13 @@ export function PrimaryWorkflowPanel({
                   </div>
 
                   <div className="stage-panel__utility-block stage-panel__utility-block--execute stage-panel__utility-block--compact">
-                    <button type="button" className="button button--primary" onClick={onExecuteScenario} disabled={isExecutingScenario}>
+                    <button
+                      ref={executeScenarioRef}
+                      type="button"
+                      className="button button--primary"
+                      onClick={onExecuteScenario}
+                      disabled={isExecutingScenario}
+                    >
                       Execute Scenario
                     </button>
                     <p className="muted">
@@ -238,7 +251,13 @@ export function PrimaryWorkflowPanel({
                   </span>
                 </div>
                 <div className="control-strip__action-group control-strip__action-group--compact">
-                  <button type="button" className="button button--ghost" onClick={onOpenGoldenDemoReport} disabled={!canOpenGoldenDemoReport}>
+                  <button
+                    ref={demoReportRef}
+                    type="button"
+                    className="button button--ghost"
+                    onClick={onOpenGoldenDemoReport}
+                    disabled={!canOpenGoldenDemoReport}
+                  >
                     Demo report
                   </button>
                   <button type="button" className="button button--quiet" onClick={onResetSimulation} disabled={isExecutingScenario}>

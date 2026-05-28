@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { EmptyState } from '../components/EmptyState';
 import { ModulePanelHeader } from '../components/ModulePanelHeader';
 import { Panel } from '../components/Panel';
 
 interface DiscoveryRoutingPanelProps {
   id?: string;
+  panelRef?: RefObject<HTMLElement>;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onInspectTopRoute: () => void;
@@ -15,6 +16,7 @@ interface DiscoveryRoutingPanelProps {
 
 export function DiscoveryRoutingPanel({
   id,
+  panelRef,
   collapsed,
   onToggleCollapsed,
   onInspectTopRoute,
@@ -23,7 +25,7 @@ export function DiscoveryRoutingPanel({
   summary
 }: DiscoveryRoutingPanelProps) {
   return (
-    <Panel id={id} title="Discovery Routing" className="panel--wide" hideTitle>
+    <Panel ref={panelRef} id={id} title="Discovery Routing" className="panel--wide" hideTitle>
       <ModulePanelHeader
         eyebrow="Routing"
         title="Recommended unrated islands"

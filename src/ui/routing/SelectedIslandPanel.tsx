@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { EmptyState } from '../components/EmptyState';
 import { ModulePanelHeader } from '../components/ModulePanelHeader';
 import { Panel } from '../components/Panel';
 
 interface SelectedIslandPanelProps {
   id?: string;
+  panelRef?: RefObject<HTMLElement>;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onPinIsland: () => void;
@@ -16,6 +17,7 @@ interface SelectedIslandPanelProps {
 
 export function SelectedIslandPanel({
   id,
+  panelRef,
   collapsed,
   onToggleCollapsed,
   onPinIsland,
@@ -25,7 +27,7 @@ export function SelectedIslandPanel({
   summary
 }: SelectedIslandPanelProps) {
   return (
-    <Panel id={id} title="Selected Island" className="panel--wide" hideTitle>
+    <Panel ref={panelRef} id={id} title="Selected Island" className="panel--wide" hideTitle>
       <ModulePanelHeader
         eyebrow="Island comparison"
         title={islandLabel}

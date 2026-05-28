@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import { Badge } from '../components/Badge';
 import { EmptyState } from '../components/EmptyState';
 import { MetricCard } from '../components/MetricCard';
@@ -13,6 +13,7 @@ import type {
 interface HiddenCohortRecoveryPanelProps {
   report: HiddenCohortRecoveryReport;
   id?: string;
+  panelRef?: RefObject<HTMLDivElement>;
 }
 
 interface HiddenCohortRecoveryModalProps {
@@ -202,11 +203,11 @@ export function HiddenCohortRecoveryModal({ open, onClose, report }: HiddenCohor
   );
 }
 
-export function HiddenCohortRecoveryPanel({ report, id }: HiddenCohortRecoveryPanelProps) {
+export function HiddenCohortRecoveryPanel({ report, id, panelRef }: HiddenCohortRecoveryPanelProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div id={id} className="card hidden-cohort-recovery">
+    <div ref={panelRef} id={id} className="card hidden-cohort-recovery">
       <div className="card__title-row hidden-cohort-recovery__title-row">
         <strong>Hidden Cohort Recovery</strong>
         <Badge tone={report.statusTone}>{report.statusLabel}</Badge>

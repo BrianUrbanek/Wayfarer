@@ -951,7 +951,7 @@ select {
   border: 1px solid rgba(141, 164, 255, 0.14);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.025);
-  padding: 12px;
+  padding: 10px 12px;
   display: grid;
   gap: 10px;
   transition:
@@ -965,10 +965,7 @@ select {
 .guided-path-step--active {
   border-color: rgba(141, 164, 255, 0.42);
   background: rgba(141, 164, 255, 0.06);
-  box-shadow:
-    0 0 0 1px rgba(141, 164, 255, 0.14),
-    0 10px 20px rgba(6, 12, 24, 0.16);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(141, 164, 255, 0.12);
 }
 
 .guided-path-step--completed {
@@ -1002,22 +999,92 @@ select {
   flex-wrap: wrap;
 }
 
-.guided-path-step__title-group {
+.guided-path-step__summary {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 
-.guided-path-step__action {
+.guided-path-step__summary-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.guided-path-step__summary-copy strong {
+  line-height: 1.25;
+}
+
+.guided-path-step__summary-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   flex-shrink: 0;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
-.guided-path__controls {
+.guided-path-step__summary-meta .badge {
+  padding: 0.22rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.guided-path-step__content {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.guided-path-step__content > p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.guided-path-step__footer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.guided-path-step__focus {
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 28px;
+  font-size: 0.88rem;
+}
+
+.guided-path-step__focus svg {
+  width: 12px;
+  height: 12px;
+}
+
+.guided-path-step__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.guided-path-step__controls .button {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 0.88rem;
+}
+
+.guided-path-details__content {
+  display: grid;
+  gap: 8px;
 }
 
 .instruction-list {

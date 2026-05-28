@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import { Badge } from '../components/Badge';
 import { EmptyState } from '../components/EmptyState';
 import { MetricCard } from '../components/MetricCard';
@@ -13,6 +13,7 @@ import type {
 interface TurnRecapPanelProps {
   report: TurnRecapReport;
   id?: string;
+  panelRef?: RefObject<HTMLDivElement>;
 }
 
 function formatSigned(value: number | null | undefined, digits = 3): string {
@@ -267,11 +268,11 @@ export function TurnRecapModal({ report, open, onClose }: { report: TurnRecapRep
   );
 }
 
-export function TurnRecapPanel({ report, id }: TurnRecapPanelProps) {
+export function TurnRecapPanel({ report, id, panelRef }: TurnRecapPanelProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div id={id} className="card turn-recap">
+    <div ref={panelRef} id={id} className="card turn-recap">
       <div className="card__title-row turn-recap__title-row">
         <strong>Turn Recap</strong>
         <Badge tone={report.statusTone}>{report.statusLabel}</Badge>

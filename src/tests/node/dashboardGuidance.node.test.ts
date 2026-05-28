@@ -40,11 +40,13 @@ describe('dashboard guidance data', () => {
       assert.ok(path.maintenanceNote);
     }
 
-    assert.ok(allText.includes('choose user'));
-    assert.ok(allText.includes('choose island'));
-    assert.ok(allText.includes('pin island'));
-    assert.ok(allText.includes('inspect top route'));
-    assert.ok(allText.includes('start or import a run'));
+    assert.ok(allText.includes('choose scenario'));
+    assert.ok(allText.includes('execute or import'));
+    assert.ok(allText.includes('turn recap'));
+    assert.ok(allText.includes('hidden cohort recovery'));
+    assert.ok(allText.includes('truth alignment'));
+    assert.ok(allText.includes('discovery routing'));
+    assert.ok(allText.includes('demo report'));
     assert.ok(allText.includes('portfolio review'));
     assert.ok(allText.includes('data fitness'));
     assert.ok(allText.includes('turn summary'));
@@ -55,6 +57,12 @@ describe('dashboard guidance data', () => {
     assert.ok(!allText.includes('recommended ordering'));
     assert.ok(!allText.includes('debug first ordering'));
 
+    assert.equal(GUIDED_TARGET_IDS.includes('primary-workflow'), true);
+    assert.equal(GUIDED_TARGET_IDS.includes('execute-scenario'), true);
+    assert.equal(GUIDED_TARGET_IDS.includes('turn-recap'), true);
+    assert.equal(GUIDED_TARGET_IDS.includes('hidden-cohort-recovery'), true);
+    assert.equal(GUIDED_TARGET_IDS.includes('selected-island-truth'), true);
+    assert.equal(GUIDED_TARGET_IDS.includes('demo-report'), true);
     assert.equal(GUIDED_TARGET_IDS.includes('turn-summary'), true);
     assert.equal(isGuidedTargetId('turn-summary'), true);
     assert.equal(isGuidedTargetId('made-up-target'), false);

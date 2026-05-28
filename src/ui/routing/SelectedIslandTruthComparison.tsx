@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import { Badge } from '../components/Badge';
 import { EmptyState } from '../components/EmptyState';
 import { MetricCard } from '../components/MetricCard';
@@ -8,6 +8,7 @@ import type { IslandTruthComparisonReport } from '../../model/islandTruthCompari
 
 interface SelectedIslandTruthComparisonProps {
   report: IslandTruthComparisonReport;
+  panelRef?: RefObject<HTMLDivElement>;
 }
 
 interface SelectedIslandTruthComparisonModalProps {
@@ -135,7 +136,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
   );
 }
 
-export function SelectedIslandTruthComparison({ report }: SelectedIslandTruthComparisonProps) {
+export function SelectedIslandTruthComparison({ report, panelRef }: SelectedIslandTruthComparisonProps) {
   const [open, setOpen] = useState(false);
   const headlineEstimate = report.headlineEstimate;
   const headlineValue = headlineEstimate ? headlineEstimate.cohortLabel : 'n/a';
@@ -144,7 +145,7 @@ export function SelectedIslandTruthComparison({ report }: SelectedIslandTruthCom
     : 'No learned estimate yet.';
 
   return (
-    <div className="card island-truth-comparison">
+    <div ref={panelRef} className="card island-truth-comparison">
       <div className="card__title-row island-truth-comparison__title-row">
         <strong>Truth Alignment</strong>
         <Badge tone={report.statusTone}>{report.statusLabel}</Badge>

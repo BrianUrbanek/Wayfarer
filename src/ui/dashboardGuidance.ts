@@ -11,45 +11,32 @@ export const GUIDED_PATHS: GuidedPath[] = [
     id: 'run-start',
     title: 'Run Start',
     recommendedPreset: 'golden-demo',
-    recommendedPath: 'Run context -> Turn Summary / Recap -> Recovery -> Truth Alignment -> Report',
+    recommendedPath: 'Golden Demo -> Execute Scenario or import -> Proof path -> Report',
     framing: {
-      system: 'Start from a clean prompt to choose a scenario or load an existing run.',
-      experience: 'Cold-load first-contact path for starting or importing a meaningful run.'
+      system: 'Begin from a clean load and establish the Golden Demo or a saved run before you inspect evidence.',
+      experience: 'Cold-load coaching path that turns a setup into a meaningful run.'
     },
     steps: [
       {
         id: 'run-start-choose-scenario',
-        title: 'Choose a scenario',
-        body: 'Use Scenario preset to select Golden Demo or another setup before you inspect anything else.',
-        targetId: 'turn-summary',
-        why: 'Preset selection sets up the run, but it does not mean a meaningful run has been loaded yet.'
+        title: 'Choose scenario / confirm Golden Demo',
+        body: 'Use the Scenario preset picker to confirm Golden Demo or another starting setup.',
+        targetId: 'primary-workflow',
+        why: 'Preset choice sets the frame, but it is not yet a loaded run.'
       },
       {
         id: 'run-start-execute-or-import',
         title: 'Execute or import',
-        body: 'Execute Scenario to generate a run, or Import JSON to load a saved run blob.',
-        targetId: 'turn-summary',
-        why: 'A run becomes interpretable only after it has real turn history or an imported saved state.'
-      },
-      {
-        id: 'run-start-read-proof-path',
-        title: 'Read the first proof path',
-        body: 'Once a meaningful run is loaded, read Turn Summary, Turn Recap, Hidden Cohort Recovery, and Selected Island / Truth Alignment in that order.',
-        targetId: 'turn-summary',
-        why: 'This is the portfolio-reviewer path after the run exists.'
-      },
-      {
-        id: 'run-start-open-report',
-        title: 'Open the report',
-        body: 'Open demo report only after a meaningful Golden Demo run exists.',
-        targetId: 'turn-summary',
-        why: 'The report is a readout artifact, not a start-state control.'
+        body: 'Execute Scenario to generate the run, or import a saved run blob if you already have one.',
+        targetId: 'execute-scenario',
+        actionLabel: 'Focus execute',
+        why: 'The run becomes real only after execution or import.'
       }
     ],
     successCriteria: [
-      'The viewer can start or import a run without seeing analysis warnings.',
-      'The viewer can tell that preset selection is not the same as a loaded run.',
-      'The first proof path appears only after a meaningful run exists.'
+      'The viewer can confirm the Golden Demo or another scenario from the start state.',
+      'The viewer can execute or import without reading analysis surfaces too early.',
+      'The run stays clearly separate from the preset frame.'
     ],
     maintenanceNote: 'Keep this path aligned to cold-load novice behavior and the start/import contract.'
   },
@@ -57,51 +44,65 @@ export const GUIDED_PATHS: GuidedPath[] = [
     id: 'portfolio-reviewer',
     title: 'Portfolio Reviewer',
     recommendedPreset: 'golden-demo',
-    recommendedPath: 'Run context -> Turn Summary / Recap -> Recovery -> Truth Alignment -> Report',
+    recommendedPath: 'Turn Summary -> Turn Recap -> Recovery -> Truth Alignment -> Routing -> Report',
     framing: {
-      system: 'Show the proof path a reviewer needs after a meaningful run is loaded.',
-      experience: 'Portfolio review flow centered on claim, run context, evidence, recovery, and report.'
+      system: 'Show the proof path once a meaningful run is loaded.',
+      experience: 'Reviewer flow centered on evidence, recovery, routing, and report.'
     },
     steps: [
       {
-        id: 'portfolio-reviewer-read-run-context',
-        title: 'Read the run context',
-        body: 'Open Run Context and confirm the active preset, seed, and turn policy.',
+        id: 'portfolio-reviewer-turn-summary',
+        title: 'Confirm the run',
+        body: 'Open Turn Summary and then Turn Recap to confirm the loaded run and the latest turn delta.',
         targetId: 'turn-summary',
-        why: 'This anchors the loaded run before reading evidence.'
+        why: 'These are the fastest proof surfaces for the loaded run.'
       },
       {
-        id: 'portfolio-reviewer-read-what-changed',
-        title: 'Read what changed',
-        body: 'Open Turn Summary and Turn Recap to see the current state and the turn-level delta.',
-        targetId: 'turn-summary',
-        why: 'These are the fastest summary cards for the loaded run.'
+        id: 'portfolio-reviewer-turn-recap',
+        title: 'Inspect Turn Recap',
+        body: 'Use Turn Recap to read the turn-level movers and the meaningful delta story.',
+        targetId: 'turn-recap',
+        why: 'The recap tells you which movers mattered in the latest turn.'
       },
       {
-        id: 'portfolio-reviewer-inspect-recovery',
-        title: 'Inspect recovery',
-        body: 'Open Hidden Cohort Recovery to read the seeded, unseeded, and noisy recovery story.',
-        targetId: 'selected-island',
-        why: 'Recovery is the key claim surface for the Golden Demo path.'
+        id: 'portfolio-reviewer-selected-user',
+        title: 'Inspect Selected User Summary',
+        body: 'Open Selected User Summary to review the selected user signal and diagnosis.',
+        targetId: 'selected-user-summary',
+        why: 'This is the primary per-user evidence surface.'
       },
       {
-        id: 'portfolio-reviewer-inspect-proof',
-        title: 'Inspect proof',
-        body: 'Select an island and inspect Truth Alignment to compare hidden truth with the learned estimate.',
-        targetId: 'selected-island',
-        why: 'This is the concrete proof path behind the summary cards.'
+        id: 'portfolio-reviewer-hidden-recovery',
+        title: 'Inspect Hidden Cohort Recovery',
+        body: 'Open Hidden Cohort Recovery to see how seeded, unseeded, and noisy reads recover.',
+        targetId: 'hidden-cohort-recovery',
+        why: 'Recovery is a key Golden Demo proof surface.'
+      },
+      {
+        id: 'portfolio-reviewer-selected-island',
+        title: 'Inspect Selected Island / Truth Alignment',
+        body: 'Open Selected Island and Truth Alignment to compare the visible read with hidden truth.',
+        targetId: 'selected-island-truth',
+        why: 'Truth alignment is the concrete island-level proof path.'
+      },
+      {
+        id: 'portfolio-reviewer-discovery-routing',
+        title: 'Use Discovery Routing',
+        body: 'Open Discovery Routing to read the next-action output for the selected user.',
+        targetId: 'discovery-routing',
+        why: 'Routing is the next-action surface that closes the evidence loop.'
       },
       {
         id: 'portfolio-reviewer-open-report',
-        title: 'Open the report',
-        body: 'Open demo report for a presentation-ready readout of the current Golden Demo state.',
-        targetId: 'turn-summary',
-        why: 'The report is the reviewer-friendly artifact once a meaningful run exists.'
+        title: 'Open Demo Report',
+        body: 'Open Demo Report for the stakeholder readout once the path evidence is clear.',
+        targetId: 'demo-report',
+        why: 'The report is the presentation-ready artifact at the end of the path.'
       }
     ],
     successCriteria: [
       'The viewer can understand the claim without opening every detail panel.',
-      'The proof path stays centered on turn summary, recovery, truth alignment, and report.',
+      'The proof path stays centered on summary, recap, recovery, truth alignment, routing, and report.',
       'Technical detail remains available but secondary.'
     ],
     maintenanceNote: 'Keep this path aligned to the novice proof path after a meaningful run loads.'
