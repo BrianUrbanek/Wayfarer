@@ -25,6 +25,8 @@ import './hiddenTasteGeneration.node.test.js';
 import './islandCohortRating.node.test.js';
 import './confidenceGrowth.node.test.js';
 import './presentationState.node.test.js';
+import './guidedPathController.node.test.js';
+import './guidedTargetRegistry.node.test.js';
 import './goldenDemoReport.node.test.js';
 import './glossary.node.test.js';
 import './deprioritization.node.test.js';

@@ -1,44 +1,10 @@
-import type { ScenarioPresetId } from '../model/scenarioPresets.js';
+import type { GuidedPath } from './guidedPath/guidedPathTypes.js';
 
 export type GuidanceMode = 'novice' | 'expert';
 
 export type DashboardPanelGroupKey = 'overview' | 'recovery' | 'routing' | 'debug';
 
 export type GuidedPathId = 'run-start' | 'portfolio-reviewer' | 'navigation-tutorial' | 'analyst-workflow';
-
-export type DashboardModuleId =
-  | 'turn-summary'
-  | 'population-summary'
-  | 'system-health'
-  | 'selected-user-summary'
-  | 'reviewer-archetype-recovery'
-  | 'discovery-routing'
-  | 'selected-island'
-  | 'model-explanation'
-  | 'island-comparison'
-  | 'pseudo-cohort-reports'
-  | 'debug-data';
-
-export interface GuidedStep {
-  title: string;
-  instruction: string;
-  targetModuleId?: DashboardModuleId;
-  why?: string;
-}
-
-export interface GuidedPath {
-  id: GuidedPathId;
-  title: string;
-  recommendedPreset: ScenarioPresetId;
-  recommendedPath?: string;
-  framing: {
-    system: string;
-    experience: string;
-  };
-  steps: GuidedStep[];
-  successCriteria: string[];
-  maintenanceNote: string;
-}
 
 export const GUIDED_PATHS: GuidedPath[] = [
   {
@@ -52,27 +18,31 @@ export const GUIDED_PATHS: GuidedPath[] = [
     },
     steps: [
       {
+        id: 'run-start-choose-scenario',
         title: 'Choose a scenario',
-        instruction: 'Use Scenario preset to select Golden Demo or another setup before you inspect anything else.',
-        targetModuleId: 'turn-summary',
+        body: 'Use Scenario preset to select Golden Demo or another setup before you inspect anything else.',
+        targetId: 'turn-summary',
         why: 'Preset selection sets up the run, but it does not mean a meaningful run has been loaded yet.'
       },
       {
+        id: 'run-start-execute-or-import',
         title: 'Execute or import',
-        instruction: 'Execute Scenario to generate a run, or Import JSON to load a saved run blob.',
-        targetModuleId: 'turn-summary',
+        body: 'Execute Scenario to generate a run, or Import JSON to load a saved run blob.',
+        targetId: 'turn-summary',
         why: 'A run becomes interpretable only after it has real turn history or an imported saved state.'
       },
       {
+        id: 'run-start-read-proof-path',
         title: 'Read the first proof path',
-        instruction: 'Once a meaningful run is loaded, read Turn Summary, Turn Recap, Hidden Cohort Recovery, and Selected Island / Truth Alignment in that order.',
-        targetModuleId: 'turn-summary',
+        body: 'Once a meaningful run is loaded, read Turn Summary, Turn Recap, Hidden Cohort Recovery, and Selected Island / Truth Alignment in that order.',
+        targetId: 'turn-summary',
         why: 'This is the portfolio-reviewer path after the run exists.'
       },
       {
+        id: 'run-start-open-report',
         title: 'Open the report',
-        instruction: 'Open demo report only after a meaningful Golden Demo run exists.',
-        targetModuleId: 'turn-summary',
+        body: 'Open demo report only after a meaningful Golden Demo run exists.',
+        targetId: 'turn-summary',
         why: 'The report is a readout artifact, not a start-state control.'
       }
     ],
@@ -94,33 +64,38 @@ export const GUIDED_PATHS: GuidedPath[] = [
     },
     steps: [
       {
+        id: 'portfolio-reviewer-read-run-context',
         title: 'Read the run context',
-        instruction: 'Open Run Context and confirm the active preset, seed, and turn policy.',
-        targetModuleId: 'turn-summary',
+        body: 'Open Run Context and confirm the active preset, seed, and turn policy.',
+        targetId: 'turn-summary',
         why: 'This anchors the loaded run before reading evidence.'
       },
       {
+        id: 'portfolio-reviewer-read-what-changed',
         title: 'Read what changed',
-        instruction: 'Open Turn Summary and Turn Recap to see the current state and the turn-level delta.',
-        targetModuleId: 'turn-summary',
+        body: 'Open Turn Summary and Turn Recap to see the current state and the turn-level delta.',
+        targetId: 'turn-summary',
         why: 'These are the fastest summary cards for the loaded run.'
       },
       {
+        id: 'portfolio-reviewer-inspect-recovery',
         title: 'Inspect recovery',
-        instruction: 'Open Hidden Cohort Recovery to read the seeded, unseeded, and noisy recovery story.',
-        targetModuleId: 'selected-island',
+        body: 'Open Hidden Cohort Recovery to read the seeded, unseeded, and noisy recovery story.',
+        targetId: 'selected-island',
         why: 'Recovery is the key claim surface for the Golden Demo path.'
       },
       {
+        id: 'portfolio-reviewer-inspect-proof',
         title: 'Inspect proof',
-        instruction: 'Select an island and inspect Truth Alignment to compare hidden truth with the learned estimate.',
-        targetModuleId: 'selected-island',
+        body: 'Select an island and inspect Truth Alignment to compare hidden truth with the learned estimate.',
+        targetId: 'selected-island',
         why: 'This is the concrete proof path behind the summary cards.'
       },
       {
+        id: 'portfolio-reviewer-open-report',
         title: 'Open the report',
-        instruction: 'Open demo report for a presentation-ready readout of the current Golden Demo state.',
-        targetModuleId: 'turn-summary',
+        body: 'Open demo report for a presentation-ready readout of the current Golden Demo state.',
+        targetId: 'turn-summary',
         why: 'The report is the reviewer-friendly artifact once a meaningful run exists.'
       }
     ],
@@ -142,51 +117,59 @@ export const GUIDED_PATHS: GuidedPath[] = [
     },
     steps: [
       {
+        id: 'navigation-start-at-setup',
         title: 'Start at setup',
-        instruction: 'Open Run Context and confirm the active scenario preset, seed, and turn policy.',
-        targetModuleId: 'system-health',
+        body: 'Open Run Context and confirm the active scenario preset, seed, and turn policy.',
+        targetId: 'system-health',
         why: 'This anchors the tutorial in the current run context before any interpretation.'
       },
       {
+        id: 'navigation-read-fitness-gate',
         title: 'Read the fitness gate',
-        instruction: 'Review Data Fitness to see whether the current dataset is ready to interpret.',
-        targetModuleId: 'system-health',
+        body: 'Review Data Fitness to see whether the current dataset is ready to interpret.',
+        targetId: 'system-health',
         why: 'Data Fitness tells you when the frame is stable enough to trust.'
       },
       {
+        id: 'navigation-check-current-turn',
         title: 'Check the current turn',
-        instruction: 'Open Turn Summary and note the current action, participants, and routed activity.',
-        targetModuleId: 'turn-summary',
+        body: 'Open Turn Summary and note the current action, participants, and routed activity.',
+        targetId: 'turn-summary',
         why: 'The turn summary explains what just happened and what changed.'
       },
       {
+        id: 'navigation-choose-user',
         title: 'Choose a user',
-        instruction: 'Use Choose user to pick one reviewer and then read Selected User Summary.',
-        targetModuleId: 'selected-user-summary',
+        body: 'Use Choose user to pick one reviewer and then read Selected User Summary.',
+        targetId: 'selected-user-summary',
         why: 'A single user is the easiest entry point for the tutorial.'
       },
       {
+        id: 'navigation-choose-island',
         title: 'Choose an island',
-        instruction: 'Use Choose island to pin a candidate island, then inspect Selected Island.',
-        targetModuleId: 'selected-island',
+        body: 'Use Choose island to pin a candidate island, then inspect Selected Island.',
+        targetId: 'selected-island',
         why: 'This shows how island-level evidence is presented in the app.'
       },
       {
+        id: 'navigation-pin-island',
         title: 'Pin the island',
-        instruction: 'Use Pin island so the chosen island stays in view while you compare modules.',
-        targetModuleId: 'selected-island',
+        body: 'Use Pin island so the chosen island stays in view while you compare modules.',
+        targetId: 'selected-island',
         why: 'Pinning helps newcomers keep their place while reading multiple panels.'
       },
       {
+        id: 'navigation-advance-reread',
         title: 'Advance and reread',
-        instruction: 'Advance one turn, then reread Data Fitness, Turn Summary, Selected User Summary, and Selected Island to see what changed.',
-        targetModuleId: 'turn-summary',
+        body: 'Advance one turn, then reread Data Fitness, Turn Summary, Selected User Summary, and Selected Island to see what changed.',
+        targetId: 'turn-summary',
         why: "Repeating the same read after a turn teaches the app's update loop."
       },
       {
+        id: 'navigation-optional-formulas',
         title: 'Optional formulas',
-        instruction: 'Open FormulaTips only when you want the calculation details behind a result.',
-        targetModuleId: 'model-explanation',
+        body: 'Open FormulaTips only when you want the calculation details behind a result.',
+        targetId: 'model-explanation',
         why: 'FormulaTips are optional affordances, not the primary path.'
       }
     ],
@@ -208,57 +191,66 @@ export const GUIDED_PATHS: GuidedPath[] = [
     },
     steps: [
       {
+        id: 'analyst-read-fitness-first',
         title: 'Read fitness first',
-        instruction: 'Check Data Fitness before interpreting any other module.',
-        targetModuleId: 'system-health',
+        body: 'Check Data Fitness before interpreting any other module.',
+        targetId: 'system-health',
         why: 'The analyst workflow always starts by confirming the data is interpretable.'
       },
       {
+        id: 'analyst-review-latest-action',
         title: 'Review the latest action',
-        instruction: 'Use Turn Summary / Recent Action to understand the most recent update.',
-        targetModuleId: 'turn-summary',
+        body: 'Use Turn Summary / Recent Action to understand the most recent update.',
+        targetId: 'turn-summary',
         why: 'Recent Action explains whether the current turn strengthened or weakened evidence.'
       },
       {
+        id: 'analyst-inspect-user-summary',
         title: 'Inspect the user summary',
-        instruction: 'Open Selected User Summary and compare declared tags vs observed behavior, target agreement vs cohort separability, and the rater signal profile.',
-        targetModuleId: 'selected-user-summary',
+        body: 'Open Selected User Summary and compare declared tags vs observed behavior, target agreement vs cohort separability, and the rater signal profile.',
+        targetId: 'selected-user-summary',
         why: 'This is the core analyst read for a single user.'
       },
       {
+        id: 'analyst-use-formulas',
         title: 'Use formula details as needed',
-        instruction: 'Open FormulaTips only when you need calculation transparency for the user summary.',
-        targetModuleId: 'model-explanation',
+        body: 'Open FormulaTips only when you need calculation transparency for the user summary.',
+        targetId: 'model-explanation',
         why: 'The formulas support the analysis, but should not replace the main read.'
       },
       {
+        id: 'analyst-read-island-evidence',
         title: 'Read the island evidence',
-        instruction: 'Inspect Selected Island for audience fit, cohort comparison, affinity evidence, and weighted ratings.',
-        targetModuleId: 'selected-island',
+        body: 'Inspect Selected Island for audience fit, cohort comparison, affinity evidence, and weighted ratings.',
+        targetId: 'selected-island',
         why: 'Island-level evidence shows how the recommendation surface is being justified.'
       },
       {
+        id: 'analyst-check-routing',
         title: 'Check routing',
-        instruction: 'Use Discovery Routing and Recommended unrated islands, then inspect top route when a recommendation exists.',
-        targetModuleId: 'discovery-routing',
+        body: 'Use Discovery Routing and Recommended unrated islands, then inspect top route when a recommendation exists.',
+        targetId: 'discovery-routing',
         why: 'Routing is the analyst-facing path to the next likely probe.'
       },
       {
+        id: 'analyst-audit-recovery',
         title: 'Audit recovery',
-        instruction: 'Open Reviewer Archetype Recovery as an audit step, not the primary read path.',
-        targetModuleId: 'reviewer-archetype-recovery',
+        body: 'Open Reviewer Archetype Recovery as an audit step, not the primary read path.',
+        targetId: 'reviewer-archetype-recovery',
         why: 'Recovery is useful for validation, but should not replace the main analysis surfaces.'
       },
       {
+        id: 'analyst-validate-only-when-needed',
         title: 'Validate only when needed',
-        instruction: 'Use Debug only for hidden checksum or generator validation.',
-        targetModuleId: 'debug-data',
+        body: 'Use Debug only for hidden checksum or generator validation.',
+        targetId: 'debug-data',
         why: 'Debug belongs at the end of the workflow, not the beginning.'
       },
       {
+        id: 'analyst-advance-and-compare',
         title: 'Advance and compare',
-        instruction: 'Advance a turn and check whether the new evidence strengthens, separates, or contradicts the previous read.',
-        targetModuleId: 'turn-summary',
+        body: 'Advance a turn and check whether the new evidence strengthens, separates, or contradicts the previous read.',
+        targetId: 'turn-summary',
         why: "The analyst workflow closes by testing whether the model's story holds after new evidence arrives."
       }
     ],

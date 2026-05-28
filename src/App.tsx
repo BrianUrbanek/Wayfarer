@@ -60,6 +60,9 @@ import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { InspectionShell } from './ui/InspectionShell';
 import { type RecentActionState } from './ui/recentActionSummary';
+import { GuidedPathTray } from './ui/guidedPath/GuidedPathTray';
+import { useGuidedPathController } from './ui/guidedPath/useGuidedPathController';
+import { useGuidedTargetRegistry } from './ui/guidedPath/useGuidedTargetRegistry';
 import { DEFAULT_TAGS } from './data/defaultTags';
 import { createDefaultCohorts } from './data/defaultCohorts';
 import { generateColumbusDataset } from './generator/columbusGenerator';
@@ -460,8 +463,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   });
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
   const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
-  const [guidedStoryCollapsed, setGuidedStoryCollapsed] = useState(false);
-  const [guidedProofCollapsed, setGuidedProofCollapsed] = useState(false);
+  const turnSummaryTargetRef = useRef<HTMLElement | null>(null);
   const [pinnedDetailCollapsed, setPinnedDetailCollapsed] = useState(false);
   const [discoveryRoutingCollapsed, setDiscoveryRoutingCollapsed] = useState(true);
   const [selectedIslandCollapsed, setSelectedIslandCollapsed] = useState(false);
@@ -2243,6 +2245,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     return `${currentScenarioLabel} is selected. You can inspect or advance the generated setup; execute the scenario to unlock the portfolio proof path and demo report.`;
   }, [currentScenarioLabel, hasScenarioSelection, presentationState.runState]);
   const selectedGuidedPath = useMemo(() => getGuidedPath(guidedPathId), [guidedPathId]);
+  const guidedPathController = useGuidedPathController(selectedGuidedPath.steps);
+  const guidedTargetRegistry = useGuidedTargetRegistry();
+  const { activeTargetId: guidedActiveTargetId, registerTarget: registerGuidedTarget, showTarget: showGuidedTarget } = guidedTargetRegistry;
+
+  useEffect(() => {
+    const unregisterTurnSummaryTarget = registerGuidedTarget('turn-summary', {
+      elementRef: turnSummaryTargetRef,
+      expand: () => setTurnSummaryCollapsed(false)
+    });
+
+    return unregisterTurnSummaryTarget;
+  }, [registerGuidedTarget, turnSummaryTargetRef]);
 
   useEffect(() => {
     if (guidanceMode === 'novice') {
@@ -2300,7 +2314,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     overview: {
       title: 'Overview',
       panels: [
-        <Panel key="turn-summary" id="turn-summary" title="Turn Summary" className="panel--full" hideTitle>
+        <Panel
+          key="turn-summary"
+          ref={turnSummaryTargetRef}
+          id="turn-summary"
+          title="Turn Summary"
+          className={`panel--full${guidedActiveTargetId === 'turn-summary' ? ' guided-target--active' : ''}`}
+          hideTitle
+        >
           <ModulePanelHeader
             title="Turn Summary"
             subtitle="Current state and most recent turn output."
@@ -2897,101 +2918,15 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         </CollapsiblePanel>
       </section>
 
-      {showInstructionTray  ?  (
-        <Tray
+      {showInstructionTray ? (
+        <GuidedPathTray
           collapsed={!guidanceOpen}
-          title={isNoviceMode  ?  'Guided paths' : 'Curator notes'}
-          className="tray--instruction tray--left"
-          side="left"
-          style={{
-            top: '18px',
-            left: '18px',
-            right: 'auto',
-            height: 'calc(100vh - 36px)'
-          }}
-          toggleCollapsedLabel={isNoviceMode  ?  'Open guided paths' : 'Open curator notes'}
-          toggleExpandedLabel={isNoviceMode  ?  'Collapse guided paths' : 'Collapse curator notes'}
-          onToggle={() => setGuidanceOpen((value) => !value)}
-        >
-          <div className="summary-header">
-            <div>
-              <p className="eyebrow">Guided path</p>
-              <h3>{selectedGuidedPath.title}</h3>
-            </div>
-          </div>
-          <div className="instruction-grid">
-            <section className="detail-block">
-              <div className="section-heading section-heading--collapse-row">
-                <h4>Guided path overview</h4>
-                <button
-                  type="button"
-                  className="icon-button collapsible-panel__toggle"
-                  onClick={() => setGuidedStoryCollapsed((value) => !value)}
-                  aria-label={guidedStoryCollapsed  ?  'Expand Guided path overview' : 'Collapse Guided path overview'}
-                >
-                  <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                    {guidedStoryCollapsed  ?  'v' : '^'}
-                  </span>
-                </button>
-              </div>
-              {!guidedStoryCollapsed  ?  (
-                <>
-                  <h4>System framing</h4>
-                  <p className="detail-block__title">{selectedGuidedPath.framing.system}</p>
-                  <h4>Experience framing</h4>
-                  <p className="detail-block__title">{selectedGuidedPath.framing.experience}</p>
-                  <p className="muted">Recommended preset: {selectedGuidedPath.recommendedPreset}</p>
-                  {selectedGuidedPath.recommendedPath ? (
-                    <p className="muted">Recommended path: {selectedGuidedPath.recommendedPath}</p>
-                  ) : null}
-                </>
-              ) : null}
-            </section>
-            <section className="detail-block detail-block--foldout">
-              <div className="detail-block__summary detail-block__summary--row">
-                <div>
-                  <span>Path steps</span>
-                  <span className="muted">Steps, success criteria, and maintenance notes.</span>
-                </div>
-                <button
-                  type="button"
-                  className="icon-button collapsible-panel__toggle"
-                  onClick={() => setGuidedProofCollapsed((value) => !value)}
-                  aria-label={guidedProofCollapsed  ?  'Expand Path steps' : 'Collapse Path steps'}
-                >
-                  <span className="collapsible-panel__toggle-icon" aria-hidden="true">
-                    {guidedProofCollapsed  ?  'v' : '^'}
-                  </span>
-                </button>
-              </div>
-              {!guidedProofCollapsed  ?  <div className="detail-block__foldout-grid">
-                <section className="detail-block detail-block--foldout-section">
-                  <h4>Steps</h4>
-                  <ol className="instruction-list">
-                    {selectedGuidedPath.steps.map((step) => (
-                      <li key={step.title}>
-                        <strong>{step.title}:</strong> {step.instruction}
-                        {step.why  ?  <span className="muted"> {step.why}</span> : null}
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-                <section className="detail-block detail-block--foldout-section">
-                  <h4>Success criteria</h4>
-                  <ul className="diagnosis-list">
-                    {selectedGuidedPath.successCriteria.map((criterion) => (
-                      <li key={criterion}>{criterion}</li>
-                    ))}
-                  </ul>
-                </section>
-                <section className="detail-block detail-block--foldout-section">
-                  <h4>Maintenance note</h4>
-                  <p>{selectedGuidedPath.maintenanceNote}</p>
-                </section>
-              </div> : null}
-            </section>
-          </div>
-        </Tray>
+          onToggleCollapsed={() => setGuidanceOpen((value) => !value)}
+          path={selectedGuidedPath}
+          controller={guidedPathController}
+          onShowTarget={showGuidedTarget}
+          title={isNoviceMode ? 'Guided paths' : 'Curator notes'}
+        />
       ) : null}
 
       <Tray

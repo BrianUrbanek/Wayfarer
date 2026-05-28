@@ -1,4 +1,4 @@
-import { useState, type PropsWithChildren } from 'react';
+import { forwardRef, useState, type PropsWithChildren } from 'react';
 
 interface PanelProps extends PropsWithChildren {
   title: string;
@@ -9,12 +9,15 @@ interface PanelProps extends PropsWithChildren {
   id?: string;
 }
 
-export function Panel({ title, children, className, hideTitle = false, collapsible = false, defaultCollapsed = false, id }: PanelProps) {
+export const Panel = forwardRef<HTMLElement, PanelProps>(function Panel(
+  { title, children, className, hideTitle = false, collapsible = false, defaultCollapsed = false, id },
+  ref
+) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   if (hideTitle && !collapsible) {
     return (
-      <section id={id} className={`panel${className ? ` ${className}` : ''}`}>
+      <section ref={ref} id={id} className={`panel${className ? ` ${className}` : ''}`}>
         <h2 className="sr-only">{title}</h2>
         {children}
       </section>
@@ -22,7 +25,7 @@ export function Panel({ title, children, className, hideTitle = false, collapsib
   }
 
   return (
-    <section id={id} className={`panel${className ? ` ${className}` : ''}`}>
+    <section ref={ref} id={id} className={`panel${className ? ` ${className}` : ''}`}>
       <div className="panel__header-row">
         <h2 className={hideTitle ? 'sr-only' : undefined}>{title}</h2>
         {collapsible ? (
@@ -41,4 +44,4 @@ export function Panel({ title, children, className, hideTitle = false, collapsib
       {!collapsed ? children : null}
     </section>
   );
-}
+});

@@ -947,6 +947,54 @@ select {
   gap: 12px;
 }
 
+.guided-path-step {
+  border: 1px solid rgba(141, 164, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.guided-path-step--active {
+  border-color: rgba(103, 215, 199, 0.5);
+  box-shadow: 0 0 0 1px rgba(103, 215, 199, 0.14), 0 12px 24px rgba(6, 12, 24, 0.18);
+}
+
+.guided-path-step--completed {
+  border-color: rgba(115, 226, 167, 0.22);
+}
+
+.guided-path-step--upcoming {
+  opacity: 0.92;
+}
+
+.guided-path-step__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.guided-path-step__title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.guided-path-step__action {
+  flex-shrink: 0;
+}
+
+.guided-path__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .instruction-list {
   margin: 0;
   padding-left: 18px;
@@ -990,6 +1038,17 @@ select {
 
 .dashboard-shell--expert .dashboard-section {
   gap: 14px;
+}
+
+.guided-target--active {
+  border-color: rgba(103, 215, 199, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(103, 215, 199, 0.2),
+    0 0 0 6px rgba(103, 215, 199, 0.08),
+    0 18px 34px rgba(6, 12, 24, 0.2);
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease;
 }
 
 .dashboard-section--overview {

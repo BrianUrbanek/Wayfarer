@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { GUIDED_PATHS, getGuidedPath } from '../../ui/dashboardGuidance.js';
 import { getScenarioPreset } from '../../model/scenarioPresets.js';
+import { GUIDED_TARGET_IDS, isGuidedTargetId } from '../../ui/guidedPath/guidedPathTypes.js';
 
 describe('dashboard guidance data', () => {
   it('exposes the expected guided path set', () => {
@@ -22,7 +23,7 @@ describe('dashboard guidance data', () => {
       path.framing.system,
       path.framing.experience,
       path.maintenanceNote,
-      ...path.steps.flatMap((step) => [step.title, step.instruction, step.why ?? '', step.targetModuleId ?? '']),
+      ...path.steps.flatMap((step) => [step.title, step.body, step.why ?? '', step.targetId ?? '']),
       ...path.successCriteria
     ])
       .join(' ')
@@ -53,5 +54,17 @@ describe('dashboard guidance data', () => {
     assert.ok(!allText.includes('drilldown targets'));
     assert.ok(!allText.includes('recommended ordering'));
     assert.ok(!allText.includes('debug first ordering'));
+
+    assert.equal(GUIDED_TARGET_IDS.includes('turn-summary'), true);
+    assert.equal(isGuidedTargetId('turn-summary'), true);
+    assert.equal(isGuidedTargetId('made-up-target'), false);
+
+    for (const path of GUIDED_PATHS) {
+      for (const step of path.steps) {
+        if (step.targetId) {
+          assert.equal(GUIDED_TARGET_IDS.includes(step.targetId), true);
+        }
+      }
+    }
   });
 });
