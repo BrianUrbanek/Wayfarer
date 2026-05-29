@@ -333,15 +333,18 @@ select {
 }
 
 .control--inline {
-  min-width: 220px;
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 220px;
 }
 
 .control--inline select {
-  min-width: 100%;
+  width: 100%;
+  min-width: 0;
 }
 
 .control--inline.control--wide {
-  min-width: 320px;
+  min-width: 0;
   flex: 1 1 360px;
 }
 
