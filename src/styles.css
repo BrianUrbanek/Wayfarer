@@ -1290,9 +1290,21 @@ select {
   flex-wrap: wrap;
 }
 
+.detail-block--pinned-reference .section-heading--collapse-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  flex-wrap: initial;
+}
+
 .section-heading--collapse-row > :first-child {
   flex: 1 1 420px;
   min-width: 0;
+}
+
+.detail-block--pinned-reference .section-heading--collapse-row > :first-child {
+  flex: initial;
 }
 
 .section-heading--collapse-row .section-toolbar__buttons {
@@ -1300,6 +1312,36 @@ select {
   flex-wrap: nowrap;
   align-items: center;
   flex: 0 0 auto;
+}
+
+.section-heading__copy {
+  flex: 1 1 100%;
+  min-width: 0;
+  grid-column: 1;
+}
+
+.section-toolbar__buttons--pinned-reference {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.section-toolbar__buttons--pinned-reference > .button {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+}
+
+.detail-block--pinned-reference .section-heading--collapse-row > .collapsible-panel__toggle {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.button--sm {
+  padding: 0.55rem 0.8rem;
+  min-height: 34px;
+  border-radius: 999px;
+  font-size: 0.82rem;
 }
 
 .card-list {

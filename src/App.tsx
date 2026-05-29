@@ -447,6 +447,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [modalKind, setModalKind] = useState<SelectionModalKind>(null);
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
+  const [pinnedReferenceControlsCollapsed, setPinnedReferenceControlsCollapsed] = useState(false);
   const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(initialGuidanceMode === 'novice');
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
   const [importedScenario, setImportedScenario] = useState<SavedWayfarerScenarioV1 | null>(null);
@@ -512,7 +513,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   useEffect(() => {
     if (pinnedDrilldownKind !== null) {
       setPinnedTrayCollapsed(false);
+      setPinnedReferenceControlsCollapsed(true);
+      return;
     }
+
+    setPinnedReferenceControlsCollapsed(false);
   }, [pinnedDrilldownKind]);
 
   const dataset = simulationState;
@@ -3029,22 +3034,43 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         toggleCollapsedLabel="Open pinned drilldown"
         toggleExpandedLabel="Collapse pinned drilldown"
         onToggle={() => setPinnedTrayCollapsed((value) => !value)}
-        onSecondaryAction={() => {
-          setPinnedDrilldownKind(null);
-          setPinnedTrayCollapsed(true);
-        }}
-        secondaryActionLabel="Clear pinned drilldown"
       >
-        <section className="detail-block">
-          <div className="section-heading">
-            <h4>Pinned reference controls</h4>
-            <p className="muted">Choose the user, island, or cohort to pin in this tray.</p>
+        <section className="detail-block detail-block--pinned-reference">
+          <div className="section-heading section-heading--collapse-row">
+            <div className="section-heading__copy">
+              <h4>Pinned reference controls</h4>
+              {!pinnedReferenceControlsCollapsed ? <p className="muted">Choose the user, island, or cohort to pin in this tray.</p> : null}
+            </div>
+            <button
+              type="button"
+              className="icon-button collapsible-panel__toggle"
+              onClick={() => setPinnedReferenceControlsCollapsed((value) => !value)}
+              aria-label={pinnedReferenceControlsCollapsed ? 'Expand pinned reference controls' : 'Collapse pinned reference controls'}
+            >
+              <span className="collapsible-panel__toggle-icon" aria-hidden="true">
+                {pinnedReferenceControlsCollapsed ? 'v' : '^'}
+              </span>
+            </button>
           </div>
-          <div className="section-toolbar__buttons">
-            {openSelectionButton('user', 'Choose user')}
-            {openSelectionButton('island', 'Choose island')}
-            {openSelectionButton('cohort', 'Choose cohort')}
-          </div>
+          {!pinnedReferenceControlsCollapsed ? (
+            <div className="section-toolbar__buttons section-toolbar__buttons--pinned-reference">
+              <button
+                type="button"
+                className="button button--ghost button--sm"
+                onClick={() => {
+                  setPinnedDrilldownKind(null);
+                  setPinnedReferenceControlsCollapsed(false);
+                  setPinnedTrayCollapsed(false);
+                }}
+                disabled={pinnedDrilldownKind === null}
+              >
+                Clear
+              </button>
+              {openSelectionButton('user', 'User')}
+              {openSelectionButton('island', 'Island')}
+              {openSelectionButton('cohort', 'Cohort')}
+            </div>
+          ) : null}
         </section>
         {pinnedDrilldownContent  ?  (
           <section className="detail-block">
