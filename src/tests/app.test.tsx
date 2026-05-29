@@ -17,7 +17,8 @@ describe('App analyst console', () => {
     expect(html).toContain('Novice keeps the instructional rails open while expert exposes the resolved controls.');
     expect(html).toContain('Guided path');
     expect(html).toContain('Guided paths');
-    expect(html).toContain('Drilldown targets');
+    expect(html).toContain('Pinned reference controls');
+    expect(html).toContain('Choose cohort');
     expect(html).toContain('Pinned reference');
     expect(html).toContain('Scenario preset');
     expect(html).toContain('Simulation JSON');

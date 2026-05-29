@@ -49,6 +49,7 @@ import {
   type TurnMode
 } from './model/turnPolicy';
 import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
+import { buildSystemMovementAnalysis } from './model/systemMovement';
 import { buildGoldenDemoReport, renderGoldenDemoReportMarkdown } from './analysis/goldenDemoReport';
 import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
@@ -56,6 +57,7 @@ import { buildIslandTruthComparison } from './model/islandTruthComparison';
 import { buildHiddenCohortRecoveryReport } from './model/hiddenCohortRecovery';
 import { buildTurnRecapReport } from './model/turnRecap';
 import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
+import { SystemMovementPanel } from './ui/components/SystemMovementPanel';
 import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { InspectionShell } from './ui/InspectionShell';
@@ -446,7 +448,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [pinnedDrilldownKind, setPinnedDrilldownKind] = useState<PinnedDrilldownKind>(null);
   const [pinnedTrayCollapsed, setPinnedTrayCollapsed] = useState(initialGuidanceMode !== 'novice');
   const [dynamicSettingsCollapsed, setDynamicSettingsCollapsed] = useState(initialGuidanceMode === 'novice');
-  const [drilldownTargetsCollapsed, setDrilldownTargetsCollapsed] = useState(initialGuidanceMode === 'novice');
   const [drawerState, setDrawerState] = useState<DrawerState>(null);
   const [importedScenario, setImportedScenario] = useState<SavedWayfarerScenarioV1 | null>(null);
   const [scenarioMessage, setScenarioMessage] = useState<string>('');
@@ -627,6 +628,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   );
   const systemHealthSummary = useMemo(() => buildSystemHealthSummary(dataset), [dataset]);
   const confidenceGrowthRows = useMemo(() => buildConfidenceGrowthRows(dataset), [dataset]);
+  const systemMovementAnalysis = useMemo(() => buildSystemMovementAnalysis(dataset), [dataset]);
   const discoverySignalAnalysis = useMemo(() => buildDiscoverySignalAnalysis(dataset), [dataset]);
   const islandLabelById = useMemo(() => new Map(dataset.islands.map((island) => [island.id, island.label] as const)), [dataset.islands]);
   const cohortDisplayLabelById = useMemo(
@@ -2351,7 +2353,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     if (guidanceMode === 'novice') {
       setGuidanceOpen(true);
       setDynamicSettingsCollapsed(true);
-      setDrilldownTargetsCollapsed(true);
       setPinnedTrayCollapsed(false);
       setShowDebug(false);
       setGuidedPathId(presentationState.runState === 'meaningful-run'  ?  'portfolio-reviewer' : 'run-start');
@@ -2360,7 +2361,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
 
     setGuidanceOpen(false);
     setDynamicSettingsCollapsed(false);
-    setDrilldownTargetsCollapsed(false);
     setPinnedTrayCollapsed(true);
     setShowDebug(true);
     setGuidedPathId('analyst-workflow');
@@ -2461,6 +2461,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </div> : null}
         </Panel>,
         <TurnRecapPanel key="turn-recap" panelRef={turnRecapTargetRef} id="turn-recap" report={turnRecapReport} />,
+        <SystemMovementPanel key="system-movement" analysis={systemMovementAnalysis} />,
         <Panel key="population-summary" id="population-summary" title="Population Summary" className="panel--full" collapsible defaultCollapsed>
           <div className="metric-grid">
             <MetricCard label="Total users" value={populationSummary.totalUsers} tone="accent" />
@@ -2796,6 +2797,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         }}
         onChooseUser={() => setModalKind('user')}
         onChooseIsland={() => setModalKind('island')}
+        onChooseCohort={() => setModalKind('cohort')}
         canOpenGoldenDemoReport={Boolean(goldenDemoReport)}
       />
 
@@ -3000,23 +3002,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
           </div>
         </CollapsiblePanel>
 
-        <CollapsiblePanel
-          title="Drilldown targets"
-          collapsed={drilldownTargetsCollapsed}
-          onToggle={() => setDrilldownTargetsCollapsed((value) => !value)}
-          description="Pin a user, island, or cohort for quick reference."
-        >
-          <div className="section-toolbar section-toolbar--stacked">
-            <p className="muted">
-              Pin a user, island, or cohort here for quick reference while you inspect the reports below.
-            </p>
-            <div className="section-toolbar__buttons">
-              {openSelectionButton('user', 'Choose user')}
-              {openSelectionButton('island', 'Choose island')}
-              {openSelectionButton('cohort', 'Choose cohort')}
-            </div>
-          </div>
-        </CollapsiblePanel>
       </section>
 
       {showInstructionTray ? (
@@ -3050,6 +3035,17 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         }}
         secondaryActionLabel="Clear pinned drilldown"
       >
+        <section className="detail-block">
+          <div className="section-heading">
+            <h4>Pinned reference controls</h4>
+            <p className="muted">Choose the user, island, or cohort to pin in this tray.</p>
+          </div>
+          <div className="section-toolbar__buttons">
+            {openSelectionButton('user', 'Choose user')}
+            {openSelectionButton('island', 'Choose island')}
+            {openSelectionButton('cohort', 'Choose cohort')}
+          </div>
+        </section>
         {pinnedDrilldownContent  ?  (
           <section className="detail-block">
             <div className="section-heading section-heading--collapse-row">
@@ -3070,7 +3066,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         ) : (
           <EmptyState
             title="Nothing pinned yet"
-            description="Pin a user, island, or cohort from Drilldown targets to anchor this space."
+            description="Choose a user, island, or cohort to anchor this space."
           />
         )}
       </Tray>

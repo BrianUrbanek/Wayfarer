@@ -56,6 +56,7 @@ interface PrimaryWorkflowPanelProps {
   expertScenarioTuningProps: ExpertScenarioTuningProps;
   onChooseUser: () => void;
   onChooseIsland: () => void;
+  onChooseCohort: () => void;
   canOpenGoldenDemoReport: boolean;
 }
 
@@ -103,6 +104,7 @@ export function PrimaryWorkflowPanel({
   expertScenarioTuningProps,
   onChooseUser,
   onChooseIsland,
+  onChooseCohort,
   canOpenGoldenDemoReport
 }: PrimaryWorkflowPanelProps) {
   return (
@@ -312,6 +314,9 @@ export function PrimaryWorkflowPanel({
               </button>
               <button type="button" className="button button--ghost" onClick={onChooseIsland} disabled={standardScenarioControlsDisabled}>
                 Choose island
+              </button>
+              <button type="button" className="button button--ghost" onClick={onChooseCohort} disabled={standardScenarioControlsDisabled}>
+                Choose cohort
               </button>
             </div>
           </div>
