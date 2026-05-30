@@ -1442,11 +1442,17 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     : null;
 
   const selectedRecommendation = selectedRecommendationDetail;
+  const selectedRecommendationKindLabel =
+    selectedRecommendation?.recommendationKind === 'SAFE_FIT'
+      ? 'Safe fit'
+      : selectedRecommendation?.recommendationKind === 'SMART_GAMBLE'
+        ? 'Smart gamble'
+        : 'Discovery probe';
   const recommendationDrawerContent = selectedRecommendation  ?  (
     <div className="detail-stack">
       <section className="detail-block">
         <h4>{dataset.islands.find((island) => island.id === selectedRecommendation.islandId) ?.label  ??  selectedRecommendation.islandId}</h4>
-        <p className="muted">{selectedRecommendation.recommendationKind === 'SAFE_FIT'  ?  'Safe fit' : 'Discovery probe'}</p>
+        <p className="muted">{selectedRecommendationKindLabel}</p>
         <p>{selectedRecommendation.explanation}</p>
       </section>
       <section className="detail-block">
@@ -2446,6 +2452,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             />
             <MetricCard label="New islands rated" value={currentTurnSummary ?.newlyRatedIslandIds.length  ??  0} />
             <MetricCard label="Safe fits routed" value={currentTurnSummary ?.recommendationKinds.SAFE_FIT  ??  0} />
+            <MetricCard label="Smart gambles" value={currentTurnSummary ?.recommendationKinds.SMART_GAMBLE  ??  0} />
             <MetricCard
               label="Discovery probes"
               value={currentTurnSummary ?.recommendationKinds.DISCOVERY_PROBE  ??  0}

@@ -158,7 +158,15 @@ function eventKey(turn: number, userId: UserId, islandId: IslandId): string {
 function buildRecommendationCounts(): Record<RecommendationKind, number> {
   return {
     SAFE_FIT: 0,
+    SMART_GAMBLE: 0,
     DISCOVERY_PROBE: 0
+  };
+}
+
+function normalizeRecommendationCounts(counts: Partial<Record<RecommendationKind, number>>): Record<RecommendationKind, number> {
+  return {
+    ...buildRecommendationCounts(),
+    ...counts
   };
 }
 
@@ -461,7 +469,7 @@ function summarizeTurn(
     guidedRatingsCreated,
     newlyRatedIslandIds,
     routedIslandIds: routedIslandIds.slice().sort(),
-    recommendationKinds: { ...recommendationKinds },
+    recommendationKinds: normalizeRecommendationCounts(recommendationKinds),
     diagnosisCounts: countDiagnoses(inferenceByUserId)
   };
 }
@@ -630,7 +638,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       participatingUserIds: summary.participatingUserIds.slice(),
       newlyRatedIslandIds: summary.newlyRatedIslandIds.slice(),
       routedIslandIds: summary.routedIslandIds.slice(),
-      recommendationKinds: { ...summary.recommendationKinds },
+      recommendationKinds: normalizeRecommendationCounts(summary.recommendationKinds),
       diagnosisCounts: { ...summary.diagnosisCounts }
     }))
   };
@@ -873,8 +881,7 @@ export function advancePolicyTurn(
     return recommendIslandsForUser(visible, state.islandAffinityReports, state.raterSignalProfiles, state.islands, recommendationOptions).recommendations.length > 0;
   });
 
-  const mixedCandidates = combineUniqueUsers(organicCandidates, guidedCandidates);
-  const selectedUsers =
+  const selectedOrganicUsers =
     config.turnMode === 'organic'
       ? selectParticipatingUsers(
           rng,
@@ -884,20 +891,24 @@ export function advancePolicyTurn(
           config.participationChance
         )
       : config.turnMode === 'guided'
-        ? selectParticipatingUsers(
-            rng,
-            guidedCandidates,
-            config.participationModel,
-            config.participatingUsersPerTurn,
-            config.participationChance
-          )
+        ? []
         : selectParticipatingUsers(
             rng,
-            mixedCandidates,
+            organicCandidates,
             config.participationModel,
             config.participatingUsersPerTurn,
             config.participationChance
           );
+  const selectedGuidedUsers =
+    config.turnMode === 'organic'
+      ? []
+      : selectParticipatingUsers(
+          rng,
+          guidedCandidates,
+          config.participationModel,
+          config.participatingUsersPerTurn,
+          config.participationChance
+        );
   const usedPairs = new Set<string>();
   const organicEvents =
     config.turnMode === 'guided'
@@ -909,7 +920,7 @@ export function advancePolicyTurn(
           state.islands,
           state.cohorts,
           state.raterSignalProfiles,
-          selectedUsers,
+          selectedOrganicUsers,
           config.organicRatingCountModel,
           config.organicRatingsPerUser,
           config.organicRatingDice,
@@ -926,7 +937,7 @@ export function advancePolicyTurn(
           state.cohorts,
           state.raterSignalProfiles,
           state.islandAffinityReports,
-          selectedUsers,
+          selectedGuidedUsers,
           config.guidedRatingCountModel,
           config.guidedRecommendationsPerUser,
           config.guidedRecommendationDice,
@@ -941,7 +952,7 @@ export function advancePolicyTurn(
   );
   const nextUsers = applyEventsToVisibleUsers(state.users, newEvents);
   const nextHistory = state.turnHistory.slice();
-  const participatingUserIds = Array.from(new Set(selectedUsers.map((user) => user.id))).sort();
+  const participatingUserIds = Array.from(new Set(combineUniqueUsers(selectedOrganicUsers, selectedGuidedUsers).map((user) => user.id))).sort();
   const nextVisibleUsers = nextUsers;
   const nextInferenceByUserId = computeInferenceMap(nextVisibleUsers, state.cohorts, state.islands, state.allTags);
   const nextRaterSignalAnalysis = buildRaterSignalProfiles(nextVisibleUsers, nextInferenceByUserId, state.cohorts);
@@ -1017,7 +1028,7 @@ export function advancePolicyTurn(
       participatingUserIds: summary.participatingUserIds.slice(),
       newlyRatedIslandIds: summary.newlyRatedIslandIds.slice(),
       routedIslandIds: summary.routedIslandIds.slice(),
-      recommendationKinds: { ...summary.recommendationKinds },
+      recommendationKinds: normalizeRecommendationCounts(summary.recommendationKinds),
       diagnosisCounts: { ...summary.diagnosisCounts }
     }))
   };

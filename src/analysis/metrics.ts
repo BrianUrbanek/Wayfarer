@@ -104,6 +104,7 @@ export function buildRunAggregateMetrics(
   const guidedRatingsCreated = sum(turnMetrics.map((entry) => entry.guidedRatingsCreated));
   const routedIslandCount = sum(turnMetrics.map((entry) => entry.routedIslandCount));
   const discoveryProbeVolume = sum(turnMetrics.map((entry) => entry.recommendationKindCounts.DISCOVERY_PROBE));
+  const smartGambleVolume = sum(turnMetrics.map((entry) => entry.recommendationKindCounts.SMART_GAMBLE));
   const safeFitVolume = sum(turnMetrics.map((entry) => entry.recommendationKindCounts.SAFE_FIT));
   const signalStartMean = turnMetrics[0]?.meanOverallSignal ?? 0;
   const signalEndMean = turnMetrics.at(-1)?.meanOverallSignal ?? 0;
@@ -125,6 +126,7 @@ export function buildRunAggregateMetrics(
     guidedRatingsCreated,
     routedIslandCount,
     discoveryProbeVolume,
+    smartGambleVolume,
     safeFitVolume,
     signalStartMean,
     signalEndMean,
@@ -170,6 +172,7 @@ export function buildPolicyAggregateMetrics(
     guidedRatingsCreated: mean(runs.map((run) => run.aggregate.guidedRatingsCreated)),
     routedIslandCount: mean(runs.map((run) => run.aggregate.routedIslandCount)),
     discoveryProbeVolume: mean(runs.map((run) => run.aggregate.discoveryProbeVolume)),
+    smartGambleVolume: mean(runs.map((run) => run.aggregate.smartGambleVolume)),
     safeFitVolume: mean(runs.map((run) => run.aggregate.safeFitVolume)),
     signalStartMean: mean(runs.map((run) => run.aggregate.signalStartMean)),
     signalEndMean: mean(runs.map((run) => run.aggregate.signalEndMean)),
@@ -213,6 +216,7 @@ export function buildPolicyComparison(
       evidenceEfficiency: compareNumericValues(guided.evidenceEfficiency, organic.evidenceEfficiency),
       timeToUsefulSignalTurn: compareNullableNumbers(guided.timeToUsefulSignalTurn, organic.timeToUsefulSignalTurn),
       discoveryProbeVolume: compareNumericValues(guided.discoveryProbeVolume, organic.discoveryProbeVolume),
+      smartGambleVolume: compareNumericValues(guided.smartGambleVolume, organic.smartGambleVolume),
       safeFitVolume: compareNumericValues(guided.safeFitVolume, organic.safeFitVolume),
       underReviewedCoverage: compareNumericValues(guided.underReviewedCoverage, organic.underReviewedCoverage)
     },
@@ -222,6 +226,7 @@ export function buildPolicyComparison(
       evidenceEfficiency: compareNumericValues(mixed.evidenceEfficiency, organic.evidenceEfficiency),
       timeToUsefulSignalTurn: compareNullableNumbers(mixed.timeToUsefulSignalTurn, organic.timeToUsefulSignalTurn),
       discoveryProbeVolume: compareNumericValues(mixed.discoveryProbeVolume, organic.discoveryProbeVolume),
+      smartGambleVolume: compareNumericValues(mixed.smartGambleVolume, organic.smartGambleVolume),
       safeFitVolume: compareNumericValues(mixed.safeFitVolume, organic.safeFitVolume),
       underReviewedCoverage: compareNumericValues(mixed.underReviewedCoverage, organic.underReviewedCoverage)
     }

@@ -32,6 +32,18 @@ function formatSignedDecimal(value: number, digits = 3): string {
   return `${prefix}${value.toFixed(digits)}`;
 }
 
+function recommendationKindBadge(row: IslandRecommendation) {
+  if (row.recommendationKind === 'SAFE_FIT') {
+    return <Badge tone="success">Safe fit</Badge>;
+  }
+
+  if (row.recommendationKind === 'SMART_GAMBLE') {
+    return <Badge tone="accent">Smart gamble</Badge>;
+  }
+
+  return <Badge tone="warning">Discovery probe</Badge>;
+}
+
 export function DiscoveryRoutingSummary({
   selectedUserLabel,
   routingModeLabel,
@@ -58,7 +70,7 @@ export function DiscoveryRoutingSummary({
     {
       key: 'kind',
       label: 'Kind',
-      render: (row) => <Badge tone={row.recommendationKind === 'SAFE_FIT' ? 'success' : 'warning'}>{row.recommendationKind === 'SAFE_FIT' ? 'Safe fit' : 'Discovery probe'}</Badge>,
+      render: recommendationKindBadge,
       align: 'center'
     },
     {

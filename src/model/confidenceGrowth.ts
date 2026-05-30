@@ -11,6 +11,7 @@ export interface ConfidenceGrowthRow {
   estimatesAbove75: number;
   routedIslandCount: number;
   safeFitCount: number;
+  smartGambleCount: number;
   discoveryProbeCount: number;
 }
 
@@ -43,8 +44,9 @@ export function buildConfidenceGrowthRows(state: SimulationState): ConfidenceGro
       estimatesAbove50: snapshots.filter((snapshot) => snapshot.confidence >= 0.5).length,
       estimatesAbove75: snapshots.filter((snapshot) => snapshot.confidence >= 0.75).length,
       routedIslandCount: summary.routedIslandIds.length,
-      safeFitCount: summary.recommendationKinds.SAFE_FIT,
-      discoveryProbeCount: summary.recommendationKinds.DISCOVERY_PROBE
+      safeFitCount: summary.recommendationKinds.SAFE_FIT ?? 0,
+      smartGambleCount: summary.recommendationKinds.SMART_GAMBLE ?? 0,
+      discoveryProbeCount: summary.recommendationKinds.DISCOVERY_PROBE ?? 0
     };
   });
 }

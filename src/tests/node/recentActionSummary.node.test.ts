@@ -14,7 +14,7 @@ describe('recent action summary helper', () => {
         guidedRatingsCreated: 1,
         newlyRatedIslandIds: ['i1', 'i2'],
         routedIslandIds: ['i2'],
-        recommendationKinds: { SAFE_FIT: 1, DISCOVERY_PROBE: 0 },
+        recommendationKinds: { SAFE_FIT: 1, SMART_GAMBLE: 0, DISCOVERY_PROBE: 0 },
         diagnosisCounts: { HIGH_SIGNAL: 0, MISMATCH_RETAG: 0, INVERSE_PROFILE: 0, UNKNOWN_OR_NOISY: 0, LOW_SIGNAL: 0, AMBIGUOUS: 0, UNEXPLAINED_PREDICTIVE: 0 }
       },
       {
@@ -26,7 +26,7 @@ describe('recent action summary helper', () => {
         guidedRatingsCreated: 1,
         newlyRatedIslandIds: ['i2', 'i3'],
         routedIslandIds: ['i3'],
-        recommendationKinds: { SAFE_FIT: 0, DISCOVERY_PROBE: 1 },
+        recommendationKinds: { SAFE_FIT: 0, SMART_GAMBLE: 0, DISCOVERY_PROBE: 1 },
         diagnosisCounts: { HIGH_SIGNAL: 0, MISMATCH_RETAG: 0, INVERSE_PROFILE: 0, UNKNOWN_OR_NOISY: 0, LOW_SIGNAL: 0, AMBIGUOUS: 0, UNEXPLAINED_PREDICTIVE: 0 }
       }
     ]);

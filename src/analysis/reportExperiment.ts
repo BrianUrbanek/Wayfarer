@@ -234,6 +234,7 @@ export function renderExperimentSuiteMarkdown(suite: ExperimentSuiteResult): str
       lines.push(`- evidence efficiency: ${formatNumber(aggregate.evidenceEfficiency)}`);
       lines.push(`- time-to-useful-signal: ${formatNullableNumber(aggregate.timeToUsefulSignalTurn)}`);
       lines.push(`- Discovery probe volume: ${formatNumber(aggregate.discoveryProbeVolume)}`);
+      lines.push(`- Smart gamble volume: ${formatNumber(aggregate.smartGambleVolume)}`);
       lines.push(`- Safe-fit volume: ${formatNumber(aggregate.safeFitVolume)}`);
       lines.push(`- Under-reviewed coverage: ${formatPercent(aggregate.underReviewedCoverage)}`);
       lines.push(`- ms per turn: ${formatNumber(aggregate.msPerTurn)}`);

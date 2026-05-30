@@ -21,6 +21,7 @@ export interface BatchTotals {
   newlyRatedIslands: number;
   routedIslands: number;
   safeFitsRouted: number;
+  smartGamblesRouted: number;
   discoveryProbesRouted: number;
 }
 
@@ -32,14 +33,16 @@ export function aggregateBatchTotals(turns: readonly SimulationTurnSummary[]): B
   let organicRatingsCreated = 0;
   let guidedRatingsCreated = 0;
   let safeFitsRouted = 0;
+  let smartGamblesRouted = 0;
   let discoveryProbesRouted = 0;
 
   for (const turn of turns) {
     ratingsCreated += turn.ratingsCreated;
     organicRatingsCreated += turn.organicRatingsCreated;
     guidedRatingsCreated += turn.guidedRatingsCreated;
-    safeFitsRouted += turn.recommendationKinds.SAFE_FIT;
-    discoveryProbesRouted += turn.recommendationKinds.DISCOVERY_PROBE;
+    safeFitsRouted += turn.recommendationKinds.SAFE_FIT ?? 0;
+    smartGamblesRouted += turn.recommendationKinds.SMART_GAMBLE ?? 0;
+    discoveryProbesRouted += turn.recommendationKinds.DISCOVERY_PROBE ?? 0;
     for (const userId of turn.participatingUserIds) {
       participantIds.add(userId);
     }
@@ -59,6 +62,7 @@ export function aggregateBatchTotals(turns: readonly SimulationTurnSummary[]): B
     newlyRatedIslands: islandIds.size,
     routedIslands: routedIslandIds.size,
     safeFitsRouted,
+    smartGamblesRouted,
     discoveryProbesRouted
   };
 }

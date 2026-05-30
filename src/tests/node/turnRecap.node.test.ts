@@ -15,7 +15,7 @@ function makeTurnSummary(turn: number, ratingsCreated: number, organicRatingsCre
     guidedRatingsCreated,
     newlyRatedIslandIds: ['island-1'],
     routedIslandIds: ['island-1'],
-    recommendationKinds: { SAFE_FIT: 1, DISCOVERY_PROBE: 0 },
+    recommendationKinds: { SAFE_FIT: 1, SMART_GAMBLE: 0, DISCOVERY_PROBE: 0 },
     diagnosisCounts: { HIGH_SIGNAL: 0, MISMATCH_RETAG: 0, INVERSE_PROFILE: 0, UNKNOWN_OR_NOISY: 0, LOW_SIGNAL: 0, AMBIGUOUS: 0, UNEXPLAINED_PREDICTIVE: 0 }
   };
 }

@@ -79,6 +79,7 @@ export interface ExperimentRunAggregateMetrics {
   readonly guidedRatingsCreated: number;
   readonly routedIslandCount: number;
   readonly discoveryProbeVolume: number;
+  readonly smartGambleVolume: number;
   readonly safeFitVolume: number;
   readonly signalStartMean: number;
   readonly signalEndMean: number;
@@ -123,6 +124,7 @@ export interface ExperimentPolicyAggregateMetrics {
   readonly guidedRatingsCreated: number;
   readonly routedIslandCount: number;
   readonly discoveryProbeVolume: number;
+  readonly smartGambleVolume: number;
   readonly safeFitVolume: number;
   readonly signalStartMean: number;
   readonly signalEndMean: number;
@@ -231,5 +233,6 @@ export interface ExperimentScenarioSummaryRow {
   readonly evidenceEfficiency: number;
   readonly timeToUsefulSignalTurn: number | null;
   readonly discoveryProbeVolume: number;
+  readonly smartGambleVolume: number;
   readonly safeFitVolume: number;
 }

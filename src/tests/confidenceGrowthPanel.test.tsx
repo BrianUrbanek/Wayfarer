@@ -16,9 +16,10 @@ describe('ConfidenceGrowthPanel', () => {
             estimatesAbove25: 1,
             estimatesAbove50: 1,
             estimatesAbove75: 1,
-            routedIslandCount: 1,
-            safeFitCount: 1,
-            discoveryProbeCount: 0
+      routedIslandCount: 1,
+      safeFitCount: 1,
+      smartGambleCount: 0,
+      discoveryProbeCount: 0
           }
         ]}
       />

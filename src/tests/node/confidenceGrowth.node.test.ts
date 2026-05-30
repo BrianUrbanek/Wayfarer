@@ -30,7 +30,7 @@ describe('confidence growth helper', () => {
           participatingUserIds: ['u-1'],
           newlyRatedIslandIds: ['i-1'],
           routedIslandIds: ['i-1'],
-          recommendationKinds: { SAFE_FIT: 1, DISCOVERY_PROBE: 0 },
+          recommendationKinds: { SAFE_FIT: 1, SMART_GAMBLE: 0, DISCOVERY_PROBE: 0 },
           diagnosisCounts: { HIGH_SIGNAL: 0, MISMATCH_RETAG: 0, INVERSE_PROFILE: 0, UNKNOWN_OR_NOISY: 0, LOW_SIGNAL: 0, AMBIGUOUS: 0, UNEXPLAINED_PREDICTIVE: 0 }
         },
         {
@@ -42,7 +42,7 @@ describe('confidence growth helper', () => {
           participatingUserIds: ['u-1', 'u-2'],
           newlyRatedIslandIds: ['i-2'],
           routedIslandIds: ['i-2'],
-          recommendationKinds: { SAFE_FIT: 0, DISCOVERY_PROBE: 1 },
+          recommendationKinds: { SAFE_FIT: 0, SMART_GAMBLE: 0, DISCOVERY_PROBE: 1 },
           diagnosisCounts: { HIGH_SIGNAL: 0, MISMATCH_RETAG: 0, INVERSE_PROFILE: 0, UNKNOWN_OR_NOISY: 0, LOW_SIGNAL: 0, AMBIGUOUS: 0, UNEXPLAINED_PREDICTIVE: 0 }
         }
       ]
@@ -62,6 +62,7 @@ describe('confidence growth helper', () => {
         estimatesAbove75: 1,
         routedIslandCount: 1,
         safeFitCount: 1,
+        smartGambleCount: 0,
         discoveryProbeCount: 0
       },
       {
@@ -75,6 +76,7 @@ describe('confidence growth helper', () => {
         estimatesAbove75: 1,
         routedIslandCount: 1,
         safeFitCount: 0,
+        smartGambleCount: 0,
         discoveryProbeCount: 1
       }
     ]);

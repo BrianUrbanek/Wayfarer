@@ -79,6 +79,7 @@ export interface GoldenDemoReport {
     readonly scopeLabel: string;
     readonly routedIslandCount: number;
     readonly discoveryProbeVolume: number;
+    readonly smartGambleVolume: number;
     readonly safeFitVolume: number;
     readonly topDeprioritizationSummary: string;
   };
@@ -111,16 +112,18 @@ function summarizeConfidence(rows: ReturnType<typeof buildConfidenceGrowthRows>)
 function summarizeRoutingTotals(state: SimulationState): {
   routedIslandCount: number;
   discoveryProbeVolume: number;
+  smartGambleVolume: number;
   safeFitVolume: number;
 } {
   return state.turnHistory.reduce(
     (accumulator, turn) => {
       accumulator.routedIslandCount += turn.routedIslandIds.length;
-      accumulator.discoveryProbeVolume += turn.recommendationKinds.DISCOVERY_PROBE;
-      accumulator.safeFitVolume += turn.recommendationKinds.SAFE_FIT;
+      accumulator.discoveryProbeVolume += turn.recommendationKinds.DISCOVERY_PROBE ?? 0;
+      accumulator.smartGambleVolume += turn.recommendationKinds.SMART_GAMBLE ?? 0;
+      accumulator.safeFitVolume += turn.recommendationKinds.SAFE_FIT ?? 0;
       return accumulator;
     },
-    { routedIslandCount: 0, discoveryProbeVolume: 0, safeFitVolume: 0 }
+    { routedIslandCount: 0, discoveryProbeVolume: 0, smartGambleVolume: 0, safeFitVolume: 0 }
   );
 }
 
@@ -246,7 +249,7 @@ export function buildGoldenDemoReport(input: {
     {
       heading: 'Routing and deprioritization summary',
       body: [
-        `Across run: routed islands ${routingTotals.routedIslandCount}, discovery probes ${routingTotals.discoveryProbeVolume}, safe fits ${routingTotals.safeFitVolume}.`,
+        `Across run: routed islands ${routingTotals.routedIslandCount}, discovery probes ${routingTotals.discoveryProbeVolume}, smart gambles ${routingTotals.smartGambleVolume}, safe fits ${routingTotals.safeFitVolume}.`,
         selectedDeprioritization.rows.length > 0
           ? `Top deprioritization example: ${state.users.find((user) => user.id === selectedDeprioritization.userId)?.label ?? selectedDeprioritization.userId} / ${state.islands.find((island) => island.id === selectedDeprioritization.rows[0].islandId)?.label ?? selectedDeprioritization.rows[0].islandId} (predicted fit ${formatSigned(selectedDeprioritization.rows[0].predictedFit)}, support ${formatPercent(selectedDeprioritization.rows[0].confidenceSupport)})`
           : 'No clean deprioritization example surfaced for this run.'
@@ -324,6 +327,7 @@ export function buildGoldenDemoReport(input: {
       scopeLabel: 'Across run',
       routedIslandCount: routingTotals.routedIslandCount,
       discoveryProbeVolume: routingTotals.discoveryProbeVolume,
+      smartGambleVolume: routingTotals.smartGambleVolume,
       safeFitVolume: routingTotals.safeFitVolume,
       topDeprioritizationSummary:
         selectedDeprioritization.rows.length > 0

@@ -242,7 +242,7 @@ describe('recommendation scoring', () => {
     expect(highDiscovery?.recommendationScore ?? 0).toBeGreaterThan(lowDiscovery?.recommendationScore ?? 0);
   });
 
-  it('blocks low-fit discovery spam under the fit floor', () => {
+  it('keeps unknown or low-support candidates eligible instead of using a positive fit floor', () => {
     const { user, signalProfiles } = buildReports();
     const recommendation = scoreIslandRecommendation(
       user,
@@ -272,10 +272,71 @@ describe('recommendation scoring', () => {
       { minPredictedFitFloor: 0.2, explorationWeight: 5 }
     );
 
-    expect(recommendation).toBeNull();
+    expect(recommendation).not.toBeNull();
+    expect(recommendation?.recommendationKind).toBe('SMART_GAMBLE');
   });
 
-  it('classifies safe recommendations versus discovery probes', () => {
+  it('rejects confident bad fits but keeps low-confidence negative probes eligible', () => {
+    const { user, signalProfiles } = buildReports();
+    const confidentBad = scoreIslandRecommendation(
+      user,
+      { id: 'i-12', label: 'Island 12' },
+      {
+        islandId: 'i-12',
+        estimates: [
+          {
+            islandId: 'i-12',
+            cohortId: 'cohort-a',
+            observedMean: -0.75,
+            affinity: -0.75,
+            confidence: 0.85,
+            disagreement: 0.1,
+            rawCount: 16,
+            effectiveWeight: 16,
+            positiveCount: 1,
+            neutralCount: 1,
+            negativeCount: 14,
+            contributions: []
+          }
+        ],
+        topPositive: null,
+        topNegative: null
+      },
+      signalProfiles.byUserId.get(user.id)
+    );
+    const lowConfidenceNegative = scoreIslandRecommendation(
+      user,
+      { id: 'i-13', label: 'Island 13' },
+      {
+        islandId: 'i-13',
+        estimates: [
+          {
+            islandId: 'i-13',
+            cohortId: 'cohort-a',
+            observedMean: -0.6,
+            affinity: -0.6,
+            confidence: 0.15,
+            disagreement: 0.7,
+            rawCount: 1,
+            effectiveWeight: 1,
+            positiveCount: 0,
+            neutralCount: 0,
+            negativeCount: 1,
+            contributions: []
+          }
+        ],
+        topPositive: null,
+        topNegative: null
+      },
+      signalProfiles.byUserId.get(user.id)
+    );
+
+    expect(confidentBad).toBeNull();
+    expect(lowConfidenceNegative).not.toBeNull();
+    expect(lowConfidenceNegative?.recommendationKind).toBe('DISCOVERY_PROBE');
+  });
+
+  it('classifies safe recommendations, smart gambles, and discovery probes distinctly', () => {
     const { user, signalProfiles } = buildReports();
     const safe = scoreIslandRecommendation(
       user,
@@ -305,7 +366,7 @@ describe('recommendation scoring', () => {
       { minPredictedFitFloor: 0.2, explorationWeight: 0.5 }
     );
 
-    const probe = scoreIslandRecommendation(
+    const gamble = scoreIslandRecommendation(
       user,
       { id: 'i-11', label: 'Island 11' },
       {
@@ -332,8 +393,70 @@ describe('recommendation scoring', () => {
       signalProfiles.byUserId.get(user.id),
       { minPredictedFitFloor: 0.2, explorationWeight: 0.5 }
     );
+    const probe = scoreIslandRecommendation(
+      user,
+      { id: 'i-14', label: 'Island 14' },
+      {
+        islandId: 'i-14',
+        estimates: [
+          {
+            islandId: 'i-14',
+            cohortId: 'cohort-a',
+            observedMean: -0.45,
+            affinity: -0.45,
+            confidence: 0.2,
+            disagreement: 0.6,
+            rawCount: 2,
+            effectiveWeight: 2,
+            positiveCount: 0,
+            neutralCount: 1,
+            negativeCount: 1,
+            contributions: []
+          }
+        ],
+        topPositive: null,
+        topNegative: null
+      },
+      signalProfiles.byUserId.get(user.id)
+    );
 
     expect(safe?.recommendationKind).toBe('SAFE_FIT');
+    expect(gamble?.recommendationKind).toBe('SMART_GAMBLE');
     expect(probe?.recommendationKind).toBe('DISCOVERY_PROBE');
+  });
+
+  it('exposes audit counters for recommendation eligibility and rejection', () => {
+    const { fixture, user, signalProfiles } = buildReports();
+    const recommendations = recommendIslandsForUser(
+      user,
+      new Map([
+        ['i-4', {
+          islandId: 'i-4',
+          estimates: [
+            {
+              islandId: 'i-4',
+              cohortId: 'cohort-a',
+              observedMean: 0.1,
+              affinity: 0.1,
+              confidence: 0.1,
+              disagreement: 0.4,
+              rawCount: 1,
+              effectiveWeight: 1,
+              positiveCount: 1,
+              neutralCount: 0,
+              negativeCount: 0,
+              contributions: []
+            }
+          ],
+          topPositive: null,
+          topNegative: null
+        }]
+      ]),
+      signalProfiles.byUserId,
+      fixture.islands
+    );
+
+    expect(recommendations.audit.alreadyRated).toBe(3);
+    expect(recommendations.audit.eligibleSmartGamble).toBe(1);
   });
 });

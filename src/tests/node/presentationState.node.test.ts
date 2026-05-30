@@ -14,7 +14,7 @@ function buildState(turn: number, turnHistoryTurns: number[] = [0]) {
       guidedRatingsCreated: 0,
       newlyRatedIslandIds: [],
       routedIslandIds: [],
-      recommendationKinds: { SAFE_FIT: 0, DISCOVERY_PROBE: 0 },
+      recommendationKinds: { SAFE_FIT: 0, SMART_GAMBLE: 0, DISCOVERY_PROBE: 0 },
       diagnosisCounts: {
         HIGH_SIGNAL: 0,
         MISMATCH_RETAG: 0,
@@ -74,7 +74,7 @@ describe('presentation state', () => {
           guidedRatingsCreated: 0,
           newlyRatedIslandIds: [],
           routedIslandIds: [],
-          recommendationKinds: { SAFE_FIT: 0, DISCOVERY_PROBE: 0 },
+          recommendationKinds: { SAFE_FIT: 0, SMART_GAMBLE: 0, DISCOVERY_PROBE: 0 },
           diagnosisCounts: {
             HIGH_SIGNAL: 0,
             MISMATCH_RETAG: 0,
