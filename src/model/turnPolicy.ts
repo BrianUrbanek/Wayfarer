@@ -9,7 +9,7 @@ export type RoutingRiskProfile = 'conservative' | 'balanced' | 'exploratory' | '
 
 export interface RoutingRiskProfileValues {
   explorationWeight: number;
-  minimumPredictedFit: number;
+  badFitGuardThreshold: number;
 }
 
 export interface TurnPolicy {
@@ -60,15 +60,15 @@ export const ROUTING_RISK_PROFILE_LABELS: Record<RoutingRiskProfile, string> = {
 export const ROUTING_RISK_PROFILE_PRESETS: Record<Exclude<RoutingRiskProfile, 'custom'>, RoutingRiskProfileValues> = {
   conservative: {
     explorationWeight: 0.25,
-    minimumPredictedFit: 0.45
+    badFitGuardThreshold: -0.2
   },
   balanced: {
     explorationWeight: 0.55,
-    minimumPredictedFit: 0.25
+    badFitGuardThreshold: -0.35
   },
   exploratory: {
     explorationWeight: 0.85,
-    minimumPredictedFit: 0.1
+    badFitGuardThreshold: -0.5
   }
 };
 
@@ -86,7 +86,7 @@ export const DEFAULT_TURN_POLICY: TurnPolicy = {
   routingRiskProfile: 'balanced',
   customRoutingValues: {
     explorationWeight: 0.55,
-    minimumPredictedFit: 0.25
+    badFitGuardThreshold: -0.35
   },
   turnBatchCount: 5
 };
@@ -117,10 +117,10 @@ export function describeRoutingRiskProfile(
   const values = resolveRoutingRiskProfileValues(routingRiskProfile, customRoutingValues);
 
   if (routingRiskProfile === 'custom') {
-    return `Custom: exploration ${values.explorationWeight.toFixed(2)} | minimum fit ${values.minimumPredictedFit.toFixed(2)}`;
+    return `Custom: exploration ${values.explorationWeight.toFixed(2)} | bad-fit guard ${values.badFitGuardThreshold.toFixed(2)}`;
   }
 
-  return `${ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}: exploration ${values.explorationWeight.toFixed(2)} | minimum fit ${values.minimumPredictedFit.toFixed(2)}`;
+  return `${ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}: exploration ${values.explorationWeight.toFixed(2)} | bad-fit guard ${values.badFitGuardThreshold.toFixed(2)}`;
 }
 
 export function selectParticipatingUsers<T extends User>(

@@ -44,16 +44,16 @@ describe('turn policy helpers', () => {
   it('resolves routing presets and preserves custom values', () => {
     assert.deepEqual(resolveRoutingRiskProfileValues('balanced', DEFAULT_TURN_POLICY.customRoutingValues), {
       explorationWeight: 0.55,
-      minimumPredictedFit: 0.25
+      badFitGuardThreshold: -0.35
     });
 
     assert.deepEqual(
-      resolveRoutingRiskProfileValues('custom', { explorationWeight: 0.9, minimumPredictedFit: 0.4 }),
-      { explorationWeight: 0.9, minimumPredictedFit: 0.4 }
+      resolveRoutingRiskProfileValues('custom', { explorationWeight: 0.9, badFitGuardThreshold: -0.4 }),
+      { explorationWeight: 0.9, badFitGuardThreshold: -0.4 }
     );
 
     assert.equal(
-      describeRoutingRiskProfile('custom', { explorationWeight: 0.9, minimumPredictedFit: 0.4 }).includes('0.90'),
+      describeRoutingRiskProfile('custom', { explorationWeight: 0.9, badFitGuardThreshold: -0.4 }).includes('0.90'),
       true
     );
   });
@@ -61,7 +61,7 @@ describe('turn policy helpers', () => {
   it('describes non-custom routing profiles with their preset values', () => {
     const description = describeRoutingRiskProfile('conservative', DEFAULT_TURN_POLICY.customRoutingValues);
 
-    assert.equal(description, 'Conservative: exploration 0.25 | minimum fit 0.45');
+    assert.equal(description, 'Conservative: exploration 0.25 | bad-fit guard -0.20');
   });
 
   it('selects participating users by fixed count or chance per user', () => {

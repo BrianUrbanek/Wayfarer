@@ -36,7 +36,7 @@ function buildTurnPolicy() {
     organicRatingsPerUser: 2,
     guidedRecommendationsPerUser: 1,
     customExplorationWeight: DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight,
-    customMinimumPredictedFit: DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit
+    customBadFitGuardThreshold: DEFAULT_TURN_POLICY.customRoutingValues.badFitGuardThreshold
   };
 }
 

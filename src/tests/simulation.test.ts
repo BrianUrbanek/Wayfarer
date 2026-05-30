@@ -80,7 +80,7 @@ const ORGANIC_TURN_CONFIG = {
   guidedRecommendationDice: '1d2' as const,
   routingRiskProfile: 'custom' as const,
   customExplorationWeight: 0.55,
-  customMinimumPredictedFit: -1
+  customBadFitGuardThreshold: -1
 };
 
 const GUIDED_TURN_CONFIG = {
@@ -96,7 +96,7 @@ const GUIDED_TURN_CONFIG = {
   guidedRecommendationDice: '1d2' as const,
   routingRiskProfile: 'custom' as const,
   customExplorationWeight: 0.55,
-  customMinimumPredictedFit: -1
+  customBadFitGuardThreshold: -1
 };
 
 describe('simulation layer', () => {
@@ -258,7 +258,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const firstEvent = firstTurn.ratingEvents.at(-1);
 
@@ -294,7 +294,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const secondEvent = secondTurn.ratingEvents.at(-1);
     const firstProfile = firstTurn.raterSignalProfiles.get(firstEvent?.userId ?? '');
@@ -322,7 +322,7 @@ describe('simulation layer', () => {
           state.islandAffinityReports,
           state.raterSignalProfiles,
           state.islands,
-          { explorationWeight: 0.55, minPredictedFitFloor: -1, topLimit: 8 }
+          { explorationWeight: 0.55, highConfidenceBadFitThreshold: -1, topLimit: 8 }
         ).recommendations.map((recommendation) => recommendation.islandId)
       ])
     );
@@ -355,7 +355,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     expect(next.turnHistory.at(-1)?.mode).toBe('mixed');

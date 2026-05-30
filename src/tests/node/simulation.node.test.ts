@@ -119,7 +119,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.equal(next.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0).length, turnZeroConfidence.length);
@@ -146,7 +146,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.equal(next.currentTurn, 1);
@@ -187,7 +187,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
 
@@ -276,7 +276,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const secondTurn = advancePolicyTurn(firstTurn, {
       turnMode: 'organic',
@@ -291,7 +291,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.equal(secondTurn.currentTurn, 2);
@@ -316,7 +316,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.equal(next.raterSignalProfiles.size, next.users.length);
@@ -368,7 +368,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const firstEvent = firstTurn.ratingEvents.at(-1);
 
@@ -397,7 +397,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const secondEvent = secondTurn.ratingEvents.at(-1);
     const firstProfile = firstTurn.raterSignalProfiles.get(firstEvent.userId);
@@ -431,7 +431,7 @@ describe('simulation layer', () => {
           state.islandAffinityReports,
           state.raterSignalProfiles,
           state.islands,
-          { explorationWeight: 0.55, minPredictedFitFloor: -1, topLimit: 8 }
+          { explorationWeight: 0.55, highConfidenceBadFitThreshold: -1, topLimit: 8 }
         ).recommendations.map((recommendation) => recommendation.islandId)
       ])
     );
@@ -448,7 +448,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 0.55,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
     const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
 
@@ -478,7 +478,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2' as const,
       routingRiskProfile: 'custom' as const,
       customExplorationWeight: 0.75,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     };
 
     const afterOne = advancePolicyTurn(initial, turnConfig);
@@ -564,7 +564,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.equal(next.turnHistory.at(-1)?.mode, 'mixed');
@@ -596,7 +596,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.ok((next.turnHistory.at(-1)?.participatingUserIds.length ?? 0) <= 4);
@@ -620,7 +620,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     const freshEvents = next.ratingEvents.slice(state.ratingEvents.length);
@@ -646,7 +646,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.equal((next.turnHistory.at(-1)?.participatingUserIds.length ?? 0) <= 2, true);
@@ -671,7 +671,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     const guidedOnly = advancePolicyTurn(state, {
@@ -687,7 +687,7 @@ describe('simulation layer', () => {
       guidedRecommendationDice: '1d2',
       routingRiskProfile: 'custom',
       customExplorationWeight: 1,
-      customMinimumPredictedFit: -1
+      customBadFitGuardThreshold: -1
     });
 
     assert.ok((organicOnly.turnHistory.at(-1)?.organicRatingsCreated ?? 0) > 0);

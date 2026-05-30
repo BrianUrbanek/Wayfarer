@@ -136,7 +136,7 @@ export interface AdvancePolicyTurnConfig {
   guidedRecommendationDice: SupportedDiceExpression;
   routingRiskProfile: RoutingRiskProfile;
   customExplorationWeight: number;
-  customMinimumPredictedFit: number;
+  customBadFitGuardThreshold: number;
 }
 
 function buildBlankRatings(islands: readonly Island[]): Record<IslandId, MaybeRating> {
@@ -694,12 +694,12 @@ function hasUnratedIsland(user: User, islands: readonly Island[]): boolean {
 
 function buildRoutingOptions(
   explorationWeight: number,
-  minPredictedFitFloor: number,
+  highConfidenceBadFitThreshold: number,
   routeCount: number
 ): RecommendationOptions {
   return {
     explorationWeight,
-    minPredictedFitFloor,
+    highConfidenceBadFitThreshold,
     topLimit: Math.max(8, routeCount * 2)
   };
 }
@@ -864,11 +864,11 @@ export function advancePolicyTurn(
 
   const routingValues = resolveRoutingRiskProfileValues(config.routingRiskProfile, {
     explorationWeight: config.customExplorationWeight,
-    minimumPredictedFit: config.customMinimumPredictedFit
+    badFitGuardThreshold: config.customBadFitGuardThreshold
   });
   const recommendationOptions = buildRoutingOptions(
     routingValues.explorationWeight,
-    routingValues.minimumPredictedFit,
+    routingValues.badFitGuardThreshold,
     config.guidedRecommendationsPerUser
   );
 

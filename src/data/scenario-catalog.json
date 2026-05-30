@@ -27,7 +27,7 @@
         "guidedRecommendationDice": "1d2",
         "routingRiskProfile": "balanced",
         "customExplorationWeight": 0.55,
-        "customMinimumPredictedFit": 0.25
+        "customBadFitGuardThreshold": -0.35
       },
       "turnsToRun": 18
     },
@@ -57,7 +57,7 @@
         "guidedRecommendationDice": "1d2",
         "routingRiskProfile": "balanced",
         "customExplorationWeight": 0.55,
-        "customMinimumPredictedFit": 0.25
+        "customBadFitGuardThreshold": -0.35
       },
       "turnsToRun": 5
     },
@@ -87,7 +87,7 @@
         "guidedRecommendationDice": "1d2",
         "routingRiskProfile": "conservative",
         "customExplorationWeight": 0.25,
-        "customMinimumPredictedFit": 0.45
+        "customBadFitGuardThreshold": -0.2
       },
       "turnsToRun": 5
     },
@@ -117,7 +117,7 @@
         "guidedRecommendationDice": "1d2",
         "routingRiskProfile": "balanced",
         "customExplorationWeight": 0.55,
-        "customMinimumPredictedFit": 0.25
+        "customBadFitGuardThreshold": -0.35
       },
       "turnsToRun": 5
     }
@@ -153,7 +153,7 @@
           "guidedRecommendationDice": "1d2",
           "routingRiskProfile": "balanced",
           "customExplorationWeight": 0.55,
-          "customMinimumPredictedFit": 0.25
+          "customBadFitGuardThreshold": -0.35
         }
       },
       {
@@ -173,7 +173,7 @@
           "guidedRecommendationDice": "1d2",
           "routingRiskProfile": "balanced",
           "customExplorationWeight": 0.55,
-          "customMinimumPredictedFit": 0.25
+          "customBadFitGuardThreshold": -0.35
         }
       },
       {
@@ -193,7 +193,7 @@
           "guidedRecommendationDice": "1d2",
           "routingRiskProfile": "balanced",
           "customExplorationWeight": 0.55,
-          "customMinimumPredictedFit": 0.25
+          "customBadFitGuardThreshold": -0.35
         }
       },
       {
@@ -213,7 +213,7 @@
           "guidedRecommendationDice": "1d2",
           "routingRiskProfile": "balanced",
           "customExplorationWeight": 0.55,
-          "customMinimumPredictedFit": 0.25
+          "customBadFitGuardThreshold": -0.35
         }
       }
     ],

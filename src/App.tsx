@@ -428,7 +428,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [guidedRecommendationDice, setGuidedRecommendationDice] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.guidedRecommendationDice);
   const [routingRiskProfile, setRoutingRiskProfile] = useState<RoutingRiskProfile>(INITIAL_SCENARIO_PRESET.turnPolicy.routingRiskProfile);
   const [customExplorationWeight, setCustomExplorationWeight] = useState(DEFAULT_TURN_POLICY.customRoutingValues.explorationWeight);
-  const [customMinimumPredictedFit, setCustomMinimumPredictedFit] = useState(DEFAULT_TURN_POLICY.customRoutingValues.minimumPredictedFit);
+  const [customBadFitGuardThreshold, setCustomBadFitGuardThreshold] = useState(DEFAULT_TURN_POLICY.customRoutingValues.badFitGuardThreshold);
   const [turnsToRun, setTurnsToRun] = useState(INITIAL_SCENARIO_PRESET.turnsToRun);
   const [executionSeedMode, setExecutionSeedMode] = useState<ScenarioExecutionSeedMode>('random');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -647,18 +647,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     () =>
       resolveRoutingRiskProfileValues(routingRiskProfile, {
         explorationWeight: customExplorationWeight,
-        minimumPredictedFit: customMinimumPredictedFit
+        badFitGuardThreshold: customBadFitGuardThreshold
       }),
-    [customExplorationWeight, customMinimumPredictedFit, routingRiskProfile]
+    [customBadFitGuardThreshold, customExplorationWeight, routingRiskProfile]
   );
   const turnModeVisibility = useMemo(() => getTurnModeVisibility(turnMode), [turnMode]);
   const routingOptions = useMemo(
     () => ({
       explorationWeight: effectiveRoutingValues.explorationWeight,
-      minPredictedFitFloor: effectiveRoutingValues.minimumPredictedFit,
+      highConfidenceBadFitThreshold: effectiveRoutingValues.badFitGuardThreshold,
       topLimit: Math.max(8, guidedRecommendationsPerUser * 2)
     }),
-    [effectiveRoutingValues.explorationWeight, effectiveRoutingValues.minimumPredictedFit, guidedRecommendationsPerUser]
+    [effectiveRoutingValues.badFitGuardThreshold, effectiveRoutingValues.explorationWeight, guidedRecommendationsPerUser]
   );
 
   const selectedUserRecommendations = useMemo(() => {
@@ -1210,7 +1210,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       routingModeLabel={visibleTurnModeLabel}
       routingProfileLabel={ROUTING_RISK_PROFILE_LABELS[routingRiskProfile]}
       explorationWeight={effectiveRoutingValues.explorationWeight}
-      minimumPredictedFit={effectiveRoutingValues.minimumPredictedFit}
+      badFitGuardThreshold={effectiveRoutingValues.badFitGuardThreshold}
       guidedRecommendationsPerUser={guidedRecommendationsPerUser}
       recommendations={selectedUserRecommendations}
       deprioritizationRows={selectedUserDeprioritization}
@@ -1777,7 +1777,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setGuidedRecommendationDice(controls.turnPolicy.guidedRecommendationDice);
     setRoutingRiskProfile(controls.turnPolicy.routingRiskProfile);
     setCustomExplorationWeight(controls.turnPolicy.customExplorationWeight);
-    setCustomMinimumPredictedFit(controls.turnPolicy.customMinimumPredictedFit);
+    setCustomBadFitGuardThreshold(controls.turnPolicy.customBadFitGuardThreshold);
     setTurnsToRun(controls.turnsToRun);
   };
 
@@ -1876,7 +1876,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setGuidedRecommendationDice(scenario.turnPolicy.guidedRecommendationDice);
     setRoutingRiskProfile(scenario.turnPolicy.routingRiskProfile);
     setCustomExplorationWeight(scenario.turnPolicy.customExplorationWeight);
-    setCustomMinimumPredictedFit(scenario.turnPolicy.customMinimumPredictedFit);
+    setCustomBadFitGuardThreshold(scenario.turnPolicy.customBadFitGuardThreshold);
     setTurnsToRun(scenario.turnsToRun);
     setSimulationState(restoredState);
     setScenarioError('');
@@ -2120,11 +2120,11 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       guidedRecommendationDice,
       routingRiskProfile,
       customExplorationWeight,
-      customMinimumPredictedFit
+      customBadFitGuardThreshold
     }),
     [
+      customBadFitGuardThreshold,
       customExplorationWeight,
-      customMinimumPredictedFit,
       guidedRatingCountModel,
       guidedRecommendationDice,
       guidedRecommendationsPerUser,
@@ -2193,7 +2193,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         importedControls.turnPolicy.guidedRecommendationDice === currentScenarioControls.turnPolicy.guidedRecommendationDice &&
         importedControls.turnPolicy.routingRiskProfile === currentScenarioControls.turnPolicy.routingRiskProfile &&
         importedControls.turnPolicy.customExplorationWeight === currentScenarioControls.turnPolicy.customExplorationWeight &&
-        importedControls.turnPolicy.customMinimumPredictedFit === currentScenarioControls.turnPolicy.customMinimumPredictedFit &&
+        importedControls.turnPolicy.customBadFitGuardThreshold === currentScenarioControls.turnPolicy.customBadFitGuardThreshold &&
         importedControls.turnsToRun === currentScenarioControls.turnsToRun;
 
       if (!importedMatchesCurrent) {
@@ -2980,13 +2980,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                     <>
                       <label className="control">
                         {labeledControl(
-                          'Minimum Predicted Fit',
-                          'Safety gate for guided routing. Islands below this fit are not recommended.'
+                          'Bad-fit guard',
+                          'Avoid likely bounce-offs. Only reject candidates when predicted fit is bad and confidence is high.'
                         )}
                         <input
                           type="number"
-                          value={customMinimumPredictedFit}
-                          onChange={(event) => setCustomMinimumPredictedFit(Number(event.target.value))}
+                          value={customBadFitGuardThreshold}
+                          onChange={(event) => setCustomBadFitGuardThreshold(Number(event.target.value))}
                           min={-1}
                           max={1}
                           step={0.05}
@@ -2995,7 +2995,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
                       <label className="control">
                         {labeledControl(
                           'Exploration Weight',
-                          'How much discovery value matters after a candidate clears the predicted-fit gate.'
+                          'How much discovery value matters after a candidate clears the bad-fit guard.'
                         )}
                         <input
                           type="number"

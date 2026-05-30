@@ -35,7 +35,6 @@ export interface IslandRecommendation {
 
 export interface RecommendationOptions {
   explorationWeight?: number;
-  minPredictedFitFloor?: number;
   highConfidenceBadFitThreshold?: number;
   badFitConfidenceThreshold?: number;
   safeFitPredictedFitThreshold?: number;
@@ -54,7 +53,6 @@ export interface UserRecommendationAnalysis {
 
 const DEFAULT_OPTIONS: Required<RecommendationOptions> = {
   explorationWeight: 0.55,
-  minPredictedFitFloor: 0.2,
   highConfidenceBadFitThreshold: -0.35,
   badFitConfidenceThreshold: 0.65,
   safeFitPredictedFitThreshold: 0.55,

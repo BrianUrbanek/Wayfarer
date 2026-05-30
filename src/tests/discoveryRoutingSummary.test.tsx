@@ -10,7 +10,7 @@ describe('discovery routing summary', () => {
         routingModeLabel="Guided"
         routingProfileLabel="Standard"
         explorationWeight={0.55}
-        minimumPredictedFit={0.2}
+        badFitGuardThreshold={-0.35}
         guidedRecommendationsPerUser={3}
         recommendations={[
           {
@@ -47,7 +47,9 @@ describe('discovery routing summary', () => {
 
     expect(html).toContain('Recommended unrated islands');
     expect(html).toContain('Deprioritized for selected user');
-    expect(html).toContain('Positive-fit routing candidates for');
+    expect(html).toContain('Guided routing candidates for');
+    expect(html).toContain('Bad-fit guard');
+    expect(html).toContain('Rejects only likely bounce-offs');
     expect(html).toContain('Negative-fit candidates for');
     expect(html).toContain('Island 1');
     expect(html).toContain('Island 2');

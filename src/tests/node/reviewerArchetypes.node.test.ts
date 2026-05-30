@@ -248,14 +248,14 @@ describe('reviewer archetype checksums', () => {
       firstAffinity.byIslandId,
       firstSignals.byUserId,
       fixture.islands,
-      { minPredictedFitFloor: -1, topLimit: 8 }
+      { highConfidenceBadFitThreshold: -1, topLimit: 8 }
     );
     const secondRecommendations = recommendIslandsForUser(
       second,
       secondAffinity.byIslandId,
       secondSignals.byUserId,
       fixture.islands,
-      { minPredictedFitFloor: -1, topLimit: 8 }
+      { highConfidenceBadFitThreshold: -1, topLimit: 8 }
     );
 
     assert.deepEqual(secondInference, firstInference);

@@ -45,7 +45,7 @@ function buildState() {
     guidedRecommendationDice: '1d2',
     routingRiskProfile: 'balanced',
     customExplorationWeight: 0.55,
-    customMinimumPredictedFit: -0.1
+    customBadFitGuardThreshold: -0.1
   });
 
   return state;

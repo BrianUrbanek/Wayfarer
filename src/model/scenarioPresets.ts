@@ -129,7 +129,7 @@ export function matchesScenarioPreset(preset: ScenarioPreset, controls: Scenario
     preset.turnPolicy.guidedRecommendationDice === controls.turnPolicy.guidedRecommendationDice &&
     preset.turnPolicy.routingRiskProfile === controls.turnPolicy.routingRiskProfile &&
     preset.turnPolicy.customExplorationWeight === controls.turnPolicy.customExplorationWeight &&
-    preset.turnPolicy.customMinimumPredictedFit === controls.turnPolicy.customMinimumPredictedFit &&
+    preset.turnPolicy.customBadFitGuardThreshold === controls.turnPolicy.customBadFitGuardThreshold &&
     preset.turnsToRun === controls.turnsToRun
   );
 }

@@ -62,7 +62,7 @@ function fromPreset(slug: ScenarioPresetId): ExperimentScenarioDefinition {
       guidedRecommendationDice: preset.turnPolicy.guidedRecommendationDice,
       routingRiskProfile: preset.turnPolicy.routingRiskProfile,
       customExplorationWeight: preset.turnPolicy.customExplorationWeight,
-      customMinimumPredictedFit: preset.turnPolicy.customMinimumPredictedFit
+      customBadFitGuardThreshold: preset.turnPolicy.customBadFitGuardThreshold
     },
     policyCases: SHARED_POLICY_CASES,
     presetAligned: true

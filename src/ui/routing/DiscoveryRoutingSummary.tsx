@@ -11,7 +11,7 @@ interface DiscoveryRoutingSummaryProps {
   routingModeLabel: string;
   routingProfileLabel: string;
   explorationWeight: number;
-  minimumPredictedFit: number;
+  badFitGuardThreshold: number;
   guidedRecommendationsPerUser: number;
   recommendations: readonly IslandRecommendation[];
   deprioritizationRows: readonly DeprioritizationRow[];
@@ -49,7 +49,7 @@ export function DiscoveryRoutingSummary({
   routingModeLabel,
   routingProfileLabel,
   explorationWeight,
-  minimumPredictedFit,
+  badFitGuardThreshold,
   guidedRecommendationsPerUser,
   recommendations,
   deprioritizationRows,
@@ -112,7 +112,7 @@ export function DiscoveryRoutingSummary({
         <MetricCard
           label="Routing profile"
           value={routingProfileLabel}
-          helper="Current routing profile controls the positive-fit side only."
+          helper="Current routing profile balances safe fit, smart gambles, and discovery probes."
         />
         <MetricCard
           label="Exploration weight"
@@ -120,9 +120,9 @@ export function DiscoveryRoutingSummary({
           helper="How much discovery value can influence the final route score."
         />
         <MetricCard
-          label="Minimum predicted fit"
-          value={formatDecimal(minimumPredictedFit, 2)}
-          helper="Safety gate for guided routing."
+          label="Bad-fit guard"
+          value={formatDecimal(badFitGuardThreshold, 2)}
+          helper="Rejects only likely bounce-offs when confidence is high enough."
         />
         <MetricCard
           label="Guided recommendations / user"
@@ -134,7 +134,7 @@ export function DiscoveryRoutingSummary({
       <section className="detail-block">
         <h4>Recommended unrated islands</h4>
         <p className="muted">
-          Positive-fit routing candidates for {selectedUserLabel}. These are unrated islands that clear the current routing floor.
+          Guided routing candidates for {selectedUserLabel}. Unknown and uncertain islands can route unless they look confidently bad.
         </p>
         {recommendations.length > 0 ? (
           <ReportTable
@@ -143,12 +143,12 @@ export function DiscoveryRoutingSummary({
             getRowKey={(row) => row.islandId}
             onRowClick={onInspectRecommendation}
             emptyTitle="No unrated recommendations"
-            emptyDescription="The current user has no unrated islands that clear the minimum predicted fit."
+            emptyDescription="The current user has no unrated islands that pass the bad-fit guard."
           />
         ) : (
           <EmptyState
             title="No unrated recommendations"
-            description="The current user has no unrated islands that clear the minimum predicted fit."
+            description="The current user has no unrated islands that pass the bad-fit guard."
           />
         )}
       </section>

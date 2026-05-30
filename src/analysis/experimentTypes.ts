@@ -199,7 +199,7 @@ export type ExperimentTurnPolicyModel = Pick<
   | 'guidedRecommendationDice'
   | 'routingRiskProfile'
   | 'customExplorationWeight'
-  | 'customMinimumPredictedFit'
+  | 'customBadFitGuardThreshold'
 >;
 
 export type ExperimentPolicyLabels = Record<TurnMode, string>;

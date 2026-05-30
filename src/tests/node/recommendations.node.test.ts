@@ -155,7 +155,7 @@ describe('recommendation scoring', () => {
       { id: 'i-5', label: 'Island 5' },
       baseReport,
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: -1, explorationWeight: 0.5 }
+      { highConfidenceBadFitThreshold: -1, explorationWeight: 0.5 }
     );
 
     const weaker = scoreIslandRecommendation(
@@ -171,7 +171,7 @@ describe('recommendation scoring', () => {
         )
       },
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: -1, explorationWeight: 0.5 }
+      { highConfidenceBadFitThreshold: -1, explorationWeight: 0.5 }
     );
 
     assert.ok((stronger?.predictedFit ?? 0) > (weaker?.predictedFit ?? 0));
@@ -205,7 +205,7 @@ describe('recommendation scoring', () => {
         topNegative: null
       },
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: -1, explorationWeight: 1 }
+      { highConfidenceBadFitThreshold: -1, explorationWeight: 1 }
     );
 
     const highDiscovery = scoreIslandRecommendation(
@@ -233,7 +233,7 @@ describe('recommendation scoring', () => {
         topNegative: null
       },
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: -1, explorationWeight: 1 }
+      { highConfidenceBadFitThreshold: -1, explorationWeight: 1 }
     );
 
     assert.ok((highDiscovery?.discoveryValue ?? 0) > (lowDiscovery?.discoveryValue ?? 0));
@@ -267,7 +267,7 @@ describe('recommendation scoring', () => {
         topNegative: null
       },
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: 0.2, explorationWeight: 5 }
+      { highConfidenceBadFitThreshold: -0.35, explorationWeight: 5 }
     );
 
     assert.notEqual(recommendation, null);
@@ -361,7 +361,7 @@ describe('recommendation scoring', () => {
         topNegative: null
       },
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: 0.2, explorationWeight: 0.5 }
+      { highConfidenceBadFitThreshold: -0.35, explorationWeight: 0.5 }
     );
 
     const gamble = scoreIslandRecommendation(
@@ -389,7 +389,7 @@ describe('recommendation scoring', () => {
         topNegative: null
       },
       signalProfiles.byUserId.get(user.id),
-      { minPredictedFitFloor: 0.2, explorationWeight: 0.5 }
+      { highConfidenceBadFitThreshold: -0.35, explorationWeight: 0.5 }
     );
     const probe = scoreIslandRecommendation(
       user,

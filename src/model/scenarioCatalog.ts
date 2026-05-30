@@ -98,7 +98,7 @@ function isTurnPolicy(value: unknown): value is AdvancePolicyTurnConfig {
       value.routingRiskProfile === 'exploratory' ||
       value.routingRiskProfile === 'custom') &&
     isNumber(value.customExplorationWeight) &&
-    isNumber(value.customMinimumPredictedFit)
+    isNumber(value.customBadFitGuardThreshold)
   );
 }
 
