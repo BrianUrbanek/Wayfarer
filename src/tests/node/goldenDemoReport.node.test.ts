@@ -79,6 +79,21 @@ describe('golden demo report', () => {
     assert.equal(first.caveats.length, 3);
   });
 
+  it('shows material confidence movement after the guided Golden Demo run', () => {
+    const { state } = buildGoldenDemoState();
+    const report = buildGoldenDemoReport({
+      scenario: getScenarioPreset('golden-demo'),
+      state
+    });
+    const firstConfidence = state.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0)
+      .reduce((sum, snapshot, _index, snapshots) => sum + snapshot.confidence / snapshots.length, 0);
+    const lastConfidence = state.confidenceSnapshots.filter((snapshot) => snapshot.turn === state.currentTurn)
+      .reduce((sum, snapshot, _index, snapshots) => sum + snapshot.confidence / snapshots.length, 0);
+
+    assert.ok(lastConfidence > firstConfidence);
+    assert.ok(report.confidenceMovement.summary.includes('Confidence moved from'));
+  });
+
   it('renders readable markdown with the required caveats and headings', () => {
     const report = buildGoldenDemoReport({
       scenario: getScenarioPreset('golden-demo'),

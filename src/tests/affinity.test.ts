@@ -121,6 +121,30 @@ describe('weighted island / cohort affinity', () => {
     expect(estimateA?.affinity).toBe(0);
   });
 
+  it('can learn high-confidence neutral affinity from repeated trusted neutral evidence', () => {
+    const neutralEvents: AffinityRatingEvent[] = Array.from({ length: 12 }, (_, index) => ({
+      id: `neutral-${index + 1}`,
+      turn: index + 1,
+      userId: userA.id,
+      islandId: islandY.id,
+      rating: 0,
+      raterSignalWeights: { [cohortA.id]: 1, [cohortB.id]: 0 }
+    }));
+    const reports = buildIslandAffinityReports(
+      neutralEvents,
+      profiles.byUserId,
+      fixture.cohorts,
+      [...fixture.islands, islandY],
+      { turnHistory: neutralEvents.map((event) => ({ turn: event.turn ?? 0 })) }
+    );
+
+    const estimateA = reports.byIslandId.get(islandY.id)?.estimates.find((entry) => entry.cohortId === cohortA.id);
+
+    expect(Math.abs(estimateA?.affinity ?? 1)).toBeLessThan(0.05);
+    expect(estimateA?.confidence ?? 0).toBeGreaterThan(0.5);
+    expect(estimateA?.effectiveWeight ?? 0).toBeGreaterThan(10);
+  });
+
   it('leaves missing islands at zero evidence', () => {
     const reports = buildIslandAffinityReports([], profiles.byUserId, fixture.cohorts, [...fixture.islands, islandY]);
     const report = reports.byIslandId.get(islandY.id);

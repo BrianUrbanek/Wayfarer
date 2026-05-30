@@ -110,14 +110,14 @@ describe('simulation layer', () => {
     expect(state.users.every((user) => Object.values(user.ratings).every((rating) => rating === null))).toBe(true);
   });
 
-  it('bootstraps turn 0 ratings with default signal weights', () => {
+  it('bootstraps turn 0 ratings without trusted cohort signal weights', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
     const firstEvent = state.ratingEvents[0];
 
     expect(firstEvent).toBeTruthy();
     expect(firstEvent?.turn).toBe(0);
-    expect(Object.values(firstEvent?.raterSignalWeights ?? {}).every((weight) => weight === 1)).toBe(true);
+    expect(Object.values(firstEvent?.raterSignalWeights ?? {}).every((weight) => weight === 0)).toBe(true);
   });
 
   it('preserves the full generated hidden taste cohort set in initial simulation state', () => {

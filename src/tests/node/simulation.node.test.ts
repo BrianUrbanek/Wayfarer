@@ -88,7 +88,7 @@ describe('simulation layer', () => {
     );
   });
 
-  it('bootstraps turn 0 ratings with default signal weights', () => {
+  it('bootstraps turn 0 ratings without trusted cohort signal weights', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 6 });
     const firstEvent = state.ratingEvents[0];
@@ -96,7 +96,7 @@ describe('simulation layer', () => {
     assert.ok(firstEvent);
     assert.equal(firstEvent.turn, 0);
     assert.equal(
-      Object.values(firstEvent.raterSignalWeights).every((weight) => weight === 1),
+      Object.values(firstEvent.raterSignalWeights).every((weight) => weight === 0),
       true
     );
   });

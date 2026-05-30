@@ -181,7 +181,7 @@ function buildSignalWeightSnapshot(
 }
 
 function buildBootstrapSignalWeightSnapshot(cohorts: readonly CohortAnchor[]): Record<CohortId, number> {
-  return Object.fromEntries(cohorts.map((cohort) => [cohort.id, 1])) as Record<CohortId, number>;
+  return Object.fromEntries(cohorts.map((cohort) => [cohort.id, 0])) as Record<CohortId, number>;
 }
 
 function cloneConfidenceSnapshot(snapshot: IslandCohortConfidenceSnapshot): IslandCohortConfidenceSnapshot {
