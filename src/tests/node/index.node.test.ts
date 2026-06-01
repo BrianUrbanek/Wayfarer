@@ -31,3 +31,4 @@ import './guidedTargetRegistry.node.test.js';
 import './goldenDemoReport.node.test.js';
 import './glossary.node.test.js';
 import './deprioritization.node.test.js';
+import './modelingCore.node.test.js';

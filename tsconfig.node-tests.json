@@ -20,6 +20,7 @@
   },
   "include": [
     "src/analysis/**/*.ts",
+    "src/modeling-core/**/*.ts",
     "src/model/**/*.ts",
     "src/generator/**/*.ts",
     "src/data/**/*.ts",
