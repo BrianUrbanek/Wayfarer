@@ -22,6 +22,7 @@ import { SelectedIslandTruthComparison } from './ui/routing/SelectedIslandTruthC
 import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEvidenceSummary';
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
+import { ModelingLabPanel } from './ui/modelingLab/ModelingLabPanel';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -851,7 +852,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     selectedInference.behaviorMatchStrength < 0.35 &&
     selectedInference.behaviorSpecificity < 0.06;
 
-  const visibleDashboardSections: DashboardPanelGroupKey[] = ['overview', 'recovery', 'routing', 'debug'];
+  const visibleDashboardSections: DashboardPanelGroupKey[] = ['overview', 'modeling', 'recovery', 'routing', 'debug'];
   const runContextNote = isNoviceMode
      ?  'Novice keeps the instructional rails open while expert exposes the resolved controls. Current run badges live in Primary Workflow.'
     : 'Expert keeps the same run-context choices visible and exposes the resolved controls. Current run badges live in Primary Workflow.';
@@ -2501,7 +2502,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         <ConfidenceGrowthPanel key="confidence-growth" rows={confidenceGrowthRows} collapsed />
       ]
     },
-      recovery: {
+    modeling: {
+      title: 'Modeling Lab',
+      panels: [
+        <ModelingLabPanel key="modeling-lab" />
+      ]
+    },
+    recovery: {
       title: 'Recovery',
       panels: [
         <Panel

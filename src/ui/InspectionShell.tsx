@@ -41,7 +41,7 @@ export function InspectionShell({
 
           return (
             <section key={sectionKey} className={`dashboard-section dashboard-section--${sectionKey}`}>
-              {sectionKey !== 'routing' && sectionKey !== 'recovery' && sectionKey !== 'overview' ? (
+              {sectionKey !== 'routing' && sectionKey !== 'recovery' && sectionKey !== 'overview' && sectionKey !== 'modeling' ? (
                 <ModulePanelHeader
                   eyebrow={section.title}
                   title="Debug checksums"
@@ -55,7 +55,7 @@ export function InspectionShell({
                   collapseLabel={sectionKey === 'debug' && debugCollapsed ? `Expand ${section.title}` : `Collapse ${section.title}`}
                 />
               ) : null}
-              {sectionKey === 'routing' || sectionKey === 'recovery' || sectionKey === 'overview' ? (
+              {sectionKey === 'routing' || sectionKey === 'recovery' || sectionKey === 'overview' || sectionKey === 'modeling' ? (
                 <div className="dashboard-section__panels">{section.panels}</div>
               ) : !(sectionKey === 'debug' && debugCollapsed) ? (
                 <div className="dashboard-section__panels">{section.panels}</div>

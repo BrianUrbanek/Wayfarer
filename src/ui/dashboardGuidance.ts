@@ -2,7 +2,7 @@ import type { GuidedPath } from './guidedPath/guidedPathTypes.js';
 
 export type GuidanceMode = 'novice' | 'expert';
 
-export type DashboardPanelGroupKey = 'overview' | 'recovery' | 'routing' | 'debug';
+export type DashboardPanelGroupKey = 'overview' | 'modeling' | 'recovery' | 'routing' | 'debug';
 
 export type GuidedPathId = 'run-start' | 'portfolio-reviewer' | 'navigation-tutorial' | 'analyst-workflow';
 

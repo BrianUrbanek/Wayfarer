@@ -1156,7 +1156,8 @@ select {
     transform 180ms ease;
 }
 
-.dashboard-section--overview {
+.dashboard-section--overview,
+.dashboard-section--modeling {
   border-top: 1px solid rgba(141, 164, 255, 0.16);
   padding-top: 8px;
 }
@@ -1189,11 +1190,13 @@ select {
 }
 
 .dashboard-section--overview .dashboard-section__panels,
+.dashboard-section--modeling .dashboard-section__panels,
 .dashboard-section--debug .dashboard-section__panels {
   grid-template-columns: 1fr;
 }
 
 .dashboard-section--overview .panel--full,
+.dashboard-section--modeling .panel--full,
 .dashboard-section--debug .panel--full {
   grid-column: 1 / -1;
 }
