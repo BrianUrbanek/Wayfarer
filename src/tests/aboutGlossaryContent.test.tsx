@@ -10,6 +10,9 @@ describe('about glossary content', () => {
     expect(html).toContain('Jump to definition');
     expect(html).toContain('id="glossary-jump"');
     expect(html).toContain('Select a term...');
+    expect(html).toContain('Confidence Composite');
+    expect(html).toContain('Oracle / Test Generator Truth');
+    expect(html).toContain('composite UX read');
 
     for (const term of GLOSSARY_TERMS) {
       expect(html).toContain(`<option value="${term.id}">${term.term}</option>`);

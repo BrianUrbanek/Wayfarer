@@ -20,6 +20,8 @@ export type GlossaryTermId =
   | 'discovery-routing'
   | 'safe-fit'
   | 'discovery-probe'
+  | 'confidence-composite'
+  | 'oracle-test-generator-truth'
   | 'confidence-snapshot'
   | 'pinned-reference'
   | 'transient-drilldown';
@@ -49,6 +51,12 @@ The system is not limited to UGC worlds, even if islands are the current concret
 Trust belongs to raters. It answers whether a person\'s ratings can be used as evidence. Discovery Signal belongs to the player-facing contribution layer. It answers whether a player has been useful over time. Confidence belongs to the island/cohort estimate itself. It answers how certain we are about fit right now, and in the current prototype it is projected from the island/cohort rating state rather than treated as a separate model.
 
 These three ideas are related but not interchangeable. Trust weights evidence. Discovery Signal is retrospective usefulness. Confidence is the current uncertainty attached to an island/cohort read.
+
+## Confidence Composite and Oracle Truth
+
+Where the UI has RD, volatility, and evidence support together, confidence is shown as a composite UX read rather than a raw certainty claim. The composite stays separate from RD/uncertainty, volatility/stability, and evidence support so each part can still be inspected on its own.
+
+Hidden truth and generator truth are validation layers only. They can be shown as oracle / test generator truth for audit and debugging, but they are never treated as model input or production-visible truth.
 
 ## Ratings, Behavior, and Hidden Truth
 
@@ -250,6 +258,26 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     relatedTerms: ['safe-fit', 'discovery-probe']
   },
   {
+    id: 'confidence-composite',
+    term: 'Confidence Composite',
+    shortDefinition: 'Composite confidence read built from RD, volatility, and evidence support.',
+    fullDefinition:
+      'A novice-facing confidence read shown only when the UI has honest RD, volatility, and evidence support available together. It is a composite summary, not a replacement for the separate uncertainty, stability, or evidence fields.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['rating-deviation', 'volatility', 'rating-event-weight', 'island-confidence']
+  },
+  {
+    id: 'oracle-test-generator-truth',
+    term: 'Oracle / Test Generator Truth',
+    shortDefinition: 'Validation-only hidden truth used to check a synthetic run.',
+    fullDefinition:
+      'The hidden generator layer used to validate a synthetic or test scenario. It is shown only as oracle / test generator truth, must be labeled as validation-only, and is never model input.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['transient-drilldown', 'confidence-snapshot']
+  },
+  {
     id: 'safe-fit',
     term: 'Safe Fit',
     shortDefinition: 'Higher-confidence positive-fit candidate route.',
@@ -308,6 +336,8 @@ export const REQUIRED_GLOSSARY_TERMS: GlossaryTermId[] = [
   'discovery-routing',
   'safe-fit',
   'discovery-probe',
+  'confidence-composite',
+  'oracle-test-generator-truth',
   'confidence-snapshot',
   'pinned-reference',
   'transient-drilldown'
