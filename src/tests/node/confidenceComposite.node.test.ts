@@ -52,4 +52,34 @@ describe('confidence composite helper', () => {
     assert.equal(summary.score, 0);
     assert.equal(summary.evidenceState, 'none');
   });
+
+  it('raises confidence when RD is lower with evidence and volatility held constant', () => {
+    const highRd = buildConfidenceCompositeSummary({
+      ratingDeviation: 0.82,
+      volatility: 0.14,
+      evidenceCount: 6
+    });
+    const lowRd = buildConfidenceCompositeSummary({
+      ratingDeviation: 0.18,
+      volatility: 0.14,
+      evidenceCount: 6
+    });
+
+    assert.equal(lowRd.score > highRd.score, true);
+  });
+
+  it('raises confidence when volatility is lower with evidence and RD held constant', () => {
+    const highVolatility = buildConfidenceCompositeSummary({
+      ratingDeviation: 0.22,
+      volatility: 0.88,
+      evidenceCount: 6
+    });
+    const lowVolatility = buildConfidenceCompositeSummary({
+      ratingDeviation: 0.22,
+      volatility: 0.08,
+      evidenceCount: 6
+    });
+
+    assert.equal(lowVolatility.score > highVolatility.score, true);
+  });
 });

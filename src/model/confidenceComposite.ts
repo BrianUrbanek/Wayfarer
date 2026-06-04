@@ -86,8 +86,10 @@ export function buildConfidenceCompositeSummary(input: ConfidenceCompositeInput)
   );
 
   const uncertaintyScore = ratingDeviation;
-  const stabilityScore = volatility;
-  const rawScore = (evidenceSupport * 0.45) + (uncertaintyScore * 0.35) + (stabilityScore * 0.2);
+  const volatilityScore = volatility;
+  const certaintyScore = 1 - ratingDeviation;
+  const stabilityScore = 1 - volatility;
+  const rawScore = (evidenceSupport * 0.45) + (certaintyScore * 0.35) + (stabilityScore * 0.2);
 
   let score = rawScore;
   let band = bandFromScore(score);
@@ -108,7 +110,7 @@ export function buildConfidenceCompositeSummary(input: ConfidenceCompositeInput)
     score,
     band,
     uncertaintyState: stateFromScore(uncertaintyScore),
-    volatilityState: stateFromScore(stabilityScore),
+    volatilityState: stateFromScore(volatilityScore),
     evidenceState: evidenceCount >= 6 ? 'strong' : evidenceCount >= 3 ? 'moderate' : 'sparse',
     label:
       band === 'high'
@@ -122,6 +124,6 @@ export function buildConfidenceCompositeSummary(input: ConfidenceCompositeInput)
               : 'No confidence',
     explanation:
       `Confidence is a UX composite of evidence support (${Math.round(evidenceSupport * 100)}%), ` +
-      `uncertainty (${Math.round(uncertaintyScore * 100)}%), and stability (${Math.round(stabilityScore * 100)}%).`
+      `certainty from low RD (${Math.round(certaintyScore * 100)}%), and stability from low volatility (${Math.round(stabilityScore * 100)}%).`
   };
 }
