@@ -326,11 +326,11 @@ describe('island truth comparison', () => {
     );
 
     expect(html).toContain('Truth comparison audit');
-    expect(html).toContain('Hidden generator truth');
+    expect(html).toContain('Oracle / test generator truth');
     expect(html).toContain('Top positive visible cohort');
     expect(html).toContain('toy-world audit data');
     expect(html).toContain('Visible cohort estimates');
-    expect(html).toContain('confidence / affinity');
+    expect(html).toContain('Confidence proxy 67% / RD 0.330 / Volatility 0.070');
   });
 
   it('renders random hidden truth details without a target cohort', () => {

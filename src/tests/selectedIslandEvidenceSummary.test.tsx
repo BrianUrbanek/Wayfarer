@@ -53,7 +53,7 @@ describe('selected island evidence summary', () => {
     );
 
     expect(html).toContain('Selected island evidence');
-    expect(html).toContain('Current confidence and directional affinity are separate reads');
+    expect(html).toContain('Current confidence and directional affinity are separate diagnostic/proxy reads');
     expect(html).toContain('Audience read');
     expect(html).toContain('Confidence &amp; stability');
     expect(html).toContain('Evidence provenance');

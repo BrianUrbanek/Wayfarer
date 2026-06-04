@@ -32,7 +32,7 @@ function metricHelperText(report: IslandTruthComparisonReport): string {
     return 'No projectable learned estimate yet.';
   }
 
-  return `Confidence ${formatPercent(targetEstimate.confidence)} / RD ${targetEstimate.ratingDeviation.toFixed(3)} / Volatility ${targetEstimate.volatility.toFixed(3)}`;
+  return `Confidence proxy ${formatPercent(targetEstimate.confidence)} / RD ${targetEstimate.ratingDeviation.toFixed(3)} / Volatility ${targetEstimate.volatility.toFixed(3)}`;
 }
 
 export function SelectedIslandTruthComparisonModal({ report, open, onClose }: SelectedIslandTruthComparisonModalProps) {
@@ -51,7 +51,8 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
         </section>
 
         <section className="detail-block">
-          <h4>Hidden generator truth</h4>
+          <h4>Oracle / test generator truth</h4>
+          <p className="muted">Shown for validation only; not model input.</p>
           {report.hiddenTruthClass || report.hiddenTargetTasteCohortId || report.hiddenAppealVectorSummary !== 'n/a' ? (
             <div className="detail-mini-table">
               <div className="detail-mini-table__row">
@@ -118,7 +119,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
               columns={[
                 { key: 'cohort', label: 'Cohort', render: (row) => row.cohortLabel },
                 { key: 'affinity', label: 'Affinity', align: 'right', render: (row) => formatSigned(row.affinity) },
-                { key: 'confidence', label: 'Certainty', align: 'right', render: (row) => formatPercent(row.confidence) },
+                { key: 'confidence', label: 'Confidence proxy', align: 'right', render: (row) => formatPercent(row.confidence) },
                 { key: 'rd', label: 'RD', align: 'right', render: (row) => row.ratingDeviation.toFixed(3) },
                 { key: 'vol', label: 'Volatility', align: 'right', render: (row) => row.volatility.toFixed(3) },
                 { key: 'weight', label: 'Weight', align: 'right', render: (row) => row.effectiveWeight.toFixed(3) },
@@ -141,7 +142,7 @@ export function SelectedIslandTruthComparison({ report, panelRef }: SelectedIsla
   const headlineEstimate = report.headlineEstimate;
   const headlineValue = headlineEstimate ? headlineEstimate.cohortLabel : 'n/a';
   const headlineHelper = headlineEstimate
-    ? `${formatPercent(headlineEstimate.confidence)} certainty / affinity ${formatSigned(headlineEstimate.affinity)}`
+    ? `${formatPercent(headlineEstimate.confidence)} confidence proxy / affinity ${formatSigned(headlineEstimate.affinity)}`
     : 'No learned estimate yet.';
 
   return (
@@ -156,15 +157,15 @@ export function SelectedIslandTruthComparison({ report, panelRef }: SelectedIsla
       <p className="muted island-truth-comparison__summary">{report.summarySentence}</p>
       <div className="metric-grid metric-grid--compact island-truth-comparison__metrics">
         <MetricCard
-          label="Hidden generator truth"
+          label="Oracle / test generator truth"
           value={report.hiddenTruthClassLabel}
           helper={
             report.hiddenTargetTasteCohortLabel
               ? `${report.hiddenTargetTasteCohortKind === 'unseeded' ? 'Unseeded' : 'Seed'} target: ${report.hiddenTargetTasteCohortLabel}`
-              : 'No hidden target cohort'
+              : 'Shown for validation only; not model input.'
           }
         />
-        <MetricCard label="Learned read" value={headlineValue} helper={headlineHelper} />
+        <MetricCard label="Learned confidence proxy" value={headlineValue} helper={headlineHelper} />
       </div>
       <p className="muted island-truth-comparison__hint">
         {report.hiddenTargetProjectableVisibleCohortLabel

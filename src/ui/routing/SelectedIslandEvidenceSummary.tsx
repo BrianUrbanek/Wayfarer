@@ -42,28 +42,28 @@ export function SelectedIslandEvidenceSummary({
       <div className="section-heading">
         <h4>Selected island evidence</h4>
         <p className="muted">
-          Current confidence and directional affinity are separate reads. The surfaces below are diagnostics, not score cards.
+          Current confidence and directional affinity are separate diagnostic/proxy reads. The surfaces below are diagnostics, not score cards.
         </p>
       </div>
       <div className="stack">
         <section className="detail-block">
           <div className="section-heading">
             <h5>Audience read</h5>
-            <p className="muted">Cohort-specific affinity, confidence, RD, volatility, and evidence are shown as separate reads.</p>
+            <p className="muted">Cohort-specific affinity, confidence proxy, RD, volatility, and evidence are shown as separate reads.</p>
           </div>
         </section>
         <IslandConfidenceRadar data={confidenceRadarData} />
         <section className="detail-block">
           <div className="section-heading">
             <h5>Confidence & stability</h5>
-            <p className="muted">Confidence remains a read summary; RD and volatility stay visible as separate support fields.</p>
+            <p className="muted">Confidence remains a proxy summary; RD and volatility stay visible as separate support fields.</p>
           </div>
         </section>
         <IslandCohortRatingTimeline rows={timelineRows} cohortLabelById={cohortLabelById} />
         <section className="detail-block">
           <div className="section-heading">
             <h5>Evidence provenance</h5>
-            <p className="muted">Rating weights, observed behavior, and projection provenance remain explicit and labeled.</p>
+            <p className="muted">Rating weights, observed behavior, and projection provenance remain explicit, labeled diagnostics.</p>
           </div>
         </section>
         <IslandEvidenceConstellationView data={constellation} />
