@@ -13,6 +13,8 @@ describe('confidence composite helper', () => {
     assert.equal(summary.band, 'high');
     assert.equal(summary.score >= 0.75, true);
     assert.equal(summary.evidenceState, 'strong');
+    assert.equal(summary.uncertaintyState, 'sparse');
+    assert.equal(summary.volatilityState, 'sparse');
   });
 
   it('treats high RD as low confidence even when evidence exists', () => {
@@ -24,7 +26,7 @@ describe('confidence composite helper', () => {
 
     assert.equal(summary.band, 'low');
     assert.equal(summary.score <= 0.4, true);
-    assert.equal(summary.uncertaintyState, 'high');
+    assert.equal(summary.uncertaintyState, 'strong');
   });
 
   it('caps confidence when volatility is high but evidence is present', () => {
@@ -36,7 +38,7 @@ describe('confidence composite helper', () => {
 
     assert.equal(summary.band, 'mixed');
     assert.equal(summary.score <= 0.65, true);
-    assert.equal(summary.volatilityState, 'high');
+    assert.equal(summary.volatilityState, 'strong');
   });
 
   it('returns no confidence when evidence is absent', () => {

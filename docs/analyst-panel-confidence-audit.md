@@ -23,7 +23,7 @@ Outputs:
 - band: `none`, `low`, `mixed`, `medium`, or `high`
 - a numeric score
 - a short explanation
-- explicit factor states for uncertainty, volatility, and evidence
+- explicit factor states for uncertainty, volatility, and evidence using the shared vocabulary `none`, `sparse`, `moderate`, `strong`
 
 ## What was deliberately not changed
 

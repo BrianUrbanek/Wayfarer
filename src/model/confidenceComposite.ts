@@ -1,6 +1,6 @@
 export type ConfidenceBand = 'none' | 'low' | 'mixed' | 'medium' | 'high';
 
-export type ConfidenceLevelState = 'none' | 'low' | 'moderate' | 'high';
+export type ConfidenceLevelState = 'none' | 'sparse' | 'moderate' | 'strong';
 
 export interface ConfidenceCompositeInput {
   ratingDeviation: number;
@@ -33,14 +33,14 @@ function stateFromScore(score: number): ConfidenceLevelState {
   }
 
   if (score < 0.35) {
-    return 'low';
+    return 'sparse';
   }
 
   if (score < 0.7) {
     return 'moderate';
   }
 
-  return 'high';
+  return 'strong';
 }
 
 function bandFromScore(score: number): ConfidenceBand {
@@ -69,8 +69,8 @@ export function buildConfidenceCompositeSummary(input: ConfidenceCompositeInput)
     return {
       score: 0,
       band: 'none',
-      uncertaintyState: stateFromScore(0),
-      volatilityState: stateFromScore(0),
+      uncertaintyState: 'none',
+      volatilityState: 'none',
       evidenceState: 'none',
       label: 'No confidence',
       explanation: 'No evidence is present, so the UX composite stays at none even if the read is otherwise stable.'
@@ -85,8 +85,8 @@ export function buildConfidenceCompositeSummary(input: ConfidenceCompositeInput)
       : evidenceCount / (evidenceCount + 3)
   );
 
-  const uncertaintyScore = 1 - ratingDeviation;
-  const stabilityScore = 1 - volatility;
+  const uncertaintyScore = ratingDeviation;
+  const stabilityScore = volatility;
   const rawScore = (evidenceSupport * 0.45) + (uncertaintyScore * 0.35) + (stabilityScore * 0.2);
 
   let score = rawScore;
@@ -109,7 +109,7 @@ export function buildConfidenceCompositeSummary(input: ConfidenceCompositeInput)
     band,
     uncertaintyState: stateFromScore(uncertaintyScore),
     volatilityState: stateFromScore(stabilityScore),
-    evidenceState: evidenceCount >= 6 ? 'high' : evidenceCount >= 3 ? 'moderate' : 'low',
+    evidenceState: evidenceCount >= 6 ? 'strong' : evidenceCount >= 3 ? 'moderate' : 'sparse',
     label:
       band === 'high'
         ? 'High confidence'
