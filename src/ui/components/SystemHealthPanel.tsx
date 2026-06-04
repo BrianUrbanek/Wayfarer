@@ -139,8 +139,9 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
         </div>
         <aside className="system-confidence-header__howto" aria-label="How to read system health">
           <p className="muted">
-            Coverage tracks evidence spread across players, islands, cohorts, and tags. Confidence tracks whether those
-            patterns are coherent and trustworthy given available evidence.
+            Coverage tracks evidence spread across players, islands, cohorts, and tags. Confidence here is a dashboard-level
+            health proxy, not the novice composite shown in overview recap rows. It tracks whether the current structure is
+            coherent and trustworthy given available evidence.
           </p>
         </aside>
       </div>
@@ -166,7 +167,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Player Confidence</div>
+          <div className="metric-card__label">Player Confidence (proxy)</div>
           {openPopover === 'playerConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Player Confidence details">
               <section className="system-health-popover__section">
@@ -191,7 +192,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
             </div>
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.playerConfidence)}</div>
-          <div className="metric-card__helper">Mismatch/inverse profiles can still be high-confidence.</div>
+          <div className="metric-card__helper">Legacy proxy. Mismatch/inverse profiles can still score high.</div>
         </article>
 
         <article className={`metric-card system-confidence-card${showConfidenceSeries.island ? ' system-confidence-card--active' : ''}`}>
@@ -214,7 +215,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Island Confidence</div>
+          <div className="metric-card__label">Island Confidence (proxy)</div>
           {openPopover === 'islandConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Island Confidence details">
               <section className="system-health-popover__section">
@@ -231,7 +232,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
             </div>
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.islandConfidence)}</div>
-          <div className="metric-card__helper">Island affinity confidence with evidence weighting.</div>
+          <div className="metric-card__helper">Legacy proxy. Island affinity confidence with evidence weighting.</div>
         </article>
 
         <article className={`metric-card system-confidence-card${showConfidenceSeries.cohort ? ' system-confidence-card--active' : ''}`}>
@@ -254,7 +255,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Cohort Confidence</div>
+          <div className="metric-card__label">Cohort Confidence (proxy)</div>
           {openPopover === 'cohortConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Cohort Confidence details">
               <section className="system-health-popover__section">
@@ -272,7 +273,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
             </div>
           ) : null}
           <div className="metric-card__value metric-card__value--text">{formatPercent(summary.cohortConfidence)}</div>
-          <div className="metric-card__helper">Cohort usefulness as explanatory structure.</div>
+          <div className="metric-card__helper">Legacy proxy. Cohort usefulness as explanatory structure.</div>
         </article>
 
         <article className={`metric-card system-confidence-card${showConfidenceSeries.tag ? ' system-confidence-card--active' : ''}`}>
@@ -295,7 +296,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Tag Confidence</div>
+          <div className="metric-card__label">Tag Confidence (proxy)</div>
           {openPopover === 'tagConfidence' ? (
             <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Tag Confidence details">
               <section className="system-health-popover__section">
@@ -343,7 +344,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
         </svg>
         <div className="system-confidence-trend__legend">
           <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--system">
-            System Confidence (always shown)
+            System Confidence (health proxy)
           </span>
           <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--player">Player</span>
           <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--island">Island</span>

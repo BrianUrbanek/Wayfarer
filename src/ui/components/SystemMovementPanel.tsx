@@ -142,7 +142,7 @@ export function SystemMovementPanel({ analysis, collapsed = false }: SystemMovem
       <div className="system-movement__intro">
         <div>
           <p className="eyebrow">Post-run visualization</p>
-          <h3>Total movement in learned audience fit</h3>
+          <h3>Total movement in learned audience fit and legibility</h3>
           <p className="muted">
             Each island is positioned by learned profile fit and legibility. Size is evidence weight; color is the dominant signal type.
           </p>
@@ -165,7 +165,7 @@ export function SystemMovementPanel({ analysis, collapsed = false }: SystemMovem
           </span>
           <span>
             <strong>{(selectedFrame?.summary.contradictionCount ?? 0) + (selectedFrame?.summary.volatilityCount ?? 0)}</strong>
-            <span>unstable reads</span>
+            <span>unstable / split reads</span>
           </span>
         </div>
       </div>
@@ -219,7 +219,7 @@ export function SystemMovementPanel({ analysis, collapsed = false }: SystemMovem
                 Profile position / affinity centroid
               </text>
               <text x="22" y="260" className="system-movement__axis-title system-movement__axis-title--y" textAnchor="middle">
-                Confidence / legibility
+                Legibility / stability
               </text>
 
               {selectedFrame.points.map((point) => {

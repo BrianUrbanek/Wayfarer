@@ -4,6 +4,7 @@ import { EmptyState } from '../components/EmptyState';
 import { MetricCard } from '../components/MetricCard';
 import { Modal } from '../components/Modal';
 import { ReportTable, type ReportTableColumn } from '../components/ReportTable';
+import { buildConfidenceCompositeSummary } from '../../model/confidenceComposite.js';
 import type {
   TurnRecapMoverKind,
   TurnRecapReport,
@@ -27,6 +28,17 @@ function formatSigned(value: number | null | undefined, digits = 3): string {
 
 function formatPercent(value: number): string {
   return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
+}
+
+function formatCompositeConfidence(row: TurnRecapRow): string {
+  const summary = buildConfidenceCompositeSummary({
+    ratingDeviation: row.currentRatingDeviation,
+    volatility: row.currentVolatility,
+    evidenceCount: row.currentEvidenceCount,
+    evidenceSupport: row.currentEffectiveWeight / Math.max(1, row.currentEffectiveWeight + 3)
+  });
+
+  return `${summary.label} (${formatPercent(summary.score)})`;
 }
 
 function toneForKind(kind: TurnRecapMoverKind | null): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' {
@@ -64,7 +76,7 @@ function buildColumns(hasComparison: boolean): ReportTableColumn<TurnRecapRow>[]
         render: (row) => (
           <div className="table-cell-stack">
             <span>
-              Affinity {formatSigned(row.currentAffinity)} | certainty {formatPercent(row.currentConfidence)}
+              Affinity {formatSigned(row.currentAffinity)} | {formatCompositeConfidence(row)}
             </span>
             <span className="muted">
               RD {row.currentRatingDeviation.toFixed(3)} | volatility {row.currentVolatility.toFixed(3)} | evidence {row.currentEvidenceCount}
@@ -95,14 +107,14 @@ function buildColumns(hasComparison: boolean): ReportTableColumn<TurnRecapRow>[]
     {
       key: 'delta',
       label: 'Turn delta',
-      render: (row) => (
-        <div className="table-cell-stack">
-          <span>Affinity {formatSigned(row.affinityDelta)}</span>
-          <span className="muted">
-            Certainty {formatSigned(row.confidenceDelta)} | RD {formatSigned(row.ratingDeviationDelta)} | volatility {formatSigned(row.volatilityDelta)}
-          </span>
-        </div>
-      )
+        render: (row) => (
+          <div className="table-cell-stack">
+            <span>Affinity {formatSigned(row.affinityDelta)}</span>
+            <span className="muted">
+            Confidence {formatSigned(row.confidenceDelta)} | RD {formatSigned(row.ratingDeviationDelta)} | volatility {formatSigned(row.volatilityDelta)}
+            </span>
+          </div>
+        )
     },
     {
       key: 'weight',
@@ -242,8 +254,8 @@ export function TurnRecapModal({ report, open, onClose }: { report: TurnRecapRep
           </div>
           <p className="muted">
             {report.hasComparison
-              ? `Latest turn ${report.currentTurn ?? 'n/a'} is compared to previous turn ${report.previousTurn ?? 'n/a'}.`
-              : 'No previous turn is available yet, so this is a baseline recap.'}
+              ? `Latest turn ${report.currentTurn ?? 'n/a'} is compared to previous turn ${report.previousTurn ?? 'n/a'}. Confidence is shown as a novice composite while RD, volatility, and evidence stay separate.`
+              : 'No previous turn is available yet, so this is a baseline recap. Confidence is shown as a composite where the row has enough evidence to support it.'}
           </p>
         </section>
 

@@ -25,8 +25,8 @@ describe('ConfidenceGrowthPanel', () => {
       />
     );
 
-    expect(html).toContain('Confidence Growth');
-    expect(html).toContain('Stored post-turn confidence snapshots');
+    expect(html).toContain('Confidence &amp; Stability');
+    expect(html).toContain('legacy proxy history');
     expect(html).toContain('Created');
     expect(html).toContain('Cumulative');
     expect(html).toContain('Avg certainty');

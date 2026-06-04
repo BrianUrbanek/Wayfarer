@@ -31,12 +31,12 @@ const columns: ReportTableColumn<ConfidenceGrowthRow>[] = [
 
 export function ConfidenceGrowthPanel({ rows, collapsed = false }: ConfidenceGrowthPanelProps) {
   return (
-    <Panel id="confidence-growth" title="Confidence Growth" className="panel--full" collapsible defaultCollapsed={collapsed}>
+    <Panel id="confidence-growth" title="Confidence & Stability" className="panel--full" collapsible defaultCollapsed={collapsed}>
       <div className="stack">
         <div className="notice notice--subtle">
           <p>
-            Stored post-turn confidence snapshots show island/cohort certainty at each turn boundary. This is a report
-            of what the model believed after processing each turn, not a reconstruction of pre-turn event weights.
+            Stored post-turn snapshots show how confidence, uncertainty, volatility, and evidence moved at each turn boundary.
+            This is a legacy proxy history of what the model believed after processing each turn, not a novice composite readout.
           </p>
         </div>
         <ReportTable
@@ -45,7 +45,7 @@ export function ConfidenceGrowthPanel({ rows, collapsed = false }: ConfidenceGro
           rows={[...rows]}
           getRowKey={(row) => String(row.turn)}
           emptyTitle="No confidence snapshots"
-          emptyDescription="Run at least one turn to store post-turn island/cohort confidence snapshots."
+          emptyDescription="Run at least one turn to store post-turn island/cohort proxy snapshots."
         />
       </div>
     </Panel>

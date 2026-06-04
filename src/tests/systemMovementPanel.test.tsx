@@ -78,7 +78,7 @@ describe('SystemMovementPanel', () => {
     const html = renderToString(<SystemMovementPanel analysis={analysis} />);
 
     expect(html).toContain('System Movement');
-    expect(html).toContain('Total movement in learned audience fit');
+    expect(html).toContain('Total movement in learned audience fit and legibility');
     expect(html).toContain('Dominant signal type legend');
     expect(html).toContain('Narrow Appeal');
     expect(html).toContain('Coverage Gap');
@@ -87,7 +87,7 @@ describe('SystemMovementPanel', () => {
     expect(html).toContain('Fit to run');
     expect(html).toContain('Export movement JSON');
     expect(html).toContain('Movement audit');
-    expect(html).toContain('Confidence / legibility');
+    expect(html).toContain('Legibility / stability');
     expect(html).toContain('Negative affinity is information; uncertainty is risk.');
   });
 });
