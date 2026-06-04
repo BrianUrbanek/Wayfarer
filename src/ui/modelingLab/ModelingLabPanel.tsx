@@ -1,18 +1,11 @@
 import { useMemo, useState } from 'react';
-import { listModelingFixtureIds } from '../../modeling-core/fixtures';
-import { runModelingFixture } from '../../modeling-core';
 import { Badge } from '../components/Badge';
+import { EmptyState } from '../components/EmptyState';
 import { MetricCard } from '../components/MetricCard';
 import { Panel } from '../components/Panel';
 import { ReportTable, type ReportTableColumn } from '../components/ReportTable';
-import {
-  buildModelingRunViewModel,
-  type ModelingAuthorityRow,
-  type ModelingHiddenTruthRow,
-  type ModelingValidationRow
-} from './modelingLabViewModel';
-
-const DEFAULT_FIXTURE_ID = 'seed-proxy-scenario-matrix';
+import { buildActiveRunModelEvidence, type ActiveRunModelEvidence } from './activeRunModelEvidence';
+import { type ModelingAuthorityRow, type ModelingHiddenTruthRow, type ModelingValidationRow } from './modelingLabViewModel';
 
 function formatOptionalNumber(value: number | null, digits = 3): string {
   return value === null ? 'n/a' : value.toFixed(digits);
@@ -78,13 +71,17 @@ const validationColumns: ReportTableColumn<ModelingValidationRow>[] = [
   { key: 'explanation', label: 'Explanation', render: (row) => row.explanation }
 ];
 
-export function ModelingLabPanel() {
-  const fixtureIds = useMemo(() => listModelingFixtureIds(), []);
-  const [selectedFixtureId, setSelectedFixtureId] = useState(DEFAULT_FIXTURE_ID);
-  const [activeFixtureId, setActiveFixtureId] = useState(DEFAULT_FIXTURE_ID);
-  const viewModel = useMemo(() => buildModelingRunViewModel(runModelingFixture(activeFixtureId)), [activeFixtureId]);
-  const summary = viewModel.runSummary;
-  const rawJson = useMemo(() => JSON.stringify(viewModel.rawTrace, null, 2), [viewModel.rawTrace]);
+interface ModelingLabPanelProps {
+  evidence?: ActiveRunModelEvidence | null;
+}
+
+export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
+  const [selectedFixtureId, setSelectedFixtureId] = useState('seed-proxy-scenario-matrix');
+  const internalEvidence = useMemo(() => buildActiveRunModelEvidence({ scenarioPreset: null }), []);
+  const activeEvidence = evidence ?? internalEvidence;
+  const viewModel = activeEvidence.kind === 'trace' ? activeEvidence.viewModel : null;
+  const summary = viewModel?.runSummary ?? null;
+  const rawJson = useMemo(() => (viewModel ? JSON.stringify(viewModel.rawTrace, null, 2) : ''), [viewModel]);
 
   return (
     <Panel id="modeling-lab" title="Modeling Lab" className="panel--full modeling-lab-panel">
@@ -92,97 +89,102 @@ export function ModelingLabPanel() {
         <div className="section-heading">
           <p className="eyebrow">Analyst scenario trace</p>
           <h3>Modeling Lab</h3>
-          <p>
-            Read-only scenario runner for modeling-core traces. This lab shows visible inference beside oracle validation
-            without using hidden truth as model input.
-          </p>
+          <p>Read-only modeling trace surface attached to the selected scenario when available.</p>
         </div>
-        <div className="section-toolbar__buttons">
+      </div>
+
+      {activeEvidence.kind === 'no-trace' ? (
+        <EmptyState
+          title="No modeling trace attached to this run"
+          description="This scenario is using the ordinary simulation path. Select a modeling-backed demo preset to inspect a modeling-core trace."
+        />
+      ) : (
+        <>
+          <div className="metric-grid metric-grid--compact">
+            <MetricCard label="Fixture" value={summary?.fixtureId ?? 'n/a'} tone="accent" />
+            <MetricCard label="Steps" value={summary?.stepCount ?? 0} />
+            <MetricCard
+              label="Scenario validation"
+              value={summary?.validationPassed === null ? 'n/a' : summary?.validationPassed ? 'PASS' : 'FAIL'}
+              tone={summary?.validationPassed === false ? 'danger' : 'success'}
+            />
+            <MetricCard label="Unsupported concepts" value={summary?.unsupportedConcepts.length ?? 0} />
+          </div>
+
+          <div className="modeling-lab-panel__summary">
+            <p>{summary?.fixtureDescription ?? 'No trace available.'}</p>
+            <Badge tone="warning">{activeEvidence.message}</Badge>
+            <p className="muted">{summary?.hiddenTruthPolicy ?? 'No hidden truth checksum is attached to this fixture.'}</p>
+          </div>
+
+          <div className="report-section">
+            <div className="report-section__column">
+              <div className="section-heading">
+                <h3>Authority Matrix</h3>
+                <p>Visible inferred relationship compared with the scenario checksum.</p>
+              </div>
+              <ReportTable
+                columns={authorityColumns}
+                rows={viewModel?.authorityRows ?? []}
+                getRowKey={(row) => row.actorId}
+                emptyTitle="No authority rows"
+                emptyDescription="This trace did not emit an authority summary."
+              />
+            </div>
+          </div>
+
+          <div className="report-section">
+            <div className="report-section__column">
+              <div className="section-heading">
+                <h3>Hidden Truth Checksum</h3>
+                <p>Oracle/test truth is shown for validation only. It is not model input.</p>
+              </div>
+              <ReportTable
+                columns={hiddenTruthColumns}
+                rows={viewModel?.hiddenTruthRows ?? []}
+                getRowKey={(row) => row.actorId}
+                emptyTitle="No hidden checksum"
+                emptyDescription="This trace does not include scenario hidden-truth checksum rows."
+              />
+            </div>
+          </div>
+
+          <div className="report-section">
+            <div className="report-section__column">
+              <div className="section-heading">
+                <h3>Validation Details</h3>
+                <p>End-of-run comparison between visible inference and hidden checksum.</p>
+              </div>
+              <ReportTable
+                columns={validationColumns}
+                rows={viewModel?.validationRows ?? []}
+                getRowKey={(row) => row.actorId}
+                emptyTitle="No validation rows"
+                emptyDescription="This trace does not include scenario authority validation."
+              />
+            </div>
+          </div>
+
+          <details className="modeling-lab-panel__raw">
+            <summary>Raw JSON</summary>
+            <pre>{rawJson}</pre>
+          </details>
+        </>
+      )}
+
+      {evidence === null ? (
+        <div className="notice notice--subtle">
+          <p className="muted">
+            Internal fixture selector is quarantined from the main analyst console. Use the node/dev harness for raw fixture inspection.
+          </p>
           <label className="control control--inline control--wide">
-            <span>Scenario</span>
+            <span>Internal fixture</span>
             <select value={selectedFixtureId} onChange={(event) => setSelectedFixtureId(event.target.value)}>
-              {fixtureIds.map((fixtureId) => (
-                <option key={fixtureId} value={fixtureId}>
-                  {fixtureId}
-                </option>
-              ))}
+              <option value="seed-proxy-scenario-matrix">seed-proxy-scenario-matrix</option>
             </select>
           </label>
-          <button type="button" className="button button--primary" onClick={() => setActiveFixtureId(selectedFixtureId)}>
-            Run
-          </button>
         </div>
-      </div>
-
-      <div className="metric-grid metric-grid--compact">
-        <MetricCard label="Fixture" value={summary.fixtureId} tone="accent" />
-        <MetricCard label="Steps" value={summary.stepCount} />
-        <MetricCard
-          label="Scenario validation"
-          value={summary.validationPassed === null ? 'n/a' : summary.validationPassed ? 'PASS' : 'FAIL'}
-          tone={summary.validationPassed === false ? 'danger' : 'success'}
-        />
-        <MetricCard label="Unsupported concepts" value={summary.unsupportedConcepts.length} />
-      </div>
-
-      <div className="modeling-lab-panel__summary">
-        <p>{summary.fixtureDescription}</p>
-        <Badge tone="warning">{viewModel.hiddenTruthNotice}</Badge>
-        <p className="muted">{summary.hiddenTruthPolicy}</p>
-      </div>
-
-      <div className="report-section">
-        <div className="report-section__column">
-          <div className="section-heading">
-            <h3>Authority Matrix</h3>
-            <p>Visible inferred relationship compared with the scenario checksum.</p>
-          </div>
-          <ReportTable
-            columns={authorityColumns}
-            rows={viewModel.authorityRows}
-            getRowKey={(row) => row.actorId}
-            emptyTitle="No authority rows"
-            emptyDescription="This fixture did not emit an authority summary."
-          />
-        </div>
-      </div>
-
-      <div className="report-section">
-        <div className="report-section__column">
-          <div className="section-heading">
-            <h3>Hidden Truth Checksum</h3>
-            <p>Oracle/test truth is shown for validation only. It is not model input.</p>
-          </div>
-          <ReportTable
-            columns={hiddenTruthColumns}
-            rows={viewModel.hiddenTruthRows}
-            getRowKey={(row) => row.actorId}
-            emptyTitle="No hidden checksum"
-            emptyDescription="This fixture does not include scenario hidden-truth checksum rows."
-          />
-        </div>
-      </div>
-
-      <div className="report-section">
-        <div className="report-section__column">
-          <div className="section-heading">
-            <h3>Validation Details</h3>
-            <p>End-of-run comparison between visible inference and hidden checksum.</p>
-          </div>
-          <ReportTable
-            columns={validationColumns}
-            rows={viewModel.validationRows}
-            getRowKey={(row) => row.actorId}
-            emptyTitle="No validation rows"
-            emptyDescription="This fixture does not include scenario authority validation."
-          />
-        </div>
-      </div>
-
-      <details className="modeling-lab-panel__raw">
-        <summary>Raw JSON</summary>
-        <pre>{rawJson}</pre>
-      </details>
+      ) : null}
     </Panel>
   );
 }

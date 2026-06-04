@@ -19,6 +19,8 @@ const SCENARIO_PRESET_IDS: ScenarioPresetId[] = [
 export interface ScenarioPresetMetadata {
   id: string;
   label: string;
+  modelingTraceFixtureId?: string;
+  modelingTraceLabel?: string;
 }
 
 export interface ScenarioPresetGeneratorConfig {
@@ -100,7 +102,24 @@ export function getScenarioPresetMetadata(id: ScenarioPresetId): ScenarioPresetM
   const preset = SCENARIO_PRESETS[id];
   return {
     id: preset.id,
-    label: preset.label
+    label: preset.label,
+    ...(preset.id === 'golden-demo'
+       ? {
+            modelingTraceFixtureId: 'seed-proxy-scenario-matrix',
+            modelingTraceLabel: 'Authority Matrix Demo'
+          }
+       : {})
+  };
+}
+
+export function stripScenarioPresetRuntimeMetadata(metadata: ScenarioPresetMetadata | null): ScenarioPresetMetadata | null {
+  if (!metadata) {
+    return null;
+  }
+
+  return {
+    id: metadata.id,
+    label: metadata.label
   };
 }
 

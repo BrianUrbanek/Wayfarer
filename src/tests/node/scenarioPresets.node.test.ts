@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   applyScenarioPreset,
   getScenarioPreset,
+  getScenarioPresetMetadata,
   listScenarioPresets,
+  stripScenarioPresetRuntimeMetadata,
   resolveScenarioPresetFromControls
 } from '../../model/scenarioPresets.js';
 import { SCENARIO_CATALOG } from '../../model/scenarioCatalog.js';
@@ -33,6 +35,15 @@ describe('scenario presets', () => {
     assert.equal(preset.turnPolicy.guidedRatingCountModel, 'fixed-count');
     assert.equal(preset.turnPolicy.guidedRecommendationsPerUser, 2);
     assert.equal(preset.turnsToRun, 18);
+  });
+
+  it('attaches the modeling-backed demo metadata without changing persistence fields', () => {
+    const metadata = getScenarioPresetMetadata('golden-demo');
+    const stripped = stripScenarioPresetRuntimeMetadata(metadata);
+
+    assert.equal(metadata.modelingTraceFixtureId, 'seed-proxy-scenario-matrix');
+    assert.equal(metadata.modelingTraceLabel, 'Authority Matrix Demo');
+    assert.deepEqual(stripped, { id: 'golden-demo', label: 'Golden Demo' });
   });
 
   it('round-trips preset controls back to the same preset', () => {

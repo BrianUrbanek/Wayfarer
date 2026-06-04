@@ -62,6 +62,7 @@ import { SystemMovementPanel } from './ui/components/SystemMovementPanel';
 import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { InspectionShell } from './ui/InspectionShell';
+import { buildActiveRunModelEvidence } from './ui/modelingLab/activeRunModelEvidence';
 import { type RecentActionState } from './ui/recentActionSummary';
 import { GuidedPathTray } from './ui/guidedPath/GuidedPathTray';
 import { useGuidedPathController } from './ui/guidedPath/useGuidedPathController';
@@ -94,6 +95,7 @@ import {
   getScenarioPresetMetadata,
   listScenarioPresets,
   resolveScenarioPresetFromControls,
+  stripScenarioPresetRuntimeMetadata,
   type ScenarioPresetMetadata,
   type ScenarioPresetId,
   type ScenarioPreset,
@@ -1783,7 +1785,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   };
 
   const exportCurrentSimulationJson = () => {
-    const scenarioPreset = scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  null;
+    const scenarioPreset = stripScenarioPresetRuntimeMetadata(scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  null);
     const savedScenario = exportSavedWayfarerScenario({
       label: `Wayfarer turn ${simulationState.currentTurn}`,
       createdAt: new Date().toISOString(),
@@ -2243,6 +2245,13 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     [activeScenarioPreset, hasGoldenDemoReportAccess, simulationState]
   );
   const activeScenarioPresetMetadata = activeScenarioPreset  ?  scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
+  const activeRunModelEvidence = useMemo(
+    () =>
+      buildActiveRunModelEvidence({
+        scenarioPreset: scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  null
+      }),
+    [activeScenarioPresetMetadata, scenarioPresetSource]
+  );
   const hasScenarioSelection = Boolean(scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  importedScenario);
   const standardScenarioControlsDisabled = isExecutingScenario || !hasScenarioSelection;
   const scenarioPresetDisplay =
@@ -2505,7 +2514,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     modeling: {
       title: 'Modeling Lab',
       panels: [
-        <ModelingLabPanel key="modeling-lab" />
+        <ModelingLabPanel key="modeling-lab" evidence={activeRunModelEvidence} />
       ]
     },
     recovery: {

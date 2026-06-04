@@ -4,7 +4,7 @@ import type {
   InferredActorAuthoritySummary,
   ModelingTraceRun,
   ScenarioAuthorityComparison
-} from '../../modeling-core/types';
+} from '../../modeling-core/types.js';
 
 export interface ModelingRunSummary {
   fixtureId: string;
@@ -74,7 +74,7 @@ function summarizeHiddenTruthPolicy(trace: ModelingTraceRun): string {
 }
 
 function unsupportedConcepts(trace: ModelingTraceRun): string[] {
-  return Array.from(new Set(trace.steps.flatMap((step) => step.unsupportedConcepts)));
+  return Array.from(new Set(trace.steps.flatMap((step: { unsupportedConcepts: string[] }) => step.unsupportedConcepts)));
 }
 
 function validationByActor(comparisons: readonly ScenarioAuthorityComparison[] | undefined): Map<string, ScenarioAuthorityComparison> {
@@ -84,7 +84,9 @@ function validationByActor(comparisons: readonly ScenarioAuthorityComparison[] |
 function hiddenChecksumByActor(
   actors: Record<string, HiddenActorRelationChecksum> | undefined
 ): Map<string, HiddenActorRelationChecksum> {
-  return new Map(Object.values(actors ?? {}).map((actor) => [actor.actorId, actor]));
+  return new Map(
+    Object.values(actors ?? {}).map((actor: HiddenActorRelationChecksum) => [actor.actorId, actor])
+  );
 }
 
 function buildAuthorityRow(
@@ -122,7 +124,7 @@ export function buildModelingRunViewModel(trace: ModelingTraceRun): ModelingRunV
       hiddenTruthPolicy: summarizeHiddenTruthPolicy(trace),
       unsupportedConcepts: unsupportedConcepts(trace)
     },
-    authorityRows: (trace.authoritySummary ?? []).map((summary) =>
+    authorityRows: (trace.authoritySummary ?? []).map((summary: InferredActorAuthoritySummary) =>
       buildAuthorityRow(summary, expectedActors.get(summary.actorId), validations.get(summary.actorId))
     ),
     hiddenTruthRows: Object.values(trace.fixtureOracle?.hiddenTruthChecksum?.actors ?? {}).map((actor) => ({
@@ -135,7 +137,7 @@ export function buildModelingRunViewModel(trace: ModelingTraceRun): ModelingRunV
       explanation: actor.explanation
     })),
     hiddenTruthNotice: HIDDEN_TRUTH_NOTICE,
-    validationRows: (trace.scenarioAuthorityValidation?.comparisons ?? []).map((comparison) => ({
+    validationRows: (trace.scenarioAuthorityValidation?.comparisons ?? []).map((comparison: ScenarioAuthorityComparison) => ({
       actorId: comparison.actorId,
       expectedRelation: comparison.expectedRelationToSeed,
       inferredRelation: comparison.inferredRelationToSeed,
