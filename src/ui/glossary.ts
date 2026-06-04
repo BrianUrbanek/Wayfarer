@@ -50,7 +50,7 @@ The system is not limited to UGC worlds, even if islands are the current concret
 
 Trust belongs to raters. It answers whether a person\'s ratings can be used as evidence. Discovery Signal belongs to the player-facing contribution layer. It answers whether a player has been useful over time. Confidence belongs to the island/cohort estimate itself. It answers how certain we are about fit right now, and in the current prototype it is projected from the island/cohort rating state rather than treated as a separate model.
 
-These three ideas are related but not interchangeable. Trust weights evidence. Discovery Signal is retrospective usefulness. Confidence is the current uncertainty attached to an island/cohort read.
+These three ideas are related but not interchangeable. Trust weights evidence. Discovery Signal is retrospective usefulness. Confidence is the UX read and actionability summary for an island/cohort estimate. RD or uncertainty describes how loose or tight the estimate is. Volatility or stability describes how unstable, split, or context-sensitive the read has been. Evidence support remains a separate input.
 
 ## Confidence Composite and Oracle Truth
 
