@@ -111,7 +111,7 @@ function buildColumns(hasComparison: boolean): ReportTableColumn<TurnRecapRow>[]
           <div className="table-cell-stack">
             <span>Affinity {formatSigned(row.affinityDelta)}</span>
             <span className="muted">
-            Confidence {formatSigned(row.confidenceDelta)} | RD {formatSigned(row.ratingDeviationDelta)} | volatility {formatSigned(row.volatilityDelta)}
+            Legacy certainty {formatSigned(row.confidenceDelta)} | RD {formatSigned(row.ratingDeviationDelta)} | volatility {formatSigned(row.volatilityDelta)}
             </span>
           </div>
         )
@@ -254,8 +254,8 @@ export function TurnRecapModal({ report, open, onClose }: { report: TurnRecapRep
           </div>
           <p className="muted">
             {report.hasComparison
-              ? `Latest turn ${report.currentTurn ?? 'n/a'} is compared to previous turn ${report.previousTurn ?? 'n/a'}. Confidence is shown as a novice composite while RD, volatility, and evidence stay separate.`
-              : 'No previous turn is available yet, so this is a baseline recap. Confidence is shown as a composite where the row has enough evidence to support it.'}
+              ? `Latest turn ${report.currentTurn ?? 'n/a'} is compared to previous turn ${report.previousTurn ?? 'n/a'}. The comparison row shows legacy certainty while RD, volatility, and evidence stay separate.`
+              : 'No previous turn is available yet, so this is a baseline recap. Current-read confidence is shown as a composite where the row has enough evidence to support it.'}
           </p>
         </section>
 

@@ -172,6 +172,6 @@ describe('turn recap panel', () => {
     expect(html).toContain('Affinity');
     expect(html).toContain('Turn delta');
     expect(html).toContain('Turn recap compares the latest turn/update boundary against the previous boundary');
-    expect(html).toContain('Confidence is shown as a novice composite');
+    expect(html).toContain('The comparison row shows legacy certainty');
   });
 });
