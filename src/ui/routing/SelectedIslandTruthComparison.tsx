@@ -32,7 +32,7 @@ function metricHelperText(report: IslandTruthComparisonReport): string {
     return 'No projectable learned estimate yet.';
   }
 
-  return `Certainty ${formatPercent(targetEstimate.confidence)} / RD ${targetEstimate.ratingDeviation.toFixed(3)} / Volatility ${targetEstimate.volatility.toFixed(3)}`;
+  return `Confidence ${formatPercent(targetEstimate.confidence)} / RD ${targetEstimate.ratingDeviation.toFixed(3)} / Volatility ${targetEstimate.volatility.toFixed(3)}`;
 }
 
 export function SelectedIslandTruthComparisonModal({ report, open, onClose }: SelectedIslandTruthComparisonModalProps) {
@@ -88,7 +88,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
               value={report.learnedTopPositiveVisibleEstimate?.cohortLabel ?? 'n/a'}
               helper={
                 report.learnedTopPositiveVisibleEstimate
-                  ? `${formatPercent(report.learnedTopPositiveVisibleEstimate.confidence)} certainty / affinity ${formatSigned(report.learnedTopPositiveVisibleEstimate.affinity)}`
+                  ? `${formatPercent(report.learnedTopPositiveVisibleEstimate.confidence)} confidence / affinity ${formatSigned(report.learnedTopPositiveVisibleEstimate.affinity)}`
                   : 'No positive estimate yet'
               }
             />
@@ -97,7 +97,7 @@ export function SelectedIslandTruthComparisonModal({ report, open, onClose }: Se
               value={report.learnedTopNegativeVisibleEstimate?.cohortLabel ?? 'n/a'}
               helper={
                 report.learnedTopNegativeVisibleEstimate
-                  ? `${formatPercent(report.learnedTopNegativeVisibleEstimate.confidence)} certainty / affinity ${formatSigned(report.learnedTopNegativeVisibleEstimate.affinity)}`
+                  ? `${formatPercent(report.learnedTopNegativeVisibleEstimate.confidence)} confidence / affinity ${formatSigned(report.learnedTopNegativeVisibleEstimate.affinity)}`
                   : 'No negative estimate yet'
               }
             />

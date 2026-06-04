@@ -87,51 +87,54 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
           </Badge>
         ))}
       </div>
-      <div className="metric-grid">
-        <MetricCard
-          label="Declared vs observed fit"
-          value={selectedInference.signalFit.toFixed(3)}
-          helper="How closely declared tags and observed ratings align at the cohort level."
-          tone="accent"
-        />
-        <MetricCard
-          label="Rating Evidence"
-          value={selectedInference.ratingEvidence.toFixed(3)}
-          helper="How much sparse rating data supports this judgment?"
-          tone="neutral"
-        />
-        <MetricCard
-          label="Current signal-weight proxy"
-          value={selectedInference.effectiveSignal.toFixed(3)}
-          helper="Internal reliability proxy currently used for routing and affinity evidence. Discovery Signal remains a separate player-facing concept."
-          tone="success"
-        />
-      </div>
-      <p className="muted">{declaredObservedRelationshipText}</p>
-      <div className="metric-grid metric-grid--compact">
-        <MetricCard
-          label="Behavior match strength"
-          value={selectedInference.behaviorMatchStrength.toFixed(3)}
-          helper="Strongest raw positive cohort fit before the distribution is normalized."
-        />
-        <MetricCard
-          label="Behavior specificity"
-          value={selectedInference.behaviorSpecificity.toFixed(3)}
-          helper="How much the behavior distribution prefers one cohort over the runner-up."
-        />
-        <MetricCard
-          label="Target agreement"
-          value={selectedInference.targetAlignment.ratedCount > 0 ? `${selectedInference.targetAlignment.agreementCount}/${selectedInference.targetAlignment.ratedCount}` : 'No evidence'}
-          helper={selectedInference.targetAlignment.cohortId ? `${Math.round(selectedInference.targetAlignment.agreementRate * 100)}% agreement with ${cohortLabel(selectedInference.targetAlignment.cohortId)} reference ratings.` : 'No reference cohort available for direct target agreement yet.'}
-          tone={selectedInference.targetAlignment.agreementRate >= 0.8 ? 'success' : selectedInference.targetAlignment.agreementRate >= 0.5 ? 'accent' : 'warning'}
-        />
-        <MetricCard
-          label="Cohort separability"
-          value={`${Math.round(selectedInference.cohortSeparability.topGap * 100)} pts`}
-          helper={selectedInference.cohortSeparability.message}
-          tone={selectedInference.cohortSeparability.label === 'high' ? 'success' : selectedInference.cohortSeparability.label === 'moderate' ? 'accent' : 'warning'}
-        />
-      </div>
+      <section className="detail-block">
+        <h4>Preference read</h4>
+        <div className="metric-grid">
+          <MetricCard
+            label="Declared vs observed fit"
+            value={selectedInference.signalFit.toFixed(3)}
+            helper="How closely declared tags and observed ratings align at the cohort level."
+            tone="accent"
+          />
+          <MetricCard
+            label="Rating evidence"
+            value={selectedInference.ratingEvidence.toFixed(3)}
+            helper="How much sparse rating data supports this judgment?"
+            tone="neutral"
+          />
+          <MetricCard
+            label="Actionability proxy"
+            value={selectedInference.effectiveSignal.toFixed(3)}
+            helper="Routing-facing reliability proxy. Discovery Signal remains separate and player-facing."
+            tone="success"
+          />
+        </div>
+        <p className="muted">{declaredObservedRelationshipText}</p>
+        <div className="metric-grid metric-grid--compact">
+          <MetricCard
+            label="Behavior match strength"
+            value={selectedInference.behaviorMatchStrength.toFixed(3)}
+            helper="Strongest raw positive cohort fit before the distribution is normalized."
+          />
+          <MetricCard
+            label="Behavior specificity"
+            value={selectedInference.behaviorSpecificity.toFixed(3)}
+            helper="How much the behavior distribution prefers one cohort over the runner-up."
+          />
+          <MetricCard
+            label="Target agreement"
+            value={selectedInference.targetAlignment.ratedCount > 0 ? `${selectedInference.targetAlignment.agreementCount}/${selectedInference.targetAlignment.ratedCount}` : 'No evidence'}
+            helper={selectedInference.targetAlignment.cohortId ? `${Math.round(selectedInference.targetAlignment.agreementRate * 100)}% agreement with ${cohortLabel(selectedInference.targetAlignment.cohortId)} reference ratings.` : 'No reference cohort available for direct target agreement yet.'}
+            tone={selectedInference.targetAlignment.agreementRate >= 0.8 ? 'success' : selectedInference.targetAlignment.agreementRate >= 0.5 ? 'accent' : 'warning'}
+          />
+          <MetricCard
+            label="Cohort separability"
+            value={`${Math.round(selectedInference.cohortSeparability.topGap * 100)} pts`}
+            helper={selectedInference.cohortSeparability.message}
+            tone={selectedInference.cohortSeparability.label === 'high' ? 'success' : selectedInference.cohortSeparability.label === 'moderate' ? 'accent' : 'warning'}
+          />
+        </div>
+      </section>
       <div className="report-section">
         <div className="report-section__column">
           <div className="section-heading">
@@ -174,7 +177,7 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
       <section className="detail-block">
         <div className="section-heading">
           <h4>
-            Rater signal profile (internal){' '}
+            Signal-source read{' '}
             <FormulaTip
               label="Rater signal proxy"
               formula="cohort signal proxy = max(0), Pearson similarity × evidence; top signal proxy = max cohort signal proxy"
@@ -238,6 +241,13 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
             : selectedPrimarySignal?.message ?? selectedInferenceDiagnosticsMessage}
         </span>
       </div>
+      <section className="detail-block">
+        <div className="section-heading">
+          <h4>Expert provenance</h4>
+          <p>Seed, seed-proxy, and source-authority values remain explicit debug checksums unless an active modeling trace is available.</p>
+        </div>
+        <p className="muted">{selectedInferenceDiagnosticsMessage ?? 'No additional provenance available.'}</p>
+      </section>
     </div>
   );
 }

@@ -68,7 +68,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Bootstrap Ratings / User');
     expect(html).toContain('Tag Alignment');
     expect(html).toContain('Rating Alignment');
-    expect(html).toContain('Current signal-weight proxy');
+    expect(html).toContain('Actionability proxy');
     expect(html).toContain('Turn behavior / Dynamic settings');
     expect(html).toContain('Expert scenario tuning');
     expect(html).toContain('Demo report');

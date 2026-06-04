@@ -18,10 +18,13 @@ describe('modeling lab panel', () => {
 
     expect(html).toContain('Modeling Lab');
     expect(html).toContain('seed-proxy-scenario-matrix');
-    expect(html).toContain('Scenario validation');
-    expect(html).toContain('Matrix Bob');
+    expect(html).toContain('Validation PASS');
+    expect(html).toContain('Inspect Authority Matrix');
+    expect(html).toContain('Inspect Hidden Truth Checksum');
+    expect(html).toContain('Inspect Validation Details');
+    expect(html).toContain('Inspect Raw JSON');
     expect(html).toContain('seedProxy');
-    expect(html).toContain('Oracle/test truth is shown for validation only. It is not model input.');
-    expect(html).toContain('Raw JSON');
+    expect(html).toContain('ORACLE / TEST TRUTH - not model input');
+    expect(html).toContain('Matrix Bob');
   });
 });

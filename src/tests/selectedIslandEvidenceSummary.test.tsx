@@ -54,7 +54,9 @@ describe('selected island evidence summary', () => {
 
     expect(html).toContain('Selected island evidence');
     expect(html).toContain('Current confidence and directional affinity are separate reads');
-    expect(html).toContain('Island confidence by cohort');
+    expect(html).toContain('Audience read');
+    expect(html).toContain('Confidence &amp; stability');
+    expect(html).toContain('Evidence provenance');
     expect(html).toContain('Island / Cohort Rating Timeline');
     expect(html).toContain('Island Evidence Distribution');
     expect(html).toContain('Experimental analyst evidence-shape read');

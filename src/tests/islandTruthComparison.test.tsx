@@ -330,6 +330,7 @@ describe('island truth comparison', () => {
     expect(html).toContain('Top positive visible cohort');
     expect(html).toContain('toy-world audit data');
     expect(html).toContain('Visible cohort estimates');
+    expect(html).toContain('confidence / affinity');
   });
 
   it('renders random hidden truth details without a target cohort', () => {

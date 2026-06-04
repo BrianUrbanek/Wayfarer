@@ -46,8 +46,26 @@ export function SelectedIslandEvidenceSummary({
         </p>
       </div>
       <div className="stack">
+        <section className="detail-block">
+          <div className="section-heading">
+            <h5>Audience read</h5>
+            <p className="muted">Cohort-specific affinity, confidence, RD, volatility, and evidence are shown as separate reads.</p>
+          </div>
+        </section>
         <IslandConfidenceRadar data={confidenceRadarData} />
+        <section className="detail-block">
+          <div className="section-heading">
+            <h5>Confidence & stability</h5>
+            <p className="muted">Confidence remains a read summary; RD and volatility stay visible as separate support fields.</p>
+          </div>
+        </section>
         <IslandCohortRatingTimeline rows={timelineRows} cohortLabelById={cohortLabelById} />
+        <section className="detail-block">
+          <div className="section-heading">
+            <h5>Evidence provenance</h5>
+            <p className="muted">Rating weights, observed behavior, and projection provenance remain explicit and labeled.</p>
+          </div>
+        </section>
         <IslandEvidenceConstellationView data={constellation} />
         <RatingEventWeightTable rows={labeledRows} />
         <ObservedBehaviorEvidencePanel
