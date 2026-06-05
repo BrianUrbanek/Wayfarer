@@ -61,15 +61,7 @@ const MAX_RD = 1;
 const MIN_VOLATILITY = 0.02;
 const MAX_VOLATILITY = 0.35;
 const BEHAVIOR_INFLUENCE = 0.12;
-// Passive drift is indexed to the learning rate and only applies after a short no-evidence grace window.
 const EVIDENCE_RD_REDUCTION_RATE = 0.28;
-const PASSIVE_DECAY_RATIO = 0.4;
-const PASSIVE_DECAY_GRACE_TURNS = 3;
-const REFERENCE_MEANINGFUL_EVIDENCE_WEIGHT = 1;
-const REFERENCE_EVIDENCE_STRENGTH =
-  REFERENCE_MEANINGFUL_EVIDENCE_WEIGHT / (REFERENCE_MEANINGFUL_EVIDENCE_WEIGHT + 4);
-const PASSIVE_NO_EVIDENCE_RD_BOOST =
-  EVIDENCE_RD_REDUCTION_RATE * REFERENCE_EVIDENCE_STRENGTH * PASSIVE_DECAY_RATIO;
 
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
@@ -175,13 +167,9 @@ export function advanceIslandCohortRatingState(
   const contradiction = alignment < 0 ? 1 : 0;
   const consistency = alignment > 0 ? 1 : 0;
   const noEvidence = evidence.primaryEvidenceWeight <= 0;
-  const inactivityTurns = previous.lastUpdatedTurn >= 0 ? evidence.turn - previous.lastUpdatedTurn : 0;
-  const shouldApplyPassiveDecay =
-    noEvidence && previous.evidenceCount > 0 && inactivityTurns > PASSIVE_DECAY_GRACE_TURNS;
 
   const ratingDeviation = clamp(
-    previous.ratingDeviation +
-      (shouldApplyPassiveDecay ? PASSIVE_NO_EVIDENCE_RD_BOOST : 0) -
+    previous.ratingDeviation -
       evidenceStrength * EVIDENCE_RD_REDUCTION_RATE +
       contradiction * 0.11 -
       consistency * 0.04,

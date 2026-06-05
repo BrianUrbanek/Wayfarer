@@ -1,21 +1,9 @@
 ﻿import { Badge } from '../components/Badge';
 import { MetricCard } from '../components/MetricCard';
-import { ReportTable, type ReportTableColumn } from '../components/ReportTable';
 import { FormulaTip } from '../components/FormulaTip';
-import type { CohortAnchor } from '../../model/types';
 import type { InferenceAnalysis } from '../../model/inference';
-import type { DiscoverySignalProfile } from '../../model/discoverySignal';
-import type { RaterSignalProfile } from '../../model/raterSignal';
 import type { UserSignalDiagnosisSummary } from '../userSignalDiagnosis';
-import { DiscoverySignalPanel } from './DiscoverySignalPanel';
 import type { ReactNode } from 'react';
-
-interface SignalRow {
-  cohort: CohortAnchor;
-  weight: number;
-  evidence: number;
-  similarity: { value: number; evidence: number; overlapCount: number };
-}
 
 interface SelectedUserSummaryProps {
   selectedUserLabel: string;
@@ -24,8 +12,6 @@ interface SelectedUserSummaryProps {
   selectedPrimarySignal: UserSignalDiagnosisSummary | null;
   selectedInferenceDiagnosticsMessage?: string;
   selectedInferenceDiagnosticsType?: string;
-  selectedRaterSignalProfile: RaterSignalProfile | null;
-  selectedDiscoverySignalProfile: DiscoverySignalProfile | null;
   declaredOverlapText: string;
   declaredObservedRelationshipText: string;
   behaviorReadText: string;
@@ -34,8 +20,6 @@ interface SelectedUserSummaryProps {
   openUserPicker: () => void;
   pinCurrentUser: () => void;
   renderPrimarySignalTitle: (signal: UserSignalDiagnosisSummary | null) => string | null;
-  signalRows: SignalRow[];
-  signalColumns: ReportTableColumn<SignalRow>[];
   declaredDistributionChart: ReactNode;
   behaviorDistributionChart: ReactNode;
 }
@@ -48,8 +32,6 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
     selectedPrimarySignal,
     selectedInferenceDiagnosticsMessage,
     selectedInferenceDiagnosticsType,
-    selectedRaterSignalProfile,
-    selectedDiscoverySignalProfile,
     declaredOverlapText,
     declaredObservedRelationshipText,
     behaviorReadText,
@@ -58,8 +40,6 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
     openUserPicker,
     pinCurrentUser,
     renderPrimarySignalTitle,
-    signalRows,
-    signalColumns,
     declaredDistributionChart,
     behaviorDistributionChart
   } = props;
@@ -101,12 +81,6 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
             value={selectedInference.ratingEvidence.toFixed(3)}
             helper="How much sparse rating data supports this judgment?"
             tone="neutral"
-          />
-          <MetricCard
-            label="Actionability proxy"
-            value={selectedInference.effectiveSignal.toFixed(3)}
-            helper="Routing-facing reliability proxy. Discovery Signal remains separate and player-facing."
-            tone="success"
           />
         </div>
         <p className="muted">{declaredObservedRelationshipText}</p>
@@ -173,53 +147,19 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
         <p>{selectedPrimarySignal?.message ?? selectedInferenceDiagnosticsMessage}</p>
         <p className="muted">{inverseNotice}</p>
       </div>
-      <DiscoverySignalPanel profile={selectedDiscoverySignalProfile} />
       <section className="detail-block">
         <div className="section-heading">
-          <h4>
-            Signal-source read{' '}
-            <FormulaTip
-              label="Rater signal proxy"
-              formula="cohort signal proxy = max(0), Pearson similarity × evidence; top signal proxy = max cohort signal proxy"
-              inputs="Evidence comes from rated-overlap support (saturating overlap evidence)."
-              interpretation="Higher values indicate stronger cohort-local reliability weighting in the current proxy model."
-            />
-          </h4>
-          <p>Internal signal weighting proxy only. Discovery Signal is player-facing and currently only partially represented in this prototype.</p>
+          <h4>Signal-source read</h4>
+          <p>
+            Hidden for replacement. The previous rater-signal and Discovery Signal surfaces used legacy cohort-similarity and stored-confidence proxy math.
+          </p>
         </div>
-        <div className="metric-grid metric-grid--compact">
-          <MetricCard
-            label="Top behavioral signal proxy"
-            value={(selectedRaterSignalProfile?.overallSignal ?? 0).toFixed(3)}
-            helper="Strongest cohort-local reliability score under current proxy math."
-            tone="accent"
-          />
-          <MetricCard
-            label="Signal evidence"
-            value={`${Math.round((selectedRaterSignalProfile?.signalEvidence ?? 0) * 100)}%`}
-            helper="Evidence supporting the strongest signal-weight proxy."
-          />
-          <MetricCard
-            label="Top signal cohort"
-            value={cohortLabel(selectedRaterSignalProfile?.topCohortId ?? null)}
-            helper="Cohort with strongest behavioral reliability weight in the current proxy."
-            tone="success"
-          />
+        <div className="notice notice--subtle">
+          <strong>Replacement target</strong>
+          <p>
+            Restore this section only when it can consume modeling-core source authority, lane-local signal usefulness, signal RD, volatility, proxy role, and provenance.
+          </p>
         </div>
-        <div className="summary-inline">
-          <span className="muted">Cohort signal proxy table</span>
-          <FormulaTip
-            label="Cohort signal proxy table"
-            formula="Signal proxy: max(0), Pearson similarity × evidence; Evidence: overlap/(overlap+k); Similarity: Pearson correlation; Overlap: co-rated island count."
-          />
-        </div>
-        <ReportTable
-          columns={signalColumns}
-          rows={signalRows}
-          getRowKey={(row) => row.cohort.id}
-          emptyTitle="No trust profile"
-          emptyDescription="This user has not yet accumulated enough overlap to form cohort-local reliability weights."
-        />
       </section>
       <div className="summary-inline">
         <Badge

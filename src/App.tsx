@@ -12,7 +12,6 @@ import { FormulaTip } from './ui/components/FormulaTip';
 import { SelectionModal, type SelectionOption } from './ui/components/SelectionModal';
 import { CollapsiblePanel } from './ui/components/CollapsiblePanel';
 import { ModulePanelHeader } from './ui/components/ModulePanelHeader';
-import { SystemHealthPanel } from './ui/components/SystemHealthPanel';
 import { Tray } from './ui/components/Tray';
 import { AboutGlossaryLauncher } from './ui/components/AboutGlossaryLauncher';
 import { PrimaryWorkflowPanel } from './ui/PrimaryWorkflowPanel';
@@ -27,7 +26,6 @@ import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
 import { DivergingAffinityBars } from './ui/components/DivergingAffinityBars';
-import { buildSystemHealthSummary } from './ui/systemHealth';
 import {
   collapseDistributionSlices,
   computeDeclaredTagOverlap,
@@ -49,17 +47,15 @@ import {
   type RoutingRiskProfile,
   type TurnMode
 } from './model/turnPolicy';
-import { buildConfidenceGrowthRows } from './model/confidenceGrowth';
 import { buildSystemMovementAnalysis } from './model/systemMovement';
 import { buildGoldenDemoReport, renderGoldenDemoReportMarkdown } from './analysis/goldenDemoReport';
-import { buildDiscoverySignalAnalysis } from './model/discoverySignal';
 import { buildObservedBehaviorAnalysis, buildObservedBehaviorRowsForIsland } from './model/observedBehavior';
 import { buildIslandTruthComparison } from './model/islandTruthComparison';
 import { buildHiddenCohortRecoveryReport } from './model/hiddenCohortRecovery';
 import { buildTurnRecapReport } from './model/turnRecap';
-import { ConfidenceGrowthPanel } from './ui/components/ConfidenceGrowthPanel';
 import { SystemMovementPanel } from './ui/components/SystemMovementPanel';
 import { TurnRecapPanel } from './ui/overview/TurnRecapPanel';
+import { buildTurnSummaryMetrics } from './ui/overview/turnSummaryMetrics';
 import { SelectedUserSummary } from './ui/selectedUser/SelectedUserSummary';
 import { InspectionShell } from './ui/InspectionShell';
 import { buildActiveRunModelEvidence } from './ui/modelingLab/activeRunModelEvidence';
@@ -460,12 +456,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [executionStatus, setExecutionStatus] = useState<string>('');
   const [isExecutingScenario, setIsExecutingScenario] = useState(false);
   const [, setRecentAction] = useState<RecentActionState | null>(null);
-  const [showConfidenceSeries, setShowConfidenceSeries] = useState({
-    player: true,
-    island: true,
-    cohort: false,
-    tag: false
-  });
   const [primaryWorkflowCollapsed, setPrimaryWorkflowCollapsed] = useState(false);
   const [turnSummaryCollapsed, setTurnSummaryCollapsed] = useState(false);
   const turnSummaryTargetRef = useRef<HTMLElement>(null);
@@ -485,6 +475,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const scenarioExecutionTokenRef = useRef(0);
   const isNoviceMode = guidanceMode === 'novice';
+
+  useEffect(() => {
+    const constrainedDesktop = window.matchMedia('(max-width: 1499px)');
+    const collapseSideTrays = (matches: boolean) => {
+      if (matches) {
+        setGuidanceOpen(false);
+        setPinnedTrayCollapsed(true);
+      }
+    };
+    const handleViewportChange = (event: MediaQueryListEvent) => collapseSideTrays(event.matches);
+
+    collapseSideTrays(constrainedDesktop.matches);
+    constrainedDesktop.addEventListener('change', handleViewportChange);
+    return () => constrainedDesktop.removeEventListener('change', handleViewportChange);
+  }, []);
 
   const latentDataset = useMemo(
     () =>
@@ -634,17 +639,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       ),
     [dataset.users.length, inferenceTypes, dataset.pseudoCohortAnalysis.allReports.length]
   );
-  const systemHealthSummary = useMemo(() => buildSystemHealthSummary(dataset), [dataset]);
-  const confidenceGrowthRows = useMemo(() => buildConfidenceGrowthRows(dataset), [dataset]);
   const systemMovementAnalysis = useMemo(() => buildSystemMovementAnalysis(dataset), [dataset]);
-  const discoverySignalAnalysis = useMemo(() => buildDiscoverySignalAnalysis(dataset), [dataset]);
   const islandLabelById = useMemo(() => new Map(dataset.islands.map((island) => [island.id, island.label] as const)), [dataset.islands]);
   const cohortDisplayLabelById = useMemo(
     () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohort.label] as const)),
     [dataset.cohorts]
   );
-  const selectedDiscoverySignalProfile = selectedUser  ?  discoverySignalAnalysis.byUserId.get(selectedUser.id)  ??  null : null;
-
   const selectedInferenceDiagnostics = selectedInference ?.diagnosis;
   const effectiveRoutingValues = useMemo(
     () =>
@@ -700,6 +700,18 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       : null;
 
   const currentTurnSummary = dataset.turnHistory[dataset.turnHistory.length - 1]  ??  null;
+  const currentTurnModeLabel =
+    currentTurnSummary?.mode === 'guided'
+      ? TURN_MODE_LABELS.guided
+      : currentTurnSummary?.mode === 'mixed'
+        ? TURN_MODE_LABELS.mixed
+        : TURN_MODE_LABELS.organic;
+  const turnSummaryMetrics = buildTurnSummaryMetrics({
+    currentTurn: dataset.currentTurn,
+    totalRatingEvents: dataset.ratingEvents.length,
+    turnSummary: currentTurnSummary,
+    turnModeLabel: currentTurnModeLabel
+  });
   const reviewerArchetypeAnalysis = dataset.reviewerArchetypeAnalysis;
   const selectedUserRatings = selectedUser  ?  countNonNullRatings(selectedUser) : 0;
   const visibleTurnModeLabel = TURN_MODE_LABELS[turnMode];
@@ -726,25 +738,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
      ?  shouldPromoteInverseSignal(selectedInference.inverseTop.score, selectedInference.behaviorSpecificity)
     : false;
   const selectedPrimarySignal = selectedInference  ?  buildPrimarySignalSummary(selectedInference) : null;
-
-  const signalRows = useMemo(() => {
-    if (!selectedRaterSignalProfile) {
-      return [];
-    }
-
-    return dataset.cohorts
-      .map((cohort) => ({
-        cohort,
-        weight: selectedRaterSignalProfile.cohortWeights[cohort.id]  ??  0,
-        evidence: selectedRaterSignalProfile.cohortEvidence[cohort.id]  ??  0,
-        similarity: selectedRaterSignalProfile.cohortSimilarities[cohort.id]  ??  {
-          value: 0,
-          evidence: 0,
-          overlapCount: 0
-        }
-      }))
-      .sort((left, right) => compareByNumeric(left.weight, right.weight));
-  }, [dataset.cohorts, selectedRaterSignalProfile]);
 
   const affinityRows = useMemo(() => {
     if (!selectedIslandAffinityReport) {
@@ -957,51 +950,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     }
   ];
 
-  const signalColumns: ReportTableColumn<{
-    cohort: CohortAnchor;
-    weight: number;
-    evidence: number;
-    similarity: {
-      value: number;
-      evidence: number;
-      overlapCount: number;
-    };
-  }>[] = [
-    {
-      key: 'cohort',
-      label: 'Cohort',
-      render: (row) => (
-        <div className="table-cell-stack">
-          <strong>{cohortLabels.full(row.cohort.id)}</strong>
-          <span className="muted">{row.cohort.tags.join(' | ')}</span>
-        </div>
-      )
-    },
-    {
-      key: 'weight',
-      label: 'Trust proxy',
-      render: (row) => <ProgressBar value={row.weight} label={formatSignedDecimal(row.weight)} tone="accent" />
-    },
-    {
-      key: 'evidence',
-      label: 'Evidence',
-      render: (row) => formatPercent(row.evidence),
-      align: 'right'
-    },
-    {
-      key: 'similarity',
-      label: 'Similarity',
-      render: (row) => formatSignedDecimal(row.similarity.value),
-      align: 'right'
-    },
-    {
-      key: 'overlap',
-      label: 'Overlap',
-      render: (row) => row.similarity.overlapCount,
-      align: 'right'
-    }
-  ];
-
   const affinityColumns: ReportTableColumn<{
     cohort: CohortAnchor;
     estimate: CohortAffinityEstimate;
@@ -1187,8 +1135,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       selectedPrimarySignal={selectedPrimarySignal}
       selectedInferenceDiagnosticsMessage={selectedInferenceDiagnostics ?.message}
       selectedInferenceDiagnosticsType={selectedInferenceDiagnostics ?.type}
-      selectedRaterSignalProfile={selectedRaterSignalProfile}
-      selectedDiscoverySignalProfile={selectedDiscoverySignalProfile}
       declaredOverlapText={declaredOverlapText}
       declaredObservedRelationshipText={declaredObservedRelationshipText}
       behaviorReadText={behaviorReadSummary ?.message  ??  'Not enough rating data yet.'}
@@ -1201,8 +1147,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         }
       }}
       renderPrimarySignalTitle={(signal) => renderPrimarySignalTitle(signal, cohortLabels.full)}
-      signalRows={signalRows}
-      signalColumns={signalColumns}
       declaredDistributionChart={declaredDistributionCard}
       behaviorDistributionChart={behaviorDistributionCard}
     />
@@ -1328,11 +1272,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       </section>
       <section className="detail-block">
         <h4>Rater signal</h4>
-        <p>
-          Overall: {formatDecimal(selectedRaterSignalProfile ?.overallSignal  ??  0)} | Evidence:{' '}
-          {formatPercent(selectedRaterSignalProfile ?.signalEvidence  ??  0)}
-        </p>
-        <p className="muted">Top cohort: {cohortLabels.full(selectedRaterSignalProfile ?.topCohortId  ??  null)}</p>
+        <div className="notice notice--subtle">
+          <strong>Hidden for replacement</strong>
+          <p>
+            Legacy rater-signal values use cohort-similarity proxy math. Restore this readout when the live app can consume modeling-core source authority, signal strength, RD, volatility, and provenance.
+          </p>
+        </div>
       </section>
       <section className="detail-block">
         <h4>Hidden taste truth</h4>
@@ -2371,10 +2316,12 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   }, [registerGuidedTarget, demoReportTargetRef]);
 
   useEffect(() => {
+    const constrainedDesktop = window.matchMedia('(max-width: 1499px)').matches;
+
     if (guidanceMode === 'novice') {
-      setGuidanceOpen(true);
+      setGuidanceOpen(!constrainedDesktop);
       setDynamicSettingsCollapsed(true);
-      setPinnedTrayCollapsed(false);
+      setPinnedTrayCollapsed(constrainedDesktop);
       setShowDebug(false);
       setGuidedPathId(presentationState.runState === 'meaningful-run'  ?  'portfolio-reviewer' : 'run-start');
       return;
@@ -2439,34 +2386,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             onToggleCollapsed={() => setTurnSummaryCollapsed((value) => !value)}
             collapseLabel={turnSummaryCollapsed  ?  'Expand Turn Summary' : 'Collapse Turn Summary'}
           />
-          {!turnSummaryCollapsed  ?  <div className="metric-grid metric-grid--compact">
-            <MetricCard label="Current turn" value={dataset.currentTurn} tone="accent" />
-            <MetricCard
-              label="Mode"
-              value={
-                currentTurnSummary ?.mode === 'guided'
-                   ?  TURN_MODE_LABELS.guided
-                  : currentTurnSummary ?.mode === 'mixed'
-                     ?  TURN_MODE_LABELS.mixed
-                    : TURN_MODE_LABELS.organic
-              }
-              helper="How the most recent turn created rating events."
-            />
-            <MetricCard label="Rating events" value={dataset.ratingEvents.length} />
-            <MetricCard label="Ratings this turn" value={currentTurnSummary ?.ratingsCreated  ??  0} />
-            <MetricCard label="Organic events this turn" value={currentTurnSummary ?.organicRatingsCreated  ??  0} />
-            <MetricCard label="Guided events this turn" value={currentTurnSummary ?.guidedRatingsCreated  ??  0} />
-            <MetricCard
-              label="Participating users this turn"
-              value={currentTurnSummary ?.participatingUserIds.length  ??  0}
-            />
-            <MetricCard label="New islands rated" value={currentTurnSummary ?.newlyRatedIslandIds.length  ??  0} />
-            <MetricCard label="Safe fits routed" value={currentTurnSummary ?.recommendationKinds.SAFE_FIT  ??  0} />
-            <MetricCard label="Smart gambles" value={currentTurnSummary ?.recommendationKinds.SMART_GAMBLE  ??  0} />
-            <MetricCard
-              label="Discovery probes"
-              value={currentTurnSummary ?.recommendationKinds.DISCOVERY_PROBE  ??  0}
-            />
+          {!turnSummaryCollapsed  ?  <div className="metric-grid metric-grid--compact turn-summary__metrics">
+            {turnSummaryMetrics.map((metric) => (
+              <MetricCard
+                key={metric.key}
+                label={metric.label}
+                value={metric.value}
+                tone={metric.tone}
+                explanation={metric.explanation}
+              />
+            ))}
           </div> : null}
           {!turnSummaryCollapsed  ?  <div className="summary-inline">
             {(dataset.turnHistory.slice(-3)  ??  []).map((turn) => (
@@ -2499,16 +2428,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
             <MetricCard label="Unknown / noisy" value={populationSummary.noisyUsers} />
             <MetricCard label="Pseudo-cohort reports" value={populationSummary.pseudoReports} />
           </div>
-        </Panel>,
-        <SystemHealthPanel
-          key="system-health"
-          id="system-health"
-          summary={systemHealthSummary}
-          collapsed={true}
-          showConfidenceSeries={showConfidenceSeries}
-          onToggleSeries={(key) => setShowConfidenceSeries((current) => ({ ...current, [key]: !current[key] }))}
-        />,
-        <ConfidenceGrowthPanel key="confidence-growth" rows={confidenceGrowthRows} collapsed />
+        </Panel>
       ]
     },
     modeling: {
@@ -2616,6 +2536,22 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       title: 'Debug',
       panels: showDebug
          ?  [
+            <Panel key="legacy-model-surfaces" id="legacy-model-surfaces" title="Legacy model surfaces flagged for replacement" className="panel--wide" collapsible defaultCollapsed>
+              <div className="stack">
+                <div className="notice notice--subtle">
+                  <strong>System Health hidden from main overview</strong>
+                  <p>
+                    This was a dashboard health proxy, not a modeling-core read. It should return only as a model-core-derived run health surface.
+                  </p>
+                </div>
+                <div className="notice notice--subtle">
+                  <strong>Confidence Growth hidden from main overview</strong>
+                  <p>
+                    This read stored legacy confidence snapshots. It should be replaced by explicit RD, volatility, evidence support, and UI confidence-composite trend views.
+                  </p>
+                </div>
+              </div>
+            </Panel>,
             <Panel key="debug-data" id="debug-data" title="Debug Data" className="panel--wide" collapsible>
               {selectedUser && selectedInference  ?  (
                 <div className="debug-grid">

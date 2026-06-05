@@ -94,7 +94,7 @@ describe('island/cohort rating substrate', () => {
     assert.ok(contradictory.confidence <= positive.confidence);
   });
 
-  it('keeps passive no-evidence decay weaker than meaningful evidence gain', () => {
+  it('does not decay rating deviation or confidence when an evidenced cell receives no new evidence', () => {
     const base = createIslandCohortRatingState({ islandId: 'island-1', cohortId: 'cohort-1' });
     const meaningful = advanceIslandCohortRatingState(base, {
       turn: 1,
@@ -103,15 +103,22 @@ describe('island/cohort rating substrate', () => {
       behaviorSupport: 0,
       evidenceCount: 1
     });
-    const missing = advanceIslandCohortRatingState(meaningful, {
-      turn: 2,
-      primaryEvidenceMean: 0,
-      primaryEvidenceWeight: 0,
-      behaviorSupport: 0,
-      evidenceCount: 0
-    });
+    let missing = meaningful;
 
-    assert.ok(base.ratingDeviation - meaningful.ratingDeviation > missing.ratingDeviation - meaningful.ratingDeviation);
+    for (let turn = 2; turn <= 30; turn += 1) {
+      missing = advanceIslandCohortRatingState(missing, {
+        turn,
+        primaryEvidenceMean: 0,
+        primaryEvidenceWeight: 0,
+        behaviorSupport: 0,
+        evidenceCount: 0
+      });
+    }
+
+    assert.equal(missing.ratingDeviation, meaningful.ratingDeviation);
+    assert.equal(missing.confidence, meaningful.confidence);
+    assert.equal(missing.evidenceCount, meaningful.evidenceCount);
+    assert.equal(missing.effectiveWeight, meaningful.effectiveWeight);
   });
 
   it('does not passively decay never-evidenced cells', () => {

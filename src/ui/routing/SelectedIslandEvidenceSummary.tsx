@@ -1,9 +1,7 @@
 import type { RatingEventWeightRow } from '../../model/ratingEventWeight.js';
 import { IslandConfidenceRadar, type IslandConfidenceRadarDatum } from './IslandConfidenceRadar';
 import { IslandCohortRatingTimeline } from './IslandCohortRatingTimeline';
-import { IslandEvidenceConstellationView } from './IslandEvidenceConstellation';
 import { ObservedBehaviorEvidencePanel } from './ObservedBehaviorEvidencePanel';
-import { RatingEventWeightTable, type RatingEventWeightPresentationRow } from './RatingEventWeightTable';
 import type { ObservedBehaviorIslandSummary, ObservedBehaviorRow } from '../../model/observedBehavior';
 import type { CohortId } from '../../model/types.js';
 import type { IslandEvidenceConstellation, IslandRatingTimelineRow } from '../../model/islandEvidenceVisualization.js';
@@ -29,14 +27,6 @@ export function SelectedIslandEvidenceSummary({
   cohortLabelById,
   islandLabel
 }: SelectedIslandEvidenceSummaryProps) {
-  const labeledRows: RatingEventWeightPresentationRow[] = ratingEventWeightRows.map((row) => {
-    const match = confidenceRadarData.find((entry) => entry.cohortId === row.cohortId);
-    return {
-      ...row,
-      cohortLabel: match?.label ?? row.cohortId
-    };
-  });
-
   return (
     <section className="detail-block">
       <div className="section-heading">
@@ -63,11 +53,18 @@ export function SelectedIslandEvidenceSummary({
         <section className="detail-block">
           <div className="section-heading">
             <h5>Evidence provenance</h5>
-            <p className="muted">Rating weights, observed behavior, and projection provenance remain explicit, labeled diagnostics.</p>
+            <p className="muted">Observed behavior remains visible. Legacy rating-weight and constellation proxy visuals are hidden until they can be rebuilt from modeling-core evidence projections.</p>
+          </div>
+          <div className="notice notice--subtle">
+            <strong>Projection provenance pending</strong>
+            <p>
+              Restore this area when the selected-island path can show source class, authority basis, signal strength, proxy target, active projection status, and superseded evidence.
+            </p>
+            <p className="muted">
+              Hidden proxy rows: {ratingEventWeightRows.length}; hidden constellation points: {constellation.points.length}.
+            </p>
           </div>
         </section>
-        <IslandEvidenceConstellationView data={constellation} />
-        <RatingEventWeightTable rows={labeledRows} />
         <ObservedBehaviorEvidencePanel
           islandLabel={islandLabel}
           behaviorSummary={observedBehaviorSummary}

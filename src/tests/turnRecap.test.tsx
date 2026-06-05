@@ -1,9 +1,46 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { TurnRecapModal, TurnRecapPanel } from '../ui/overview/TurnRecapPanel';
-import type { TurnRecapReport } from '../model/turnRecap';
+import type { TurnRecapReport, TurnRecapRow } from '../model/turnRecap';
+
+function makeRow(overrides: Partial<TurnRecapRow> = {}): TurnRecapRow {
+  return {
+    islandId: 'island-1',
+    islandLabel: 'Island 1',
+    cohortId: 'cohort-a',
+    cohortLabel: 'Action',
+    comparisonAvailable: true,
+    currentTurn: 1,
+    previousTurn: 0,
+    currentAffinity: 0.3,
+    previousAffinity: 0.1,
+    affinityDelta: 0.2,
+    currentConfidence: 0.7,
+    previousConfidence: 0.4,
+    confidenceDelta: 0.3,
+    currentRatingDeviation: 0.25,
+    previousRatingDeviation: 0.55,
+    ratingDeviationDelta: -0.3,
+    currentVolatility: 0.05,
+    previousVolatility: 0.08,
+    volatilityDelta: -0.03,
+    currentEffectiveWeight: 3,
+    previousEffectiveWeight: 1,
+    effectiveWeightDelta: 2,
+    currentEvidenceCount: 3,
+    previousEvidenceCount: 1,
+    evidenceCountDelta: 2,
+    moverKind: 'affinity' as const,
+    moverLabel: 'Affinity',
+    moverDirectionLabel: 'up +0.200',
+    score: 0.3,
+    ...overrides
+  };
+}
 
 function makeReport(overrides: Partial<TurnRecapReport> = {}): TurnRecapReport {
+  const affinityRow = makeRow();
+
   return {
     status: 'movers',
     statusLabel: 'Meaningful movers',
@@ -17,105 +54,9 @@ function makeReport(overrides: Partial<TurnRecapReport> = {}): TurnRecapReport {
     organicRatingsCreated: 4,
     guidedRatingsCreated: 0,
     meaningfulMoverCount: 1,
-    rows: [
-      {
-        islandId: 'island-1',
-        islandLabel: 'Island 1',
-        cohortId: 'cohort-a',
-        cohortLabel: 'Action',
-        comparisonAvailable: true,
-        currentTurn: 1,
-        previousTurn: 0,
-        currentAffinity: 0.3,
-        previousAffinity: 0.1,
-        affinityDelta: 0.2,
-        currentConfidence: 0.7,
-        previousConfidence: 0.4,
-        confidenceDelta: 0.3,
-        currentRatingDeviation: 0.25,
-        previousRatingDeviation: 0.55,
-        ratingDeviationDelta: -0.3,
-        currentVolatility: 0.05,
-        previousVolatility: 0.08,
-        volatilityDelta: -0.03,
-        currentEffectiveWeight: 3,
-        previousEffectiveWeight: 1,
-        effectiveWeightDelta: 2,
-        currentEvidenceCount: 3,
-        previousEvidenceCount: 1,
-        evidenceCountDelta: 2,
-        moverKind: 'affinity',
-        moverLabel: 'Affinity',
-        moverDirectionLabel: 'up +0.200',
-        score: 0.3
-      }
-    ],
-    meaningfulRows: [
-      {
-        islandId: 'island-1',
-        islandLabel: 'Island 1',
-        cohortId: 'cohort-a',
-        cohortLabel: 'Action',
-        comparisonAvailable: true,
-        currentTurn: 1,
-        previousTurn: 0,
-        currentAffinity: 0.3,
-        previousAffinity: 0.1,
-        affinityDelta: 0.2,
-        currentConfidence: 0.7,
-        previousConfidence: 0.4,
-        confidenceDelta: 0.3,
-        currentRatingDeviation: 0.25,
-        previousRatingDeviation: 0.55,
-        ratingDeviationDelta: -0.3,
-        currentVolatility: 0.05,
-        previousVolatility: 0.08,
-        volatilityDelta: -0.03,
-        currentEffectiveWeight: 3,
-        previousEffectiveWeight: 1,
-        effectiveWeightDelta: 2,
-        currentEvidenceCount: 3,
-        previousEvidenceCount: 1,
-        evidenceCountDelta: 2,
-        moverKind: 'affinity',
-        moverLabel: 'Affinity',
-        moverDirectionLabel: 'up +0.200',
-        score: 0.3
-      }
-    ],
-    highlightRows: [
-      {
-        islandId: 'island-1',
-        islandLabel: 'Island 1',
-        cohortId: 'cohort-a',
-        cohortLabel: 'Action',
-        comparisonAvailable: true,
-        currentTurn: 1,
-        previousTurn: 0,
-        currentAffinity: 0.3,
-        previousAffinity: 0.1,
-        affinityDelta: 0.2,
-        currentConfidence: 0.7,
-        previousConfidence: 0.4,
-        confidenceDelta: 0.3,
-        currentRatingDeviation: 0.25,
-        previousRatingDeviation: 0.55,
-        ratingDeviationDelta: -0.3,
-        currentVolatility: 0.05,
-        previousVolatility: 0.08,
-        volatilityDelta: -0.03,
-        currentEffectiveWeight: 3,
-        previousEffectiveWeight: 1,
-        effectiveWeightDelta: 2,
-        currentEvidenceCount: 3,
-        previousEvidenceCount: 1,
-        evidenceCountDelta: 2,
-        moverKind: 'affinity',
-        moverLabel: 'Affinity',
-        moverDirectionLabel: 'up +0.200',
-        score: 0.3
-      }
-    ],
+    rows: [affinityRow],
+    meaningfulRows: [affinityRow],
+    highlightRows: [affinityRow],
     hasComparison: true,
     ...overrides
   };
@@ -173,5 +114,42 @@ describe('turn recap panel', () => {
     expect(html).toContain('Turn delta');
     expect(html).toContain('Turn recap compares the latest turn/update boundary against the previous boundary');
     expect(html).toContain('The comparison row shows legacy certainty');
+  });
+
+  it('colors certainty direction by certainty movement only', () => {
+    const affinityRow = makeRow();
+    const certaintyUpRow = makeRow({
+      islandId: 'island-2',
+      islandLabel: 'Island 2',
+      moverKind: 'certainty',
+      moverLabel: 'Certainty',
+      moverDirectionLabel: 'up +0.140',
+      confidenceDelta: 0.14,
+      score: 0.14
+    });
+    const certaintyDownRow = makeRow({
+      islandId: 'island-3',
+      islandLabel: 'Island 3',
+      moverKind: 'certainty',
+      moverLabel: 'Certainty',
+      moverDirectionLabel: 'down -0.108',
+      confidenceDelta: -0.108,
+      score: 0.108
+    });
+
+    const html = renderToString(
+      <TurnRecapModal
+        report={makeReport({
+          meaningfulRows: [certaintyUpRow, certaintyDownRow, affinityRow],
+          highlightRows: [certaintyUpRow, certaintyDownRow]
+        })}
+        open
+        onClose={() => undefined}
+      />
+    );
+
+    expect(html).toContain('turn-recap__direction turn-recap__direction--certainty-up');
+    expect(html).toContain('turn-recap__direction turn-recap__direction--certainty-down');
+    expect(html).toContain('<span class="turn-recap__direction">up +0.200</span>');
   });
 });

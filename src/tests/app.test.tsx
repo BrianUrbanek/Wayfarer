@@ -68,7 +68,7 @@ describe('App analyst console', () => {
     expect(html).toContain('Bootstrap Ratings / User');
     expect(html).toContain('Tag Alignment');
     expect(html).toContain('Rating Alignment');
-    expect(html).toContain('Actionability proxy');
+    expect(html).not.toContain('Actionability proxy');
     expect(html).toContain('Turn behavior / Dynamic settings');
     expect(html).toContain('Expert scenario tuning');
     expect(html).toContain('Demo report');
@@ -78,5 +78,16 @@ describe('App analyst console', () => {
     expect(html).toContain('Seed on execute');
     expect(html).toContain('Execute Scenario');
     expect(html).toContain('Expert keeps the same run-context choices visible and exposes the resolved controls.');
+    expect(html).toContain('Current turn explanation');
+    expect(html).toContain('Mode explanation');
+    expect(html).toContain('Rating events explanation');
+    expect(html).toContain('Discovery probes explanation');
+    expect(html).toContain('Legacy model surfaces flagged for replacement');
+    expect(html).toContain('System Health hidden from main overview');
+    expect(html).toContain('Confidence Growth hidden from main overview');
+    expect(html).toContain('Legacy rater-signal values use cohort-similarity proxy math');
+    expect(html).not.toContain('System Confidence (health proxy)');
+    expect(html).not.toContain('Average confidence');
+    expect(html).not.toContain('How the most recent turn created rating events.');
   });
 });

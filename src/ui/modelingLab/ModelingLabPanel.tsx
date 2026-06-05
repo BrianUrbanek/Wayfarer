@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { EmptyState } from '../components/EmptyState';
+import { InfoTip } from '../components/InfoTip';
 import { MetricCard } from '../components/MetricCard';
 import { Modal } from '../components/Modal';
 import { Panel } from '../components/Panel';
@@ -12,32 +13,65 @@ function formatOptionalNumber(value: number | null, digits = 3): string {
   return value === null ? 'n/a' : value.toFixed(digits);
 }
 
-const authorityColumns: ReportTableColumn<ModelingAuthorityRow>[] = [
+export function formatAuthorityRelation(relation: ModelingAuthorityRow['visibleRelation']): string {
+  switch (relation) {
+    case 'seedProxy':
+      return 'Seed proxy';
+    case 'ordinarySimilar':
+      return 'Ordinary similar';
+    case 'inverseSignal':
+      return 'Inverse signal';
+    case 'seed':
+      return 'Seed';
+    case 'unrelated':
+      return 'Unrelated';
+  }
+}
+
+export const authorityColumns: ReportTableColumn<ModelingAuthorityRow>[] = [
   {
     key: 'actor',
     label: 'Actor',
+    render: (row) => <strong title={row.actorId}>{row.label}</strong>
+  },
+  {
+    key: 'visible',
+    label: 'Visible role',
     render: (row) => (
-      <div className="table-cell-stack">
-        <strong>{row.label}</strong>
-        <span className="muted">{row.actorId}</span>
+      <div className="modeling-lab-table__explained-value">
+        <span>{formatAuthorityRelation(row.visibleRelation)}</span>
+        <InfoTip
+          label="Visible role explanation"
+          text="The role inferred from visible model state only. Oracle/test expectations are kept in Validation Details."
+        />
       </div>
     )
   },
-  { key: 'visible', label: 'Visible inference', render: (row) => row.visibleRelation },
-  { key: 'expected', label: 'Oracle expectation', render: (row) => row.expectedRelation ?? 'n/a' },
-  { key: 'seed', label: 'Seed', render: (row) => row.seedId ?? 'n/a' },
+  { key: 'seed', label: 'Seed reference', render: (row) => row.seedId ?? 'n/a' },
   { key: 'lane', label: 'Lane', render: (row) => row.lane },
-  { key: 'overlap', label: 'Overlap', align: 'right', render: (row) => row.overlapCount },
-  { key: 'agreement', label: 'Agreement', align: 'right', render: (row) => row.agreementCount },
-  { key: 'contradictions', label: 'Contradictions', align: 'right', render: (row) => row.contradictionCount },
-  { key: 'proxy', label: 'Proxy strength', align: 'right', render: (row) => formatOptionalNumber(row.proxyStrength) },
   {
-    key: 'result',
-    label: 'Result',
+    key: 'evidence',
+    label: 'Evidence summary',
     render: (row) => (
-      <Badge tone={row.validationResult === 'PASS' ? 'success' : row.validationResult === 'FAIL' ? 'danger' : 'neutral'}>
-        {row.validationResult}
-      </Badge>
+      <span className="modeling-lab-table__evidence-summary">
+        <span>{row.overlapCount} overlap</span>
+        <span>{row.agreementCount} agree</span>
+        <span>{row.contradictionCount} contradict</span>
+      </span>
+    )
+  },
+  {
+    key: 'proxy',
+    label: 'Proxy strength',
+    align: 'right',
+    render: (row) => (
+      <div className="modeling-lab-table__explained-value modeling-lab-table__explained-value--right">
+        <span>{formatOptionalNumber(row.proxyStrength)}</span>
+        <InfoTip
+          label="Proxy strength explanation"
+          text="Lane-local strength of an established visible seed-proxy relationship. It is not general player preference."
+        />
+      </div>
     )
   }
 ];
@@ -60,7 +94,7 @@ const hiddenTruthColumns: ReportTableColumn<ModelingHiddenTruthRow>[] = [
   { key: 'notes', label: 'Oracle note', render: (row) => row.explanation }
 ];
 
-const validationColumns: ReportTableColumn<ModelingValidationRow>[] = [
+export const validationColumns: ReportTableColumn<ModelingValidationRow>[] = [
   { key: 'actor', label: 'Actor', render: (row) => row.actorId },
   { key: 'expected', label: 'Expected', render: (row) => row.expectedRelation },
   { key: 'inferred', label: 'Inferred', render: (row) => row.inferredRelation },
@@ -86,8 +120,6 @@ export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
   const summary = viewModel?.runSummary ?? null;
   const rawJson = useMemo(() => (viewModel ? JSON.stringify(viewModel.rawTrace, null, 2) : ''), [viewModel]);
   const authoritySummary = viewModel?.authorityRows.slice(0, 3) ?? [];
-  const hiddenSummary = viewModel?.hiddenTruthRows.slice(0, 3) ?? [];
-  const validationSummary = viewModel?.validationRows.slice(0, 3) ?? [];
   const validationPassed = summary?.validationPassed;
 
   return (
@@ -107,23 +139,37 @@ export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
         />
       ) : (
         <>
-          <div className="metric-grid metric-grid--compact">
-            <MetricCard label="Fixture" value={summary?.fixtureId ?? 'n/a'} tone="accent" />
-            <MetricCard label="Steps" value={summary?.stepCount ?? 0} />
+          <div className="metric-grid metric-grid--compact modeling-lab-panel__metrics">
+            <MetricCard
+              label="Fixture"
+              value={activeEvidence.traceLabel}
+              valueTitle={summary?.fixtureId ?? undefined}
+              tone="accent"
+              explanation="The deterministic modeling-core scenario attached to this active analyst-console run."
+            />
+            <MetricCard label="Steps" value={summary?.stepCount ?? 0} explanation="The number of trace steps emitted while running the attached fixture." />
             <MetricCard
               label="Scenario validation"
               value={summary?.validationPassed === null ? 'n/a' : summary?.validationPassed ? 'PASS' : 'FAIL'}
               tone={summary?.validationPassed === false ? 'danger' : 'success'}
+              explanation="End-of-run oracle/test comparison. This validation result is not model input."
             />
-            <MetricCard label="Unsupported concepts" value={summary?.unsupportedConcepts.length ?? 0} />
+            <MetricCard
+              label="Unsupported concepts"
+              value={summary?.unsupportedConcepts.length ?? 0}
+              explanation="Trace concepts deliberately marked as unavailable rather than silently approximated."
+            />
           </div>
 
-          <div className="badge-row">
-            <Badge tone={validationPassed === false ? 'danger' : 'success'}>
-              {validationPassed === null ? 'Validation unavailable' : validationPassed ? 'Validation PASS' : 'Validation FAIL'}
-            </Badge>
-            <Badge tone="neutral">{viewModel?.hiddenTruthNotice ?? 'Oracle / test truth only'}</Badge>
-            <Badge tone="warning">{activeEvidence.message}</Badge>
+          <div className="modeling-lab-panel__group">
+            <strong className="modeling-lab-panel__group-label">Trace status &amp; boundaries</strong>
+            <div className="badge-row">
+              <Badge tone={validationPassed === false ? 'danger' : 'success'}>
+                {validationPassed === null ? 'Validation unavailable' : validationPassed ? 'Validation PASS' : 'Validation FAIL'}
+              </Badge>
+              <Badge tone="neutral">{viewModel?.hiddenTruthNotice ?? 'Oracle / test truth only'}</Badge>
+              <Badge tone="warning">{activeEvidence.message}</Badge>
+            </div>
           </div>
 
           <div className="modeling-lab-panel__summary">
@@ -131,37 +177,34 @@ export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
             <p className="muted">{summary?.hiddenTruthPolicy ?? 'No hidden truth checksum is attached to this fixture.'}</p>
           </div>
 
-          <div className="metric-grid metric-grid--compact">
-            <MetricCard label="Authority rows" value={viewModel?.authorityRows.length ?? 0} helper="Compact summary only." />
-            <MetricCard label="Hidden checksum rows" value={viewModel?.hiddenTruthRows.length ?? 0} helper="Oracle/test truth rows." />
-            <MetricCard label="Validation rows" value={viewModel?.validationRows.length ?? 0} helper="Scenario authority checks." />
+          <div className="metric-grid metric-grid--compact modeling-lab-panel__metrics modeling-lab-panel__metrics--audit">
+            <MetricCard
+              label="Authority rows"
+              value={viewModel?.authorityRows.length ?? 0}
+              explanation="Visible source-authority relationships summarized from the model trace."
+            />
+            <MetricCard
+              label="Hidden checksum rows"
+              value={viewModel?.hiddenTruthRows.length ?? 0}
+              explanation="Oracle/test truth rows available only for validation and debugging."
+            />
+            <MetricCard
+              label="Validation rows"
+              value={viewModel?.validationRows.length ?? 0}
+              explanation="Expected-versus-inferred authority comparisons available in Validation Details."
+            />
           </div>
 
-          <div className="summary-inline">
-            {authoritySummary.map((row) => (
-              <Badge key={`authority-${row.actorId}`} tone={row.validationResult === 'PASS' ? 'success' : row.validationResult === 'FAIL' ? 'danger' : 'neutral'}>
-                {row.label}: {row.visibleRelation}
-              </Badge>
-            ))}
-            {authoritySummary.length === 0 ? <Badge tone="neutral">No authority summary</Badge> : null}
-          </div>
-
-          <div className="summary-inline">
-            {hiddenSummary.map((row) => (
-              <Badge key={`hidden-${row.actorId}`} tone="accent">
-                {row.label}: {row.expectedRelationToSeed}
-              </Badge>
-            ))}
-            {hiddenSummary.length === 0 ? <Badge tone="neutral">No hidden checksum rows</Badge> : null}
-          </div>
-
-          <div className="summary-inline">
-            {validationSummary.map((row) => (
-              <Badge key={`validation-${row.actorId}`} tone={row.passed ? 'success' : 'danger'}>
-                {row.actorId}: {row.passed ? 'PASS' : 'FAIL'}
-              </Badge>
-            ))}
-            {validationSummary.length === 0 ? <Badge tone="neutral">No validation details</Badge> : null}
+          <div className="modeling-lab-panel__group">
+            <strong className="modeling-lab-panel__group-label">Visible authority snapshot</strong>
+            <div className="summary-inline">
+              {authoritySummary.map((row) => (
+                <Badge key={`authority-${row.actorId}`} tone="accent">
+                  {row.label}: {formatAuthorityRelation(row.visibleRelation)}
+                </Badge>
+              ))}
+              {authoritySummary.length === 0 ? <Badge tone="neutral">No authority summary</Badge> : null}
+            </div>
           </div>
 
           <div className="section-toolbar section-toolbar--stacked">
@@ -187,7 +230,7 @@ export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
         open={detailView !== null}
         title={
           detailView === 'authority'
-            ? 'Authority Matrix'
+            ? 'Visible Authority Matrix'
             : detailView === 'hidden-truth'
               ? 'Hidden Truth Checksum'
               : detailView === 'validation'
@@ -200,13 +243,14 @@ export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
       >
         {detailView === 'authority' ? (
           <div className="detail-block">
-            <p className="muted">Visible inferred relationship compared with the scenario checksum.</p>
+            <p className="muted">Visible source-authority relationships only. Use Validation Details for oracle/test comparison.</p>
             <ReportTable
               columns={authorityColumns}
               rows={viewModel?.authorityRows ?? []}
               getRowKey={(row) => row.actorId}
               emptyTitle="No authority rows"
               emptyDescription="This trace did not emit an authority summary."
+              className="report-table--dense modeling-lab-authority-table"
             />
           </div>
         ) : null}

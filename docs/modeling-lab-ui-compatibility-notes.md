@@ -22,3 +22,5 @@ Review each existing panel and choose one of three actions:
 1. Relabel as Columbus simulation / legacy proxy.
 2. Repoint to modeling-core trace data where an equivalent exists.
 3. Delete if the readout duplicates or contradicts the modeling-core lab surface.
+
+See [`live-app-modeling-core-alignment-audit.md`](./live-app-modeling-core-alignment-audit.md) for the foundation confidence fix boundary and the current live-app versus modeling-core divergence map.

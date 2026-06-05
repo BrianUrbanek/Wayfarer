@@ -38,4 +38,12 @@ describe('glossary data', () => {
       }
     }
   });
+
+  it('preserves focused discoverability semantics', () => {
+    assert.match(glossaryTermById('source-authority')?.fullDefinition ?? '', /separate from what that player personally prefers/i);
+    assert.match(glossaryTermById('inverse-signal')?.fullDefinition ?? '', /useful negative-polarity evidence/i);
+    assert.match(glossaryTermById('seed-proxy')?.fullDefinition ?? '', /lane-local/i);
+    assert.match(glossaryTermById('seed-proxy')?.fullDefinition ?? '', /does not mean the seed directly rated/i);
+    assert.match(glossaryTermById('unsupported-concept')?.fullDefinition ?? '', /silently approximated/i);
+  });
 });

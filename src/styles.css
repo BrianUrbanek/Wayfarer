@@ -946,6 +946,14 @@ select {
   z-index: 25;
 }
 
+@media (max-width: 1499px) and (min-width: 721px) {
+  .app-shell {
+    --shell-content-width: calc(100vw - 224px);
+    padding-left: 112px;
+    padding-right: 112px;
+  }
+}
+
 .instruction-grid {
   display: grid;
   gap: 12px;
@@ -1724,8 +1732,9 @@ select {
 
 @media (max-width: 1180px) {
   .app-shell {
-    padding-left: calc(20px + var(--left-tray-space, 0px));
-    padding-right: calc(20px + var(--right-tray-space, 0px));
+    --shell-content-width: calc(100vw - 224px);
+    padding-left: 112px;
+    padding-right: 112px;
   }
 
   .control-bar {
@@ -2068,6 +2077,18 @@ select {
   min-width: 0;
 }
 
+.metric-card__label-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.metric-card__label-row > .info-tip__tooltip {
+  flex: 0 0 auto;
+}
+
 .metric-card__label {
   color: var(--muted);
   font-size: 0.8rem;
@@ -2387,6 +2408,97 @@ select {
 .confidence-growth__table th:first-child,
 .confidence-growth__table td:first-child {
   min-width: 64px;
+}
+
+.turn-summary__metrics {
+  grid-auto-rows: 1fr;
+}
+
+.turn-summary__metrics > .metric-card {
+  height: 100%;
+}
+
+.modeling-lab-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.modeling-lab-panel__metrics {
+  gap: 14px;
+}
+
+.modeling-lab-panel__metrics--audit {
+  margin-top: 2px;
+}
+
+.modeling-lab-panel__summary {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(141, 164, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(8, 12, 22, 0.32);
+}
+
+.modeling-lab-panel__summary p {
+  margin: 0;
+}
+
+.modeling-lab-panel__group {
+  display: grid;
+  gap: 10px;
+}
+
+.modeling-lab-panel__group-label {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.modeling-lab-panel__group .badge-row,
+.modeling-lab-panel__group .summary-inline {
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.modeling-lab-panel .section-toolbar__buttons {
+  gap: 10px;
+}
+
+.modeling-lab-table__explained-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modeling-lab-table__explained-value--right {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.modeling-lab-table__evidence-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.modeling-lab-table__evidence-summary > span {
+  white-space: nowrap;
+}
+
+.modeling-lab-authority-table {
+  min-width: 760px;
+}
+
+.modeling-lab-authority-table th:nth-child(1),
+.modeling-lab-authority-table td:nth-child(1) {
+  min-width: 110px;
+}
+
+.modeling-lab-authority-table th:nth-child(5),
+.modeling-lab-authority-table td:nth-child(5) {
+  min-width: 180px;
 }
 
 .system-movement {
@@ -2942,6 +3054,18 @@ select {
   min-width: 860px;
 }
 
+.turn-recap__direction {
+  font-weight: 700;
+}
+
+.turn-recap__direction--certainty-up {
+  color: var(--up);
+}
+
+.turn-recap__direction--certainty-down {
+  color: var(--meh);
+}
+
 .report-table__row--clickable {
   cursor: pointer;
 }
@@ -3099,6 +3223,7 @@ select {
   align-items: flex-start;
   justify-content: center;
   padding: 18px 24px 24px;
+  overflow: auto;
 }
 
 .overlay--drawer {
@@ -3122,7 +3247,7 @@ select {
 
 .modal--top {
   width: min(1100px, 100%);
-  max-height: min(78vh, 900px);
+  max-height: min(calc(100dvh - 42px), 900px);
 }
 
 .modal--recovery {

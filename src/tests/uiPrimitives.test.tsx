@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { CollapsiblePanel } from '../ui/components/CollapsiblePanel';
 import { Drawer } from '../ui/components/Drawer';
 import { Modal } from '../ui/components/Modal';
+import { MetricCard } from '../ui/components/MetricCard';
 
 describe('UI primitives', () => {
   it('renders a modal shell when open', () => {
@@ -69,5 +70,20 @@ describe('UI primitives', () => {
     expect(collapsed).toContain('Stable settings');
     expect(collapsed).toContain('Expand Simulation setup');
     expect(collapsed).not.toContain('Panel content');
+  });
+
+  it('renders a metric explanation affordance only when requested', () => {
+    const explained = renderToString(<MetricCard label="Evidence support" value={4} explanation="Distinct supporting events." />);
+    const plain = renderToString(<MetricCard label="Evidence support" value={4} />);
+
+    expect(explained).toContain('Evidence support explanation');
+    expect(plain).not.toContain('Evidence support explanation');
+  });
+
+  it('uses the explained metric name as the tooltip heading', () => {
+    const html = renderToString(<MetricCard label="Fixture" value="Demo" explanation="Attached trace fixture." />);
+
+    expect(html).toContain('<h5>Fixture</h5>');
+    expect(html).not.toContain('<h5>About</h5>');
   });
 });

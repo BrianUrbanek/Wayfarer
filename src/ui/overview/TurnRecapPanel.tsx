@@ -57,6 +57,30 @@ function toneForKind(kind: TurnRecapMoverKind | null): 'neutral' | 'accent' | 's
   }
 }
 
+function certaintyDirectionClass(row: TurnRecapRow): string {
+  if (row.moverKind !== 'certainty' || row.confidenceDelta === null) {
+    return '';
+  }
+
+  if (row.confidenceDelta > 0) {
+    return ' turn-recap__direction--certainty-up';
+  }
+
+  if (row.confidenceDelta < 0) {
+    return ' turn-recap__direction--certainty-down';
+  }
+
+  return '';
+}
+
+function renderMoverDirection(row: TurnRecapRow): JSX.Element {
+  return (
+    <span className={`turn-recap__direction${certaintyDirectionClass(row)}`}>
+      {row.moverDirectionLabel}
+    </span>
+  );
+}
+
 function buildColumns(hasComparison: boolean): ReportTableColumn<TurnRecapRow>[] {
   if (!hasComparison) {
     return [
@@ -130,7 +154,7 @@ function buildColumns(hasComparison: boolean): ReportTableColumn<TurnRecapRow>[]
     {
       key: 'direction',
       label: 'Direction',
-      render: (row) => row.moverDirectionLabel
+      render: renderMoverDirection
     }
   ];
 }

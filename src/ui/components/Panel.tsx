@@ -17,8 +17,7 @@ export const Panel = forwardRef<HTMLElement, PanelProps>(function Panel(
 
   if (hideTitle && !collapsible) {
     return (
-      <section ref={ref} id={id} className={`panel${className ? ` ${className}` : ''}`}>
-        <h2 className="sr-only">{title}</h2>
+      <section ref={ref} id={id} aria-label={title} className={`panel${className ? ` ${className}` : ''}`}>
         {children}
       </section>
     );

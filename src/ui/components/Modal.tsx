@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { PropsWithChildren } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps extends PropsWithChildren {
   open: boolean;
@@ -51,7 +52,7 @@ export function Modal({ open, title, onClose, children, placement = 'center', cl
     return null;
   }
 
-  return (
+  const modal = (
     <div
       className={`overlay overlay--modal ${placement === 'top' ? 'overlay--modal-top' : ''}`}
       role="presentation"
@@ -77,4 +78,6 @@ export function Modal({ open, title, onClose, children, placement = 'center', cl
       </div>
     </div>
   );
+
+  return typeof document === 'undefined' ? modal : createPortal(modal, document.body);
 }

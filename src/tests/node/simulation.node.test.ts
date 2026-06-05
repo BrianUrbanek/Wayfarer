@@ -4,6 +4,7 @@ import { DEFAULT_TAGS } from '../../data/defaultTags.js';
 import { createDefaultCohorts } from '../../data/defaultCohorts.js';
 import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { computeInference } from '../../model/inference.js';
+import { getScenarioPreset } from '../../model/scenarioPresets.js';
 import { recommendIslandsForUser } from '../../model/recommendations.js';
 import {
   advancePolicyTurn,
@@ -62,6 +63,10 @@ function buildSignalWeights(bootstrap: ReturnType<typeof buildBootstrap>, defaul
 function roundNumber(value: number, digits = 6) {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+function average(values: readonly number[]) {
+  return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function visibleUserWithEvents(events: RatingEvent[], index = 0) {
@@ -694,5 +699,41 @@ describe('simulation layer', () => {
     assert.equal(organicOnly.turnHistory.at(-1)?.guidedRatingsCreated ?? 0, 0);
     assert.equal(guidedOnly.turnHistory.at(-1)?.organicRatingsCreated ?? 0, 0);
     assert.ok((guidedOnly.turnHistory.at(-1)?.guidedRatingsCreated ?? 0) > 0);
+  });
+
+  it('does not collapse Golden Demo learned confidence after rating saturation creates zero-event turns', () => {
+    const preset = getScenarioPreset('golden-demo');
+    const dataset = generateColumbusDataset({
+      ...preset.generatorConfig,
+      allTags: DEFAULT_TAGS,
+      cohorts: createDefaultCohorts()
+    });
+    let state = createInitialSimulationState({
+      seed: preset.generatorConfig.seed,
+      allTags: dataset.allTags,
+      latentUsers: dataset.users,
+      cohorts: dataset.cohorts,
+      islands: dataset.islands,
+      hiddenTasteCohorts: dataset.hiddenTasteCohorts,
+      initialRatingsPerUser: preset.generatorConfig.bootstrapRatingsPerUser
+    });
+    let saturationState = state;
+
+    for (let turn = 1; turn <= 54; turn += 1) {
+      state = advancePolicyTurn(state, preset.turnPolicy);
+      if ((state.turnHistory.at(-1)?.ratingsCreated ?? 0) > 0) {
+        saturationState = state;
+      }
+    }
+
+    const saturationAverageConfidence = average(saturationState.islandCohortRatingSnapshots.map((snapshot) => snapshot.confidence));
+    const finalAverageConfidence = average(state.islandCohortRatingSnapshots.map((snapshot) => snapshot.confidence));
+    const zeroEventTail = state.turnHistory
+      .slice(saturationState.turnHistory.length)
+      .every((summary) => summary.ratingsCreated === 0);
+
+    assert.ok(state.currentTurn > saturationState.currentTurn);
+    assert.equal(zeroEventTail, true);
+    assert.ok(finalAverageConfidence >= saturationAverageConfidence * 0.95);
   });
 });

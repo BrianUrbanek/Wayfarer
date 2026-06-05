@@ -20,8 +20,20 @@ export type GlossaryTermId =
   | 'discovery-routing'
   | 'safe-fit'
   | 'discovery-probe'
+  | 'smart-gamble'
   | 'confidence-composite'
   | 'oracle-test-generator-truth'
+  | 'modeling-trace-fixture'
+  | 'source-authority'
+  | 'seed-proxy'
+  | 'ordinary-similar'
+  | 'inverse-signal'
+  | 'lane-local-authority'
+  | 'proxy-strength'
+  | 'unsupported-concept'
+  | 'rating-event'
+  | 'organic-rating-event'
+  | 'guided-rating-event'
   | 'confidence-snapshot'
   | 'pinned-reference'
   | 'transient-drilldown';
@@ -278,6 +290,86 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     relatedTerms: ['transient-drilldown', 'confidence-snapshot']
   },
   {
+    id: 'modeling-trace-fixture',
+    term: 'Modeling Trace / Fixture',
+    shortDefinition: 'Deterministic internal scenario and its inspectable execution record.',
+    fullDefinition:
+      'A fixture is a deterministic modeling-core scenario. Its modeling trace records the visible inputs, updates, projections, validations, and deliberately unsupported concepts emitted while that scenario runs.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['source-authority', 'unsupported-concept', 'oracle-test-generator-truth']
+  },
+  {
+    id: 'source-authority',
+    term: 'Source Authority',
+    shortDefinition: 'How useful a player is as an evidence source.',
+    fullDefinition:
+      'A signal-source read describing whether and how a player can contribute evidence to other estimates. It is separate from what that player personally prefers.',
+    scope: 'internal',
+    implementedStatus: 'partial',
+    relatedTerms: ['seed-proxy', 'inverse-signal', 'trust']
+  },
+  {
+    id: 'seed-proxy',
+    term: 'Seed Proxy',
+    shortDefinition: 'A player whose visible evidence can stand in for a seed within a lane.',
+    fullDefinition:
+      'A lane-local source-authority relationship established from sufficient visible agreement with a seed. Proxy-projected evidence preserves the actual rater as provenance; it does not mean the seed directly rated the island.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['source-authority', 'lane-local-authority', 'proxy-strength']
+  },
+  {
+    id: 'ordinary-similar',
+    term: 'Ordinary Similar',
+    shortDefinition: 'Visible similarity that has not earned seed-proxy authority.',
+    fullDefinition:
+      'A player who appears similar to a seed from visible evidence but does not meet the requirements for a seed-proxy relationship.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['source-authority', 'seed-proxy']
+  },
+  {
+    id: 'inverse-signal',
+    term: 'Inverse Signal',
+    shortDefinition: 'Stable opposing evidence that can still be useful.',
+    fullDefinition:
+      'A consistently inverse relationship that can contribute useful negative-polarity evidence. Inverse signal does not mean bad player or unusable evidence.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['source-authority', 'volatility']
+  },
+  {
+    id: 'lane-local-authority',
+    term: 'Lane-local Authority',
+    shortDefinition: 'Source authority restricted to a specific tag or evidence lane.',
+    fullDefinition:
+      'Authority learned for one tag or evidence lane. It must not automatically transfer to unrelated lanes.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['source-authority', 'seed-proxy']
+  },
+  {
+    id: 'proxy-strength',
+    term: 'Proxy Strength',
+    shortDefinition: 'Strength of an established lane-local seed-proxy relationship.',
+    fullDefinition:
+      'A visible modeling-trace value describing the strength of a specific seed-proxy relationship. It is not general player preference or universal trust.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['seed-proxy', 'lane-local-authority']
+  },
+  {
+    id: 'unsupported-concept',
+    term: 'Unsupported Concept',
+    shortDefinition: 'Trace semantics intentionally reported as unavailable.',
+    fullDefinition:
+      'A concept the current modeling trace does not implement or expose. Unsupported concepts are named explicitly instead of being silently approximated.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['modeling-trace-fixture']
+  },
+  {
     id: 'safe-fit',
     term: 'Safe Fit',
     shortDefinition: 'Higher-confidence positive-fit candidate route.',
@@ -287,6 +379,16 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     relatedTerms: ['discovery-routing', 'discovery-probe']
   },
   {
+    id: 'smart-gamble',
+    term: 'Smart Gamble',
+    shortDefinition: 'Promising guided route that does not yet qualify as a safe fit.',
+    fullDefinition:
+      'A recommendation route with positive expected fit but insufficient support for the stronger safe-fit band. It remains distinct from an information-first discovery probe.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['discovery-routing', 'safe-fit', 'discovery-probe']
+  },
+  {
     id: 'discovery-probe',
     term: 'Discovery Probe',
     shortDefinition: 'Exploration-oriented route with bounded risk.',
@@ -294,6 +396,36 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     scope: 'analyst-facing',
     implementedStatus: 'implemented',
     relatedTerms: ['discovery-routing', 'safe-fit']
+  },
+  {
+    id: 'rating-event',
+    term: 'Rating Event',
+    shortDefinition: 'Immutable record of one player rating one island.',
+    fullDefinition:
+      'An append-only simulation record capturing a player rating and its source context. Turn summaries count rating events rather than mutable current-rating cells.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['organic-rating-event', 'guided-rating-event', 'rating-event-weight']
+  },
+  {
+    id: 'organic-rating-event',
+    term: 'Organic Rating Event',
+    shortDefinition: 'Rating created without recommendation-guided routing.',
+    fullDefinition:
+      'A rating event created by the organic turn stream rather than by a guided recommendation route.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['rating-event', 'guided-rating-event']
+  },
+  {
+    id: 'guided-rating-event',
+    term: 'Guided Rating Event',
+    shortDefinition: 'Rating created from recommendation-guided exposure.',
+    fullDefinition:
+      'A rating event created after the guided routing stream selected an unrated island for a participating user.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['rating-event', 'organic-rating-event', 'discovery-routing']
   },
   {
     id: 'pinned-reference',
@@ -336,8 +468,20 @@ export const REQUIRED_GLOSSARY_TERMS: GlossaryTermId[] = [
   'discovery-routing',
   'safe-fit',
   'discovery-probe',
+  'smart-gamble',
   'confidence-composite',
   'oracle-test-generator-truth',
+  'modeling-trace-fixture',
+  'source-authority',
+  'seed-proxy',
+  'ordinary-similar',
+  'inverse-signal',
+  'lane-local-authority',
+  'proxy-strength',
+  'unsupported-concept',
+  'rating-event',
+  'organic-rating-event',
+  'guided-rating-event',
   'confidence-snapshot',
   'pinned-reference',
   'transient-drilldown'

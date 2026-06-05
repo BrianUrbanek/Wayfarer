@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { SelectedUserSummary } from '../ui/selectedUser/SelectedUserSummary';
 
 describe('selected user summary', () => {
-  it('renders the discovery signal and hidden taste audit surface', () => {
+  it('hides legacy signal-source proxies until modeling-core authority is available', () => {
     const html = renderToString(
       <SelectedUserSummary
         selectedUserLabel="User 1"
@@ -26,28 +26,6 @@ describe('selected user summary', () => {
           } as never
         }
         selectedPrimarySignal={null}
-        selectedRaterSignalProfile={null}
-        selectedDiscoverySignalProfile={
-          {
-            userId: 'user-1',
-            score: 0.42,
-            behaviorConsistency: 0.51,
-            confidenceMomentum: 0.48,
-            support: 0.75,
-            eventCount: 3,
-            latestTurn: 2,
-            summary: 'Synthetic discovery usefulness is based on 3 rating-linked behavior events and stored confidence snapshots.',
-            turnRows: [
-              {
-                turn: 1,
-                ratingEvents: 2,
-                behaviorAgreement: 0.5,
-                confidenceMomentum: 0.45,
-                usefulness: 0.49
-              }
-            ]
-          } as never
-        }
         declaredOverlapText="Overlap text"
         declaredObservedRelationshipText="Relationship text"
         behaviorReadText="Behavior read text"
@@ -56,17 +34,17 @@ describe('selected user summary', () => {
         openUserPicker={() => {}}
         pinCurrentUser={() => {}}
         renderPrimarySignalTitle={() => 'Primary behavior read: diffuse behavior'}
-        signalRows={[]}
-        signalColumns={[]}
         declaredDistributionChart={<div>Declared chart</div>}
         behaviorDistributionChart={<div>Behavior chart</div>}
       />
     );
 
-    expect(html).toContain('Discovery Signal');
-    expect(html).toContain('Retrospective usefulness uses observed behavior and stored confidence snapshots.');
     expect(html).toContain('Preference read');
     expect(html).toContain('Signal-source read');
+    expect(html).toContain('Hidden for replacement');
+    expect(html).toContain('previous rater-signal and Discovery Signal surfaces used legacy cohort-similarity and stored-confidence proxy math');
+    expect(html).toContain('modeling-core source authority');
+    expect(html).not.toContain('Retrospective usefulness uses observed behavior and stored confidence snapshots.');
     expect(html).toContain('Expert provenance');
   });
 });

@@ -1,22 +1,27 @@
 import type { PropsWithChildren, ReactNode } from 'react';
+import { InfoTip } from './InfoTip';
 
-interface MetricCardProps extends PropsWithChildren {
+export interface MetricCardProps extends PropsWithChildren {
   label: string;
   value: ReactNode;
   helper?: ReactNode;
+  explanation?: string;
   tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
   labelTitle?: string;
   valueTitle?: string;
   helperTitle?: string;
 }
 
-export function MetricCard({ label, value, helper, tone = 'neutral', labelTitle, valueTitle, helperTitle }: MetricCardProps) {
+export function MetricCard({ label, value, helper, explanation, tone = 'neutral', labelTitle, valueTitle, helperTitle }: MetricCardProps) {
   const valueIsPlainText = typeof value === 'string' || typeof value === 'number';
 
   return (
     <article className={`metric-card metric-card--${tone}`}>
-      <div className="metric-card__label" title={labelTitle ?? label}>
-        {label}
+      <div className="metric-card__label-row">
+        <div className="metric-card__label" title={labelTitle ?? label}>
+          {label}
+        </div>
+        {explanation ? <InfoTip label={`${label} explanation`} text={explanation} title={label} /> : null}
       </div>
       <div
         className={`metric-card__value${valueIsPlainText ? ' metric-card__value--text' : ''}`}

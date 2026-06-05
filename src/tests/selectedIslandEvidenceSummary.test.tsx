@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { SelectedIslandEvidenceSummary } from '../ui/routing/SelectedIslandEvidenceSummary';
 
 describe('selected island evidence summary', () => {
-  it('renders confidence and rating-event-weight explanation surfaces', () => {
+  it('keeps legacy projection visuals hidden behind a replacement notice', () => {
     const html = renderToString(
       <SelectedIslandEvidenceSummary
         confidenceRadarData={[{ cohortId: 'cohort-action', confidence: 0.42, label: 'Action' }]}
@@ -57,10 +57,14 @@ describe('selected island evidence summary', () => {
     expect(html).toContain('Audience read');
     expect(html).toContain('Confidence &amp; stability');
     expect(html).toContain('Evidence provenance');
+    expect(html).toContain('Legacy rating-weight and constellation proxy visuals are hidden');
+    expect(html).toContain('Projection provenance pending');
+    expect(html).toContain('Hidden proxy rows: 1');
+    expect(html).toContain('hidden constellation points: 1');
     expect(html).toContain('Island / Cohort Rating Timeline');
-    expect(html).toContain('Island Evidence Distribution');
-    expect(html).toContain('Experimental analyst evidence-shape read');
-    expect(html).toContain('Rating Event Weight');
+    expect(html).not.toContain('Island Evidence Distribution');
+    expect(html).not.toContain('Experimental analyst evidence-shape read');
+    expect(html).not.toContain('Rating Event Weight');
     expect(html).toContain('Observed behavior');
     expect(html).toContain('generated from rating events');
     expect(html).toContain('Behavior events');

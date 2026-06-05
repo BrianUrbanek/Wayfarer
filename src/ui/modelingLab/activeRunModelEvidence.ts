@@ -18,6 +18,7 @@ export type ActiveRunModelEvidence =
       kind: 'trace';
       message: string;
       traceFixtureId: string;
+      traceLabel: string;
       trace: ModelingTraceRun;
       viewModel: ModelingRunViewModel;
     };
@@ -43,6 +44,7 @@ export function buildActiveRunModelEvidence(input: ActiveRunModelEvidenceInput):
     kind: 'trace',
     message: `Modeling trace attached for ${input.scenarioPreset?.label ?? traceFixtureId}.`,
     traceFixtureId,
+    traceLabel: input.scenarioPreset?.modelingTraceLabel ?? traceFixtureId,
     trace,
     viewModel: buildModelingRunViewModel(trace)
   };

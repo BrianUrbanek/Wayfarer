@@ -21,6 +21,7 @@ describe('active run model evidence adapter', () => {
     expect(evidence.kind).toBe('trace');
     expect(evidence.message).toContain('Modeling trace attached');
     expect(evidence.trace?.fixtureId).toBe('seed-proxy-scenario-matrix');
+    expect(evidence.kind === 'trace' ? evidence.traceLabel : null).toBe('Authority Matrix Demo');
     expect(evidence.viewModel?.authorityRows.length).toBeGreaterThan(0);
   });
 });
