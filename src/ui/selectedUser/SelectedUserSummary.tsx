@@ -4,6 +4,7 @@ import { FormulaTip } from '../components/FormulaTip';
 import type { InferenceAnalysis } from '../../model/inference';
 import type { UserSignalDiagnosisSummary } from '../userSignalDiagnosis';
 import type { ReactNode } from 'react';
+import type { LiveUserEvidenceRead } from '../liveEvidenceAdapter';
 
 interface SelectedUserSummaryProps {
   selectedUserLabel: string;
@@ -22,6 +23,7 @@ interface SelectedUserSummaryProps {
   renderPrimarySignalTitle: (signal: UserSignalDiagnosisSummary | null) => string | null;
   declaredDistributionChart: ReactNode;
   behaviorDistributionChart: ReactNode;
+  liveEvidenceRead: LiveUserEvidenceRead;
 }
 
 export function SelectedUserSummary(props: SelectedUserSummaryProps) {
@@ -41,7 +43,8 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
     pinCurrentUser,
     renderPrimarySignalTitle,
     declaredDistributionChart,
-    behaviorDistributionChart
+    behaviorDistributionChart,
+    liveEvidenceRead
   } = props;
 
   return (
@@ -150,15 +153,23 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
       <section className="detail-block">
         <div className="section-heading">
           <h4>Signal-source read</h4>
-          <p>
-            Hidden for replacement. The previous rater-signal and Discovery Signal surfaces used legacy cohort-similarity and stored-confidence proxy math.
-          </p>
+          <p>Compatibility bridge for live-app evidence. Canonical source authority is only available through attached modeling-core traces.</p>
+        </div>
+        <div className="metric-grid metric-grid--compact">
+          <MetricCard
+            label="Evidence state"
+            value={liveEvidenceRead.state}
+            tone={liveEvidenceRead.state === 'canonical' ? 'success' : liveEvidenceRead.state === 'compatibility' ? 'accent' : 'warning'}
+            helper={liveEvidenceRead.headline}
+          />
+          <MetricCard label="Source authority" value={liveEvidenceRead.sourceAuthority} helper={liveEvidenceRead.provenance} />
         </div>
         <div className="notice notice--subtle">
-          <strong>Replacement target</strong>
-          <p>
-            Restore this section only when it can consume modeling-core source authority, lane-local signal usefulness, signal RD, volatility, proxy role, and provenance.
-          </p>
+          <strong>{liveEvidenceRead.headline}</strong>
+          <p>{liveEvidenceRead.compatibilityNote}</p>
+          <p className="muted">{liveEvidenceRead.laneSignalSummary}</p>
+          <p className="muted">{liveEvidenceRead.rdSummary}</p>
+          <p className="muted">{liveEvidenceRead.volatilitySummary}</p>
         </div>
       </section>
       <div className="summary-inline">

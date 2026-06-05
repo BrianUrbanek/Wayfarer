@@ -1,0 +1,26 @@
+{
+  "repo": "Wayfarer",
+  "baselineDate": "2026-06-05",
+  "docsRead": [
+    "README.md",
+    "docs/modeling-core-lab.md",
+    "docs/wayfarer-next-generation-model-spec.md",
+    "package.json"
+  ],
+  "nonNegotiableContracts": [
+    "Modeling-core work is additive and wrapper-based unless the user explicitly asks for a rewrite.",
+    "Current trace/state should be exposed honestly; missing future-model semantics belong in explicit gaps, not invented fields.",
+    "Turn semantics are snapshot-isolated and should not self-validate within the same turn.",
+    "Deterministic fixtures and JSON-safe traces are preferred for lab work."
+  ],
+  "boundaries": [
+    "modeling-core harness and docs are the current core seam",
+    "scenario-lab and seed-proxy work are adjacent but should stay causally separate",
+    "UI changes should preserve existing analyst-console patterns and avoid parallel controls"
+  ],
+  "currentRiskNotes": [
+    "Confidence terminology is overloaded in the spec and can drift into ambiguous code/UI.",
+    "Docs describe future discovery simulation ideas that are not yet the source of truth for current behavior.",
+    "No documentation/ directory exists in this checkout; repo docs live under docs/."
+  ]
+}

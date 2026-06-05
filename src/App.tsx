@@ -22,6 +22,7 @@ import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEviden
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
 import { ModelingLabPanel } from './ui/modelingLab/ModelingLabPanel';
+import { buildLiveIslandEvidenceRead, buildLiveUserEvidenceRead } from './ui/liveEvidenceAdapter';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -579,6 +580,32 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, cohortLabels.full);
   const selectedRaterSignalProfile = selectedUser  ?  dataset.raterSignalProfiles.get(selectedUser.id)  ??  null : null;
   const selectedIslandAffinityReport = selectedIsland  ?  dataset.islandAffinityReports.get(selectedIsland.id)  ??  null : null;
+  const activeRunModelEvidence = useMemo(
+    () =>
+      buildActiveRunModelEvidence({
+        scenarioPreset: scenarioPresetSource
+      }),
+    [scenarioPresetSource]
+  );
+  const selectedUserLiveEvidenceRead = useMemo(
+    () =>
+      buildLiveUserEvidenceRead({
+        user: selectedUser,
+        inference: selectedInference ?? null,
+        signalProfile: selectedRaterSignalProfile,
+        activeRunEvidence: activeRunModelEvidence
+      }),
+    [activeRunModelEvidence, selectedInference, selectedRaterSignalProfile, selectedUser]
+  );
+  const selectedIslandLiveEvidenceRead = useMemo(
+    () =>
+      buildLiveIslandEvidenceRead({
+        islandId: selectedIsland?.id ?? null,
+        affinityReport: selectedIslandAffinityReport,
+        activeRunEvidence: activeRunModelEvidence
+      }),
+    [activeRunModelEvidence, selectedIsland, selectedIslandAffinityReport]
+  );
   const cohortLabelById = useMemo(
     () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohortLabels.full(cohort.id)])),
     [dataset.cohorts, cohortLabels]
@@ -1149,6 +1176,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       renderPrimarySignalTitle={(signal) => renderPrimarySignalTitle(signal, cohortLabels.full)}
       declaredDistributionChart={declaredDistributionCard}
       behaviorDistributionChart={behaviorDistributionCard}
+      liveEvidenceRead={selectedUserLiveEvidenceRead}
     />
   ) : null;
   const discoveryRoutingSummary = selectedUser  ?  (
@@ -1249,6 +1277,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         constellation={selectedIslandConstellation}
         cohortLabelById={selectedIslandCohortLabelById}
         islandLabel={selectedIsland.label}
+        liveEvidenceRead={selectedIslandLiveEvidenceRead}
       />
     </div>
   ) : null;
@@ -2190,13 +2219,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     [activeScenarioPreset, hasGoldenDemoReportAccess, simulationState]
   );
   const activeScenarioPresetMetadata = activeScenarioPreset  ?  scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
-  const activeRunModelEvidence = useMemo(
-    () =>
-      buildActiveRunModelEvidence({
-        scenarioPreset: scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  null
-      }),
-    [activeScenarioPresetMetadata, scenarioPresetSource]
-  );
   const hasScenarioSelection = Boolean(scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  importedScenario);
   const standardScenarioControlsDisabled = isExecutingScenario || !hasScenarioSelection;
   const scenarioPresetDisplay =

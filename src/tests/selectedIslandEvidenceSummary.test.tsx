@@ -49,6 +49,16 @@ describe('selected island evidence summary', () => {
           }
         }}
         islandLabel="Island 1"
+        liveEvidenceRead={{
+          state: 'compatibility',
+          headline: 'Compatibility proxy only',
+          sourceAuthority: 'Legacy affinity snapshots remain the active live-app read for island-1; they are not modeling-core source authority.',
+          provenance: 'Ratings and observed behavior are visible, but projection provenance is not canonical here.',
+          compatibilityNote: 'This readout is explicitly a compatibility/degraded bridge, not canonical modeling-core evidence.',
+          affinitySummary: 'Visible affinity estimates: 1',
+          rdSummary: 'Top confidence: 0.500',
+          volatilitySummary: 'Top volatility: 0.080'
+        }}
       />
     );
 
@@ -57,10 +67,12 @@ describe('selected island evidence summary', () => {
     expect(html).toContain('Audience read');
     expect(html).toContain('Confidence &amp; stability');
     expect(html).toContain('Evidence provenance');
-    expect(html).toContain('Legacy rating-weight and constellation proxy visuals are hidden');
-    expect(html).toContain('Projection provenance pending');
-    expect(html).toContain('Hidden proxy rows: 1');
-    expect(html).toContain('hidden constellation points: 1');
+    expect(html).toContain('Evidence state');
+    expect(html).toContain('Legacy affinity snapshots remain the active live-app read');
+    expect(html).toContain('Compatibility proxy only');
+    expect(html).toContain('Hidden proxy rows:');
+    expect(html).toContain('hidden constellation points:');
+    expect(html).toContain('>1<');
     expect(html).toContain('Island / Cohort Rating Timeline');
     expect(html).not.toContain('Island Evidence Distribution');
     expect(html).not.toContain('Experimental analyst evidence-shape read');

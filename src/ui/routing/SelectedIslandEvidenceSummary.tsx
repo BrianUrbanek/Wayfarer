@@ -2,9 +2,11 @@ import type { RatingEventWeightRow } from '../../model/ratingEventWeight.js';
 import { IslandConfidenceRadar, type IslandConfidenceRadarDatum } from './IslandConfidenceRadar';
 import { IslandCohortRatingTimeline } from './IslandCohortRatingTimeline';
 import { ObservedBehaviorEvidencePanel } from './ObservedBehaviorEvidencePanel';
+import { MetricCard } from '../components/MetricCard';
 import type { ObservedBehaviorIslandSummary, ObservedBehaviorRow } from '../../model/observedBehavior';
 import type { CohortId } from '../../model/types.js';
 import type { IslandEvidenceConstellation, IslandRatingTimelineRow } from '../../model/islandEvidenceVisualization.js';
+import type { LiveIslandEvidenceRead } from '../liveEvidenceAdapter';
 
 interface SelectedIslandEvidenceSummaryProps {
   confidenceRadarData: readonly IslandConfidenceRadarDatum[];
@@ -15,6 +17,7 @@ interface SelectedIslandEvidenceSummaryProps {
   constellation: IslandEvidenceConstellation;
   cohortLabelById: ReadonlyMap<CohortId, string>;
   islandLabel: string;
+  liveEvidenceRead: LiveIslandEvidenceRead;
 }
 
 export function SelectedIslandEvidenceSummary({
@@ -25,7 +28,8 @@ export function SelectedIslandEvidenceSummary({
   timelineRows,
   constellation,
   cohortLabelById,
-  islandLabel
+  islandLabel,
+  liveEvidenceRead
 }: SelectedIslandEvidenceSummaryProps) {
   return (
     <section className="detail-block">
@@ -55,11 +59,21 @@ export function SelectedIslandEvidenceSummary({
             <h5>Evidence provenance</h5>
             <p className="muted">Observed behavior remains visible. Legacy rating-weight and constellation proxy visuals are hidden until they can be rebuilt from modeling-core evidence projections.</p>
           </div>
+          <div className="metric-grid metric-grid--compact">
+            <MetricCard
+              label="Evidence state"
+              value={liveEvidenceRead.state}
+              tone={liveEvidenceRead.state === 'canonical' ? 'success' : liveEvidenceRead.state === 'compatibility' ? 'accent' : 'warning'}
+              helper={liveEvidenceRead.headline}
+            />
+            <MetricCard label="Source authority" value={liveEvidenceRead.sourceAuthority} helper={liveEvidenceRead.provenance} />
+          </div>
           <div className="notice notice--subtle">
-            <strong>Projection provenance pending</strong>
-            <p>
-              Restore this area when the selected-island path can show source class, authority basis, signal strength, proxy target, active projection status, and superseded evidence.
-            </p>
+            <strong>{liveEvidenceRead.headline}</strong>
+            <p>{liveEvidenceRead.compatibilityNote}</p>
+            <p className="muted">{liveEvidenceRead.affinitySummary}</p>
+            <p className="muted">{liveEvidenceRead.rdSummary}</p>
+            <p className="muted">{liveEvidenceRead.volatilitySummary}</p>
             <p className="muted">
               Hidden proxy rows: {ratingEventWeightRows.length}; hidden constellation points: {constellation.points.length}.
             </p>

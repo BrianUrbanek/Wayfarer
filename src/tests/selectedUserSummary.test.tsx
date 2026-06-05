@@ -36,14 +36,26 @@ describe('selected user summary', () => {
         renderPrimarySignalTitle={() => 'Primary behavior read: diffuse behavior'}
         declaredDistributionChart={<div>Declared chart</div>}
         behaviorDistributionChart={<div>Behavior chart</div>}
+        liveEvidenceRead={{
+          state: 'compatibility',
+          headline: 'Compatibility proxy only',
+          sourceAuthority: 'Legacy cohort-similarity proxy remains in use for User 1; it is not source authority.',
+          provenance: 'Visible ratings and inference are available, but the live app cannot yet surface canonical source-class or projection provenance here.',
+          compatibilityNote: 'This readout is explicitly a compatibility/degraded bridge, not canonical modeling-core evidence.',
+          laneSignalSummary: 'Legacy cohort weights exist for 1 cohorts.',
+          rdSummary: 'Observed rating evidence: 0.456',
+          volatilitySummary: 'Behavior specificity: 0.432'
+        }}
       />
     );
 
     expect(html).toContain('Preference read');
     expect(html).toContain('Signal-source read');
-    expect(html).toContain('Hidden for replacement');
-    expect(html).toContain('previous rater-signal and Discovery Signal surfaces used legacy cohort-similarity and stored-confidence proxy math');
-    expect(html).toContain('modeling-core source authority');
+    expect(html).toContain('Compatibility bridge for live-app evidence');
+    expect(html).toContain('Evidence state');
+    expect(html).toContain('Compatibility proxy only');
+    expect(html).toContain('Legacy cohort-similarity proxy remains in use');
+    expect(html).toContain('canonical modeling-core evidence');
     expect(html).not.toContain('Retrospective usefulness uses observed behavior and stored confidence snapshots.');
     expect(html).toContain('Expert provenance');
   });

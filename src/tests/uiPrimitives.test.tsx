@@ -83,7 +83,8 @@ describe('UI primitives', () => {
   it('uses the explained metric name as the tooltip heading', () => {
     const html = renderToString(<MetricCard label="Fixture" value="Demo" explanation="Attached trace fixture." />);
 
-    expect(html).toContain('<h5>Fixture</h5>');
-    expect(html).not.toContain('<h5>About</h5>');
+    expect(html).toContain('Fixture explanation');
+    expect(html).toContain('title="Fixture"');
+    expect(html).not.toContain('title="About"');
   });
 });
