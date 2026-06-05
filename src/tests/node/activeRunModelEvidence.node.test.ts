@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { getScenarioPresetMetadata } from '../../model/scenarioPresets.js';
-import { buildActiveRunModelEvidence } from '../../ui/modelingLab/activeRunModelEvidence.js';
+import {
+  buildActiveRunModelEvidence,
+  resolveActiveRunModelEvidencePreset
+} from '../../ui/modelingLab/activeRunModelEvidence.js';
 
 describe('active run model evidence adapter', () => {
   it('returns a no-trace state for ordinary scenarios', () => {
@@ -23,5 +26,17 @@ describe('active run model evidence adapter', () => {
     expect(evidence.trace?.fixtureId).toBe('seed-proxy-scenario-matrix');
     expect(evidence.kind === 'trace' ? evidence.traceLabel : null).toBe('Authority Matrix Demo');
     expect(evidence.viewModel?.authorityRows.length).toBeGreaterThan(0);
+  });
+
+  it('falls back to active scenario preset metadata when the source preset is null', () => {
+    const activeScenarioPresetMetadata = getScenarioPresetMetadata('golden-demo');
+    const resolvedPreset = resolveActiveRunModelEvidencePreset(null, activeScenarioPresetMetadata);
+    const evidence = buildActiveRunModelEvidence({
+      scenarioPreset: resolvedPreset
+    });
+
+    expect(resolvedPreset).toEqual(activeScenarioPresetMetadata);
+    expect(evidence.kind).toBe('trace');
+    expect(evidence.trace?.fixtureId).toBe('seed-proxy-scenario-matrix');
   });
 });

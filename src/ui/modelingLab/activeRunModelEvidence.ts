@@ -7,6 +7,13 @@ export interface ActiveRunModelEvidenceInput {
   scenarioPreset: ScenarioPresetMetadata | null;
 }
 
+export function resolveActiveRunModelEvidencePreset(
+  scenarioPresetSource: ScenarioPresetMetadata | null,
+  activeScenarioPresetMetadata: ScenarioPresetMetadata | null
+): ScenarioPresetMetadata | null {
+  return scenarioPresetSource ?? activeScenarioPresetMetadata ?? null;
+}
+
 export type ActiveRunModelEvidence =
   | {
       kind: 'no-trace';

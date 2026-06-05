@@ -64,9 +64,9 @@ describe('modeling lab panel', () => {
       explanation: 'Example'
     })}</>);
 
-    expect(html).toContain('>15<');
-    expect(html).toContain('>agree<');
-    expect(html).toContain('>contradict<');
+    expect(html).toContain('15<!-- --> overlap');
+    expect(html).toContain('15<!-- --> agree');
+    expect(html).toContain('0<!-- --> contradict');
     expect(html).not.toContain(' / ');
   });
 });

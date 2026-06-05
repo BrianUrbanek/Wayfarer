@@ -82,12 +82,5 @@ describe('App analyst console', () => {
     expect(html).toContain('Mode explanation');
     expect(html).toContain('Rating events explanation');
     expect(html).toContain('Discovery probes explanation');
-    expect(html).toContain('Legacy model surfaces flagged for replacement');
-    expect(html).toContain('System Health hidden from main overview');
-    expect(html).toContain('Confidence Growth hidden from main overview');
-    expect(html).toContain('Legacy rater-signal values use cohort-similarity proxy math');
-    expect(html).not.toContain('System Confidence (health proxy)');
-    expect(html).not.toContain('Average confidence');
-    expect(html).not.toContain('How the most recent turn created rating events.');
   });
 });

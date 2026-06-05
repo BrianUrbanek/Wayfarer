@@ -23,6 +23,7 @@ import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
 import { ModelingLabPanel } from './ui/modelingLab/ModelingLabPanel';
 import { buildLiveIslandEvidenceRead, buildLiveUserEvidenceRead } from './ui/liveEvidenceAdapter';
+import { resolveActiveRunModelEvidencePreset } from './ui/modelingLab/activeRunModelEvidence';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
 import { DistributionLegend } from './ui/components/DistributionLegend';
@@ -580,32 +581,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const selectedComparisonLabel = comparisonLabel(selectedUser, selectedComparisonCohort, cohortLabels.full);
   const selectedRaterSignalProfile = selectedUser  ?  dataset.raterSignalProfiles.get(selectedUser.id)  ??  null : null;
   const selectedIslandAffinityReport = selectedIsland  ?  dataset.islandAffinityReports.get(selectedIsland.id)  ??  null : null;
-  const activeRunModelEvidence = useMemo(
-    () =>
-      buildActiveRunModelEvidence({
-        scenarioPreset: scenarioPresetSource
-      }),
-    [scenarioPresetSource]
-  );
-  const selectedUserLiveEvidenceRead = useMemo(
-    () =>
-      buildLiveUserEvidenceRead({
-        user: selectedUser,
-        inference: selectedInference ?? null,
-        signalProfile: selectedRaterSignalProfile,
-        activeRunEvidence: activeRunModelEvidence
-      }),
-    [activeRunModelEvidence, selectedInference, selectedRaterSignalProfile, selectedUser]
-  );
-  const selectedIslandLiveEvidenceRead = useMemo(
-    () =>
-      buildLiveIslandEvidenceRead({
-        islandId: selectedIsland?.id ?? null,
-        affinityReport: selectedIslandAffinityReport,
-        activeRunEvidence: activeRunModelEvidence
-      }),
-    [activeRunModelEvidence, selectedIsland, selectedIslandAffinityReport]
-  );
   const cohortLabelById = useMemo(
     () => new Map(dataset.cohorts.map((cohort) => [cohort.id, cohortLabels.full(cohort.id)])),
     [dataset.cohorts, cohortLabels]
@@ -1152,6 +1127,91 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       <DistributionDonut slices={behaviorDistributionSlices} />
       <DistributionLegend slices={behaviorDistributionSlices} formatPercent={formatPercent} />
     </div>
+  );
+  const currentTurnPolicy = useMemo(
+    () => ({
+      turnMode,
+      participationModel,
+      participatingUsersPerTurn,
+      participationChance,
+      organicRatingCountModel,
+      organicRatingsPerUser,
+      organicRatingDice,
+      guidedRatingCountModel,
+      guidedRecommendationsPerUser,
+      guidedRecommendationDice,
+      routingRiskProfile,
+      customExplorationWeight,
+      customBadFitGuardThreshold
+    }),
+    [
+      customBadFitGuardThreshold,
+      customExplorationWeight,
+      guidedRatingCountModel,
+      guidedRecommendationDice,
+      guidedRecommendationsPerUser,
+      organicRatingCountModel,
+      organicRatingDice,
+      organicRatingsPerUser,
+      participationChance,
+      participationModel,
+      participatingUsersPerTurn,
+      routingRiskProfile,
+      turnMode
+    ]
+  );
+  const currentScenarioControls = useMemo<ScenarioPresetControls>(
+    () => ({
+      seed,
+      numUsers,
+      numIslands,
+      bootstrapRatingsPerUser,
+      tagAlignmentDistribution,
+      ratingAlignmentDistribution,
+      turnPolicy: currentTurnPolicy,
+      turnsToRun
+    }),
+    [
+      bootstrapRatingsPerUser,
+      currentTurnPolicy,
+      numIslands,
+      numUsers,
+      ratingAlignmentDistribution,
+      seed,
+      tagAlignmentDistribution,
+      turnsToRun
+    ]
+  );
+  const activeScenarioPreset = useMemo(
+    () => resolveScenarioPresetFromControls(currentScenarioControls),
+    [currentScenarioControls]
+  );
+  const activeScenarioPresetMetadata = activeScenarioPreset  ?  scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
+  const activeRunModelEvidence = useMemo(
+    () =>
+      buildActiveRunModelEvidence({
+        scenarioPreset: resolveActiveRunModelEvidencePreset(scenarioPresetSource, activeScenarioPresetMetadata)
+      }),
+    [activeScenarioPresetMetadata, scenarioPresetSource]
+  );
+  const selectedUserLiveEvidenceRead = useMemo(
+    () =>
+      buildLiveUserEvidenceRead({
+        user: selectedUser,
+        inference: selectedInference ?? null,
+        signalProfile: selectedRaterSignalProfile,
+        activeRunEvidence: activeRunModelEvidence
+      }),
+    [activeRunModelEvidence, selectedInference, selectedRaterSignalProfile, selectedUser]
+  );
+  const selectedIslandLiveEvidenceRead = useMemo(
+    () =>
+      buildLiveIslandEvidenceRead({
+        islandId: selectedIsland?.id ?? null,
+        affinityReport: selectedIslandAffinityReport,
+        activeRunEvidence: activeRunModelEvidence
+      }),
+    [activeRunModelEvidence, selectedIsland, selectedIslandAffinityReport]
   );
 
   const selectedUserSummary = selectedInference  ?  (
@@ -2083,62 +2143,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     applyScenarioPresetSelection(INITIAL_SCENARIO_PRESET.id);
   };
 
-  const currentTurnPolicy = useMemo(
-    () => ({
-      turnMode,
-      participationModel,
-      participatingUsersPerTurn,
-      participationChance,
-      organicRatingCountModel,
-      organicRatingsPerUser,
-      organicRatingDice,
-      guidedRatingCountModel,
-      guidedRecommendationsPerUser,
-      guidedRecommendationDice,
-      routingRiskProfile,
-      customExplorationWeight,
-      customBadFitGuardThreshold
-    }),
-    [
-      customBadFitGuardThreshold,
-      customExplorationWeight,
-      guidedRatingCountModel,
-      guidedRecommendationDice,
-      guidedRecommendationsPerUser,
-      organicRatingCountModel,
-      organicRatingDice,
-      organicRatingsPerUser,
-      participationChance,
-      participationModel,
-      participatingUsersPerTurn,
-      routingRiskProfile,
-      turnMode
-    ]
-  );
-
-  const currentScenarioControls = useMemo<ScenarioPresetControls>(
-    () => ({
-      seed,
-      numUsers,
-      numIslands,
-      bootstrapRatingsPerUser,
-      tagAlignmentDistribution,
-      ratingAlignmentDistribution,
-      turnPolicy: currentTurnPolicy,
-      turnsToRun
-    }),
-    [
-      bootstrapRatingsPerUser,
-      currentTurnPolicy,
-      numIslands,
-      numUsers,
-      ratingAlignmentDistribution,
-      seed,
-      tagAlignmentDistribution,
-      turnsToRun
-    ]
-  );
-
   useEffect(() => {
     if (importedScenario) {
       const importedControls = {
@@ -2202,10 +2206,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const isMeaningfulRunLoaded = presentationState.runState === 'meaningful-run';
   const showAnalysisDashboard = presentationState.guidanceMode === 'expert' || isMeaningfulRunLoaded;
 
-  const activeScenarioPreset = useMemo(
-    () => resolveScenarioPresetFromControls(currentScenarioControls),
-    [currentScenarioControls]
-  );
   const isGoldenDemoPath = scenarioPresetSource ?.id === 'golden-demo' || activeScenarioPreset ?.id === 'golden-demo';
   const hasGoldenDemoReportAccess = isGoldenDemoPath && isMeaningfulRunLoaded;
   const goldenDemoReport = useMemo(
@@ -2218,7 +2218,6 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         : null,
     [activeScenarioPreset, hasGoldenDemoReportAccess, simulationState]
   );
-  const activeScenarioPresetMetadata = activeScenarioPreset  ?  scenarioPresetMetadataFromPreset(activeScenarioPreset) : null;
   const hasScenarioSelection = Boolean(scenarioPresetSource  ??  activeScenarioPresetMetadata  ??  importedScenario);
   const standardScenarioControlsDisabled = isExecutingScenario || !hasScenarioSelection;
   const scenarioPresetDisplay =
