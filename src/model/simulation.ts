@@ -169,8 +169,12 @@ function cloneUserWithRatings(user: User, ratings: Record<IslandId, MaybeRating>
   };
 }
 
-function eventKey(turn: number, userId: UserId, islandId: IslandId): string {
+function eventId(turn: number, userId: UserId, islandId: IslandId): string {
   return `${turn}:${userId}:${islandId}`;
+}
+
+function pairKey(userId: UserId, islandId: IslandId): string {
+  return `${userId}:${islandId}`;
 }
 
 function latestHistoricalRatingEvent(
@@ -183,6 +187,29 @@ function latestHistoricalRatingEvent(
     if (event.userId === userId && event.islandId === islandId) {
       return event;
     }
+  }
+
+  return null;
+}
+
+function resolveRevisionReason(
+  previousEvent: RatingEvent | null,
+  nextEvent: { rating: Rating; source: RatingEventSource; islandVersionId: string; gameRulesVersionId: string }
+): RatingRevisionReason | null {
+  if (!previousEvent) {
+    return null;
+  }
+
+  if (previousEvent.gameRulesVersionId !== nextEvent.gameRulesVersionId) {
+    return 'gamePatchRefresh';
+  }
+
+  if (previousEvent.islandVersionId !== nextEvent.islandVersionId) {
+    return 'islandUpdateRefresh';
+  }
+
+  if (previousEvent.rating !== nextEvent.rating) {
+    return 'playerChangedMind';
   }
 
   return null;
@@ -251,7 +278,7 @@ function latestActiveRatingsByPair(
     if (!isCurrentRatingEvent(event, currentVersions) || superseded.has(event.id)) {
       continue;
     }
-    const key = eventKey(event.turn, event.userId, event.islandId);
+    const key = pairKey(event.userId, event.islandId);
     const existing = active.get(key);
     if (!existing || existing.turn <= event.turn) {
       active.set(key, event);
@@ -408,14 +435,17 @@ function buildConfidenceSnapshots(
   islands: readonly Island[],
   ratingEvents: readonly RatingEvent[],
   turnHistory: readonly SimulationTurnSummary[],
-  allTags: readonly TagId[]
+  allTags: readonly TagId[],
+  refreshEvents: readonly RatingRefreshEvent[] = []
 ): IslandCohortConfidenceSnapshot[] {
   const uniqueTurns = Array.from(new Set(turnHistory.map((summary) => summary.turn))).sort((left, right) => left - right);
   const snapshots: IslandCohortConfidenceSnapshot[] = [];
 
   for (const turn of uniqueTurns) {
     const turnEvents = ratingEvents.filter((event) => event.turn <= turn);
-    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents, buildInitialRatingVersions(islands));
+    const turnRefreshEvents = refreshEvents.filter((event) => event.turn <= turn);
+    const currentVersions = buildCurrentRatingVersions(islands, turnRefreshEvents);
+    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents, currentVersions);
     const inferenceByUserId = computeInferenceMap(visibleUsers, cohorts, islands, allTags);
     const signalAnalysis = buildRaterSignalProfiles(visibleUsers, inferenceByUserId, cohorts);
     const affinityAnalysis = buildIslandAffinityReports(turnEvents, signalAnalysis.byUserId, cohorts, islands);
@@ -546,7 +576,7 @@ function createRatingEventsForUsers(
       const rating = user.ratings[islandId] ?? 0;
 
       events.push({
-        id: eventKey(turn, user.id, islandId),
+        id: eventId(turn, user.id, islandId),
         turn,
         userId: user.id,
         islandId,
@@ -680,7 +710,7 @@ function recomputeState(
     })),
     confidenceSnapshots: confidenceSnapshots
       ? confidenceSnapshots.map((snapshot) => cloneConfidenceSnapshot(snapshot))
-      : buildConfidenceSnapshots(latentUsers, cohorts, islands, ratingEvents, turnHistory, allTags)
+      : buildConfidenceSnapshots(latentUsers, cohorts, islands, ratingEvents, turnHistory, allTags, refreshEvents)
   };
 }
 
@@ -891,7 +921,7 @@ function createOrganicEventsForUsers(
 
     const unratedIslandIds = islands
       .map((island) => island.id)
-      .filter((islandId) => (visible.ratings[islandId] ?? null) === null && !(usedPairs?.has(eventKey(turn, user.id, islandId)) ?? false));
+      .filter((islandId) => (visible.ratings[islandId] ?? null) === null && !(usedPairs?.has(eventId(turn, user.id, islandId)) ?? false));
 
     if (unratedIslandIds.length === 0) {
       continue;
@@ -905,7 +935,7 @@ function createOrganicEventsForUsers(
 
     for (const islandId of pickedIslandIds) {
       const rating = user.ratings[islandId] ?? 0;
-      const key = eventKey(turn, user.id, islandId);
+      const key = eventId(turn, user.id, islandId);
       usedPairs?.add(key);
       const profile = signalProfiles.get(user.id);
       const previousEvent = latestHistoricalRatingEvent(historicalEvents, user.id, islandId);
@@ -913,20 +943,24 @@ function createOrganicEventsForUsers(
         ? buildSignalWeightSnapshot(cohorts, new Map(cohorts.map((cohort) => [cohort.id, profile.cohortWeights[cohort.id] ?? 0])), 0)
         : buildSignalWeightSnapshot(cohorts, new Map(), 0);
 
-      events.push({
+      const candidateEvent = {
         id: key,
         turn,
         userId: user.id,
         islandId,
         rating,
-        source: 'organic',
+        source: 'organic' as const,
         raterSignalWeights: weights,
         islandVersionId: currentVersions.islandVersionById[islandId],
-        gameRulesVersionId: currentVersions.gameRulesVersionId,
-        ...(previousEvent && previousEvent.rating !== rating
+        gameRulesVersionId: currentVersions.gameRulesVersionId
+      };
+      const revisionReason = resolveRevisionReason(previousEvent, candidateEvent);
+      events.push({
+        ...candidateEvent,
+        ...(revisionReason
           ? {
-              revisionReason: 'playerChangedMind' as RatingRevisionReason,
-              supersedesEventId: previousEvent.id
+              revisionReason,
+              supersedesEventId: previousEvent?.id
             }
           : {})
       });
@@ -970,7 +1004,7 @@ function createGuidedRatingEventsForUsers(
       signalProfiles,
       islands,
       recommendationOptions
-    ).recommendations.filter((entry) => (visible.ratings[entry.islandId] ?? null) === null && !(usedPairs?.has(eventKey(turn, user.id, entry.islandId)) ?? false));
+    ).recommendations.filter((entry) => (visible.ratings[entry.islandId] ?? null) === null && !(usedPairs?.has(eventId(turn, user.id, entry.islandId)) ?? false));
 
     if (recommendations.length === 0) {
       continue;
@@ -981,7 +1015,7 @@ function createGuidedRatingEventsForUsers(
 
     for (const recommendation of selectedRecommendations) {
       const rating = user.ratings[recommendation.islandId] ?? 0;
-      const key = eventKey(turn, user.id, recommendation.islandId);
+      const key = eventId(turn, user.id, recommendation.islandId);
       usedPairs?.add(key);
       const profile = signalProfiles.get(user.id);
       const previousEvent = latestHistoricalRatingEvent(historicalEvents, user.id, recommendation.islandId);
@@ -989,20 +1023,25 @@ function createGuidedRatingEventsForUsers(
         ? buildSignalWeightSnapshot(cohorts, new Map(cohorts.map((cohort) => [cohort.id, profile.cohortWeights[cohort.id] ?? 0])), 0)
         : buildSignalWeightSnapshot(cohorts, new Map(), 0);
 
-      events.push({
+      const candidateEvent = {
         id: key,
         turn,
         userId: user.id,
         islandId: recommendation.islandId,
         rating,
-        source: 'guided',
+        source: 'guided' as const,
         raterSignalWeights: weights,
         islandVersionId: currentVersions.islandVersionById[recommendation.islandId],
-        gameRulesVersionId: currentVersions.gameRulesVersionId,
-        ...(previousEvent && previousEvent.rating !== rating
+        gameRulesVersionId: currentVersions.gameRulesVersionId
+      };
+
+      const revisionReason = resolveRevisionReason(previousEvent, candidateEvent);
+      events.push({
+        ...candidateEvent,
+        ...(revisionReason
           ? {
-              revisionReason: 'playerChangedMind' as RatingRevisionReason,
-              supersedesEventId: previousEvent.id
+              revisionReason,
+              supersedesEventId: previousEvent?.id
             }
           : {})
       });

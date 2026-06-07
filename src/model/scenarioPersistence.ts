@@ -207,6 +207,27 @@ function validateRatingEvent(value: unknown): value is RatingEvent {
     return false;
   }
 
+  if (
+    value.revisionReason !== undefined &&
+    value.revisionReason !== 'playerChangedMind' &&
+    value.revisionReason !== 'gamePatchRefresh' &&
+    value.revisionReason !== 'islandUpdateRefresh'
+  ) {
+    return false;
+  }
+
+  if (value.supersedesEventId !== undefined && !isString(value.supersedesEventId)) {
+    return false;
+  }
+
+  if (value.islandVersionId !== undefined && !isString(value.islandVersionId)) {
+    return false;
+  }
+
+  if (value.gameRulesVersionId !== undefined && !isString(value.gameRulesVersionId)) {
+    return false;
+  }
+
   return true;
 }
 

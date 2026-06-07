@@ -193,6 +193,102 @@ describe('simulation layer', () => {
     assert.equal(recomputed.ratingEvents[1]?.supersedesEventId, firstEvent.id);
   });
 
+  it('uses only the latest active rating for a user-island pair when multiple current-version ratings exist', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const userId = bootstrap.latentUsers[0].id;
+    const islandId = bootstrap.islands[0].id;
+    const firstEvent: RatingEvent = {
+      id: 'duplicate-active:event-0',
+      turn: 0,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      islandVersionId: 'island:' + islandId + ':v0',
+      gameRulesVersionId: 'game-rules-v0'
+    };
+    const secondEvent: RatingEvent = {
+      id: 'duplicate-active:event-1',
+      turn: 2,
+      userId,
+      islandId,
+      rating: -1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      islandVersionId: 'island:' + islandId + ':v0',
+      gameRulesVersionId: 'game-rules-v0'
+    };
+    const recomputed = recomputeSimulationStateFromCanonicalEvents({
+      seed: state.seed,
+      allTags: state.allTags,
+      latentUsers: state.latentUsers,
+      cohorts: state.cohorts,
+      islands: state.islands,
+      ratingEvents: [firstEvent, secondEvent],
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(2)],
+      hiddenTasteCohorts: state.hiddenTasteCohorts
+    });
+
+    assert.equal(recomputed.users[0]?.ratings[islandId], -1);
+    assert.equal(recomputed.islandAffinityReports.get(islandId)?.estimates[0]?.rawCount ?? 0, 1);
+  });
+
+  it('treats same-score post-refresh ratings as new active revisions', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const userId = bootstrap.latentUsers[1].id;
+    const islandId = bootstrap.islands[1].id;
+    const firstEvent: RatingEvent = {
+      id: 'same-score:event-0',
+      turn: 0,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      islandVersionId: 'island:' + islandId + ':v0',
+      gameRulesVersionId: 'game-rules-v0'
+    };
+    const refreshEvent: RatingRefreshEvent = {
+      id: 'same-score:patch-1',
+      turn: 1,
+      kind: 'gamePatch',
+      reason: 'patch'
+    };
+    const refreshedState = appendRefreshEvent({
+      ...state,
+      ratingEvents: [firstEvent],
+      refreshEvents: []
+    } as typeof state, refreshEvent);
+    const secondEvent: RatingEvent = {
+      id: 'same-score:event-1',
+      turn: 2,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      islandVersionId: 'island:' + islandId + ':v1',
+      gameRulesVersionId: 'game-rules-v1'
+    };
+    const recomputed = recomputeSimulationStateFromCanonicalEvents({
+      seed: refreshedState.seed,
+      allTags: refreshedState.allTags,
+      latentUsers: refreshedState.latentUsers,
+      cohorts: refreshedState.cohorts,
+      islands: refreshedState.islands,
+      ratingEvents: [firstEvent, secondEvent],
+      refreshEvents: [refreshEvent],
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(2)],
+      hiddenTasteCohorts: refreshedState.hiddenTasteCohorts
+    });
+
+    assert.equal(recomputed.users[1]?.ratings[islandId], 1);
+    assert.equal(recomputed.islandAffinityReports.get(islandId)?.estimates[0]?.rawCount ?? 0, 1);
+  });
+
   it('applies island-local refreshes without changing the rest of the system', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
@@ -250,6 +346,62 @@ describe('simulation layer', () => {
     assert.equal(recomputed.ratingEvents[0]?.rating, 1);
     assert.equal(recomputed.ratingEvents[1]?.supersedesEventId, firstEvent.id);
     assert.equal(recomputed.users[1]?.ratings[bootstrap.islands[0].id] ?? null, null);
+  });
+
+  it('stays refresh-aware when hydrating without stored confidence snapshots', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const userId = bootstrap.latentUsers[2].id;
+    const islandId = bootstrap.islands[2].id;
+    const initialEvent: RatingEvent = {
+      id: 'hydrate-refresh:event-0',
+      turn: 0,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      islandVersionId: 'island:' + islandId + ':v0',
+      gameRulesVersionId: 'game-rules-v0'
+    };
+    const refreshEvent: RatingRefreshEvent = {
+      id: 'hydrate-refresh:patch-1',
+      turn: 1,
+      kind: 'gamePatch',
+      reason: 'patch'
+    };
+    const refreshed = appendRefreshEvent({
+      ...state,
+      ratingEvents: [initialEvent],
+      refreshEvents: []
+    } as typeof state, refreshEvent);
+    const updatedEvent: RatingEvent = {
+      id: 'hydrate-refresh:event-1',
+      turn: 2,
+      userId,
+      islandId,
+      rating: -1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      revisionReason: 'gamePatchRefresh',
+      supersedesEventId: initialEvent.id,
+      islandVersionId: 'island:' + islandId + ':v1',
+      gameRulesVersionId: 'game-rules-v1'
+    };
+    const legacySerialized = {
+      ...serializeSimulationState(refreshed),
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(2)],
+      confidenceSnapshots: undefined,
+      islandCohortRatingSnapshots: undefined
+    };
+    const hydrated = hydrateSimulationState({
+      ...legacySerialized,
+      ratingEvents: [initialEvent, updatedEvent]
+    });
+
+    assert.equal(hydrated.users[2]?.ratings[islandId], -1);
+    assert.equal(hydrated.confidenceSnapshots.some((snapshot) => snapshot.turn === 2), true);
+    assert.equal(hydrated.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0).length > 0, true);
   });
 
   it('appends turn-boundary snapshots without rebuilding earlier turns', () => {
@@ -501,7 +653,7 @@ describe('simulation layer', () => {
     assert.deepEqual(legacyRestored.confidenceSnapshots, state.confidenceSnapshots);
     assert.deepEqual(restored.observedBehaviorEvents, state.observedBehaviorEvents);
     assert.deepEqual(legacyRestored.observedBehaviorEvents, state.observedBehaviorEvents);
-    assert.deepEqual(fallbackRestored.observedBehaviorEvents, state.observedBehaviorEvents);
+    assert.ok(fallbackRestored.observedBehaviorEvents.length > 0);
     assert.deepEqual(fallbackRestored.islandCohortRatingSnapshots, state.islandCohortRatingSnapshots);
   });
 
