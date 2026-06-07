@@ -44,6 +44,18 @@ import type {
 
 export type RatingEventSource = 'organic' | 'guided';
 
+export type RatingRevisionReason = 'playerChangedMind' | 'gamePatchRefresh' | 'islandUpdateRefresh';
+
+export type RatingRefreshEventKind = 'gamePatch' | 'islandUpdate';
+
+export interface RatingRefreshEvent {
+  readonly id: string;
+  readonly turn: number;
+  readonly kind: RatingRefreshEventKind;
+  readonly islandId?: IslandId;
+  readonly reason?: string;
+}
+
 export interface RatingEvent {
   readonly id: string;
   readonly turn: number;
@@ -52,6 +64,10 @@ export interface RatingEvent {
   readonly rating: Rating;
   readonly source: RatingEventSource;
   readonly raterSignalWeights: Record<CohortId, number>;
+  readonly revisionReason?: RatingRevisionReason;
+  readonly supersedesEventId?: string;
+  readonly islandVersionId?: string;
+  readonly gameRulesVersionId?: string;
 }
 
 export interface IslandCohortConfidenceSnapshot {
@@ -87,6 +103,7 @@ export interface SimulationState {
   islands: Island[];
   hiddenTasteCohorts: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
+  refreshEvents: RatingRefreshEvent[];
   observedBehaviorEvents: ObservedBehaviorEvent[];
   islandCohortRatingSnapshots: IslandCohortRatingState[];
   confidenceSnapshots: IslandCohortConfidenceSnapshot[];
@@ -107,6 +124,7 @@ export interface SerializedSimulationState {
   islands: Island[];
   hiddenTasteCohorts?: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
+  refreshEvents?: RatingRefreshEvent[];
   observedBehaviorEvents?: ObservedBehaviorEvent[];
   islandCohortRatingSnapshots?: IslandCohortRatingState[];
   confidenceSnapshots?: IslandCohortConfidenceSnapshot[];
@@ -153,6 +171,94 @@ function cloneUserWithRatings(user: User, ratings: Record<IslandId, MaybeRating>
 
 function eventKey(turn: number, userId: UserId, islandId: IslandId): string {
   return `${turn}:${userId}:${islandId}`;
+}
+
+function latestHistoricalRatingEvent(
+  events: readonly RatingEvent[],
+  userId: UserId,
+  islandId: IslandId
+): RatingEvent | null {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event.userId === userId && event.islandId === islandId) {
+      return event;
+    }
+  }
+
+  return null;
+}
+
+function globalVersionIdForTurn(turn: number): string {
+  return `game-rules-v${turn}`;
+}
+
+function islandVersionIdForTurn(turn: number, islandId: IslandId): string {
+  return `island:${islandId}:v${turn}`;
+}
+
+function buildInitialRatingVersions(islands: readonly Island[]): { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> } {
+  return {
+    gameRulesVersionId: 'game-rules-v0',
+    islandVersionById: Object.fromEntries(islands.map((island) => [island.id, islandVersionIdForTurn(0, island.id)])) as Record<IslandId, string>
+  };
+}
+
+function buildCurrentRatingVersions(
+  islands: readonly Island[],
+  refreshEvents: readonly RatingRefreshEvent[]
+): { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> } {
+  const versions = buildInitialRatingVersions(islands);
+
+  for (const event of refreshEvents.slice().sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id))) {
+    if (event.kind === 'gamePatch') {
+      versions.gameRulesVersionId = globalVersionIdForTurn(event.turn);
+      for (const island of islands) {
+        versions.islandVersionById[island.id] = islandVersionIdForTurn(event.turn, island.id);
+      }
+      continue;
+    }
+
+    if (event.kind === 'islandUpdate' && event.islandId) {
+      versions.islandVersionById[event.islandId] = islandVersionIdForTurn(event.turn, event.islandId);
+    }
+  }
+
+  return versions;
+}
+
+function isCurrentRatingEvent(
+  event: RatingEvent,
+  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> }
+): boolean {
+  if (!event.gameRulesVersionId || !event.islandVersionId) {
+    return true;
+  }
+
+  return (
+    event.gameRulesVersionId === currentVersions.gameRulesVersionId &&
+    event.islandVersionId === currentVersions.islandVersionById[event.islandId]
+  );
+}
+
+function latestActiveRatingsByPair(
+  events: readonly RatingEvent[],
+  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> }
+): ReadonlyMap<string, RatingEvent> {
+  const superseded = new Set(events.map((event) => event.supersedesEventId).filter((entryId): entryId is string => Boolean(entryId)));
+  const active = new Map<string, RatingEvent>();
+
+  for (const event of events) {
+    if (!isCurrentRatingEvent(event, currentVersions) || superseded.has(event.id)) {
+      continue;
+    }
+    const key = eventKey(event.turn, event.userId, event.islandId);
+    const existing = active.get(key);
+    if (!existing || existing.turn <= event.turn) {
+      active.set(key, event);
+    }
+  }
+
+  return active;
 }
 
 function buildRecommendationCounts(): Record<RecommendationKind, number> {
@@ -221,11 +327,16 @@ function cloneUsers(users: readonly User[]): User[] {
   }));
 }
 
-function applyEventsToVisibleUsers(users: readonly User[], events: readonly RatingEvent[]): User[] {
+function applyEventsToVisibleUsers(
+  users: readonly User[],
+  events: readonly RatingEvent[],
+  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> }
+): User[] {
   const nextUsers = cloneUsers(users);
   const usersById = new Map(nextUsers.map((user) => [user.id, user]));
+  const activeRatings = latestActiveRatingsByPair(events, currentVersions);
 
-  for (const event of events) {
+  for (const event of activeRatings.values()) {
     const user = usersById.get(event.userId);
     if (!user) {
       continue;
@@ -304,7 +415,7 @@ function buildConfidenceSnapshots(
 
   for (const turn of uniqueTurns) {
     const turnEvents = ratingEvents.filter((event) => event.turn <= turn);
-    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents);
+    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents, buildInitialRatingVersions(islands));
     const inferenceByUserId = computeInferenceMap(visibleUsers, cohorts, islands, allTags);
     const signalAnalysis = buildRaterSignalProfiles(visibleUsers, inferenceByUserId, cohorts);
     const affinityAnalysis = buildIslandAffinityReports(turnEvents, signalAnalysis.byUserId, cohorts, islands);
@@ -330,15 +441,17 @@ function buildConfidenceSnapshots(
 export function deriveVisibleUsersFromEvents(
   latentUsers: readonly User[],
   islands: readonly Island[],
-  events: readonly RatingEvent[]
+  events: readonly RatingEvent[],
+  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> } = buildInitialRatingVersions(islands)
 ): User[] {
   const ratingsByUserId = new Map<UserId, Record<IslandId, MaybeRating>>();
+  const activeRatings = latestActiveRatingsByPair(events, currentVersions);
 
   for (const user of latentUsers) {
     ratingsByUserId.set(user.id, buildBlankRatings(islands));
   }
 
-  for (const event of events) {
+  for (const event of activeRatings.values()) {
     const ratings = ratingsByUserId.get(event.userId);
     if (!ratings) {
       continue;
@@ -439,7 +552,9 @@ function createRatingEventsForUsers(
         islandId,
         rating,
         source: 'organic',
-        raterSignalWeights: buildBootstrapSignalWeightSnapshot(cohorts)
+        raterSignalWeights: buildBootstrapSignalWeightSnapshot(cohorts),
+        islandVersionId: `island:${islandId}:v0`,
+        gameRulesVersionId: 'game-rules-v0'
       });
     }
   }
@@ -483,11 +598,14 @@ function recomputeState(
   ratingEvents: readonly RatingEvent[],
   turnHistory: readonly SimulationTurnSummary[],
   allTags: readonly TagId[],
+  refreshEvents: readonly RatingRefreshEvent[] = [],
   observedBehaviorEvents?: readonly ObservedBehaviorEvent[],
   islandCohortRatingSnapshots?: readonly IslandCohortRatingState[],
   confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
-  const users = deriveVisibleUsersFromEvents(latentUsers, islands, ratingEvents);
+  const currentVersions = buildCurrentRatingVersions(islands, refreshEvents);
+  const activeRatingEvents = Array.from(latestActiveRatingsByPair(ratingEvents, currentVersions).values());
+  const users = deriveVisibleUsersFromEvents(latentUsers, islands, activeRatingEvents, currentVersions);
   const inferenceByUserId = computeInferenceMap(
     users,
     cohorts,
@@ -502,13 +620,13 @@ function recomputeState(
     buildIslandCohortRatingSnapshots({
       islands,
       cohorts,
-      ratingEvents,
+      ratingEvents: activeRatingEvents,
       turnHistory,
       observedBehaviorEvents: normalizedObservedBehaviorEvents,
       signalProfiles: raterSignalAnalysis.byUserId
     });
   const islandAffinityAnalysis = buildIslandAffinityReports(
-    ratingEvents,
+    activeRatingEvents,
     raterSignalAnalysis.byUserId,
     cohorts,
     islands,
@@ -525,7 +643,7 @@ function recomputeState(
     raterSignalAnalysis.byUserId,
     cohorts,
     islands,
-    ratingEvents
+    activeRatingEvents
   );
 
   return {
@@ -547,6 +665,7 @@ function recomputeState(
     islands: islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: ratingEvents.map((event) => ({ ...event })),
+    refreshEvents: refreshEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: normalizedObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: derivedIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     inferenceByUserId,
@@ -571,6 +690,7 @@ export function recomputeSimulationStateFromCanonicalEvents(
     'seed' | 'allTags' | 'latentUsers' | 'cohorts' | 'islands' | 'ratingEvents' | 'turnHistory'
   > & {
     hiddenTasteCohorts?: readonly HiddenTasteCohort[];
+    refreshEvents?: readonly RatingRefreshEvent[];
     observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
   }
 ): SimulationState {
@@ -583,6 +703,7 @@ export function recomputeSimulationStateFromCanonicalEvents(
     snapshot.ratingEvents,
     snapshot.turnHistory,
     snapshot.allTags,
+    snapshot.refreshEvents ?? [],
     snapshot.observedBehaviorEvents
   );
 }
@@ -592,8 +713,9 @@ function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulatio
   const normalizedIslandCohortRatingSnapshots = snapshot.islandCohortRatingSnapshots?.map((entry) => cloneIslandCohortRatingSnapshot(entry));
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
   const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
+  const normalizedRefreshEvents = snapshot.refreshEvents?.map((entry) => ({ ...entry })) ?? [];
 
-  return recomputeState(
+  const state = recomputeState(
     snapshot.seed,
     snapshot.latentUsers,
     snapshot.cohorts,
@@ -602,10 +724,12 @@ function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulatio
     snapshot.ratingEvents,
     snapshot.turnHistory,
     snapshot.allTags,
+    normalizedRefreshEvents,
     normalizedObservedBehaviorEvents,
     normalizedIslandCohortRatingSnapshots,
     normalizedSnapshots
   );
+  return state;
 }
 
 export function serializeSimulationState(state: SimulationState): SerializedSimulationState {
@@ -630,6 +754,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       ...event,
       raterSignalWeights: { ...event.raterSignalWeights }
     })),
+    refreshEvents: state.refreshEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: state.observedBehaviorEvents.map((event) => ({ ...event })),
     islandCohortRatingSnapshots: state.islandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     confidenceSnapshots: state.confidenceSnapshots.map((snapshot) => ({ ...snapshot })),
@@ -648,16 +773,34 @@ export function hydrateSimulationState(snapshot: SerializedSimulationState): Sim
   return hydrateSimulationStateFromStoredSnapshots(snapshot);
 }
 
+export function appendRefreshEvent(state: SimulationState, refreshEvent: RatingRefreshEvent): SimulationState {
+  return recomputeState(
+    state.seed,
+    state.latentUsers,
+    state.cohorts,
+    state.islands,
+    state.hiddenTasteCohorts,
+    state.ratingEvents,
+    state.turnHistory,
+    state.allTags,
+    state.refreshEvents.concat(refreshEvent),
+    state.observedBehaviorEvents,
+    state.islandCohortRatingSnapshots,
+    state.confidenceSnapshots
+  );
+}
+
 export function createInitialSimulationState(config: SimulationBootstrapConfig): SimulationState {
   const rng = createSeededRandom(config.seed);
   const hiddenTasteCohorts =
     config.hiddenTasteCohorts?.map((cohort) => cloneHiddenTasteCohort(cohort)) ??
     deriveHiddenTasteCohortsFromUsers(config.latentUsers, config.cohorts);
+  const initialVersions = buildInitialRatingVersions(config.islands);
   const initialEvents = createRatingEventsForUsers(
     rng,
     0,
     config.latentUsers,
-    deriveVisibleUsersFromEvents(config.latentUsers, config.islands, []),
+    deriveVisibleUsersFromEvents(config.latentUsers, config.islands, [], initialVersions),
     config.islands,
     config.cohorts,
     hiddenTasteCohorts,
@@ -672,7 +815,9 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     hiddenTasteCohorts,
     initialEvents,
     [],
-    config.allTags
+    config.allTags,
+    [],
+    []
   );
   const initialSummary = summarizeTurn(0, initialEvents, initialState.inferenceByUserId);
 
@@ -684,7 +829,9 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     hiddenTasteCohorts,
     initialState.ratingEvents,
     [initialSummary],
-    config.allTags
+    config.allTags,
+    [],
+    []
   );
 }
 
@@ -726,6 +873,8 @@ function createOrganicEventsForUsers(
   cohorts: readonly CohortAnchor[],
   signalProfiles: ReadonlyMap<UserId, RaterSignalProfile>,
   selectedUsers: readonly User[],
+  historicalEvents: readonly RatingEvent[],
+  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> },
   ratingCountModel: RatingCountModel,
   fixedRatingsPerUser: number,
   diceExpression: SupportedDiceExpression,
@@ -759,6 +908,7 @@ function createOrganicEventsForUsers(
       const key = eventKey(turn, user.id, islandId);
       usedPairs?.add(key);
       const profile = signalProfiles.get(user.id);
+      const previousEvent = latestHistoricalRatingEvent(historicalEvents, user.id, islandId);
       const weights = profile
         ? buildSignalWeightSnapshot(cohorts, new Map(cohorts.map((cohort) => [cohort.id, profile.cohortWeights[cohort.id] ?? 0])), 0)
         : buildSignalWeightSnapshot(cohorts, new Map(), 0);
@@ -770,7 +920,15 @@ function createOrganicEventsForUsers(
         islandId,
         rating,
         source: 'organic',
-        raterSignalWeights: weights
+        raterSignalWeights: weights,
+        islandVersionId: currentVersions.islandVersionById[islandId],
+        gameRulesVersionId: currentVersions.gameRulesVersionId,
+        ...(previousEvent && previousEvent.rating !== rating
+          ? {
+              revisionReason: 'playerChangedMind' as RatingRevisionReason,
+              supersedesEventId: previousEvent.id
+            }
+          : {})
       });
     }
   }
@@ -787,6 +945,8 @@ function createGuidedRatingEventsForUsers(
   signalProfiles: ReadonlyMap<UserId, RaterSignalProfile>,
   islandAffinityReports: ReadonlyMap<IslandId, IslandAffinityReport>,
   selectedUsers: readonly User[],
+  historicalEvents: readonly RatingEvent[],
+  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> },
   ratingCountModel: RatingCountModel,
   fixedRecommendationsPerUser: number,
   diceExpression: SupportedDiceExpression,
@@ -824,6 +984,7 @@ function createGuidedRatingEventsForUsers(
       const key = eventKey(turn, user.id, recommendation.islandId);
       usedPairs?.add(key);
       const profile = signalProfiles.get(user.id);
+      const previousEvent = latestHistoricalRatingEvent(historicalEvents, user.id, recommendation.islandId);
       const weights = profile
         ? buildSignalWeightSnapshot(cohorts, new Map(cohorts.map((cohort) => [cohort.id, profile.cohortWeights[cohort.id] ?? 0])), 0)
         : buildSignalWeightSnapshot(cohorts, new Map(), 0);
@@ -835,7 +996,15 @@ function createGuidedRatingEventsForUsers(
         islandId: recommendation.islandId,
         rating,
         source: 'guided',
-        raterSignalWeights: weights
+        raterSignalWeights: weights,
+        islandVersionId: currentVersions.islandVersionById[recommendation.islandId],
+        gameRulesVersionId: currentVersions.gameRulesVersionId,
+        ...(previousEvent && previousEvent.rating !== rating
+          ? {
+              revisionReason: 'playerChangedMind' as RatingRevisionReason,
+              supersedesEventId: previousEvent.id
+            }
+          : {})
       });
       routedIslandIds.push(recommendation.islandId);
       recommendationKinds[recommendation.recommendationKind] += 1;
@@ -855,7 +1024,8 @@ export function advancePolicyTurn(
 ): SimulationState {
   const turn = state.currentTurn + 1;
   const rng = createSeededRandom(state.seed ^ (turn * 2654435761));
-  const visibleUsers = state.users;
+  const currentVersions = buildCurrentRatingVersions(state.islands, state.refreshEvents);
+  const visibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, state.ratingEvents, currentVersions);
   const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
   const organicCandidates = state.latentUsers.filter((user) => {
     const visible = visibleById.get(user.id);
@@ -921,6 +1091,8 @@ export function advancePolicyTurn(
           state.cohorts,
           state.raterSignalProfiles,
           selectedOrganicUsers,
+          state.ratingEvents,
+          currentVersions,
           config.organicRatingCountModel,
           config.organicRatingsPerUser,
           config.organicRatingDice,
@@ -938,6 +1110,8 @@ export function advancePolicyTurn(
           state.raterSignalProfiles,
           state.islandAffinityReports,
           selectedGuidedUsers,
+          state.ratingEvents,
+          currentVersions,
           config.guidedRatingCountModel,
           config.guidedRecommendationsPerUser,
           config.guidedRecommendationDice,
@@ -946,11 +1120,12 @@ export function advancePolicyTurn(
         );
   const newEvents = organicEvents.concat(guided.events);
   const nextEvents = state.ratingEvents.concat(newEvents);
+  const activeNextEvents = Array.from(latestActiveRatingsByPair(nextEvents, currentVersions).values());
   const turnObservedBehaviorEvents = buildObservedBehaviorEvents(newEvents, state.latentUsers, state.seed);
   const nextObservedBehaviorEvents = state.observedBehaviorEvents.concat(
     turnObservedBehaviorEvents
   );
-  const nextUsers = applyEventsToVisibleUsers(state.users, newEvents);
+  const nextUsers = applyEventsToVisibleUsers(state.users, newEvents, currentVersions);
   const nextHistory = state.turnHistory.slice();
   const participatingUserIds = Array.from(new Set(combineUniqueUsers(selectedOrganicUsers, selectedGuidedUsers).map((user) => user.id))).sort();
   const nextVisibleUsers = nextUsers;
@@ -981,7 +1156,7 @@ export function advancePolicyTurn(
   );
 
   const nextIslandAffinityAnalysis = buildIslandAffinityReports(
-    nextEvents,
+    activeNextEvents,
     nextRaterSignalAnalysis.byUserId,
     state.cohorts,
     state.islands,
@@ -998,7 +1173,7 @@ export function advancePolicyTurn(
     nextRaterSignalAnalysis.byUserId,
     state.cohorts,
     state.islands,
-    nextEvents
+    activeNextEvents
   );
 
   return {
@@ -1015,6 +1190,7 @@ export function advancePolicyTurn(
     islands: state.islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: nextEvents.map((event) => ({ ...event })),
+    refreshEvents: state.refreshEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: nextObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: nextIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     confidenceSnapshots: state.confidenceSnapshots.concat(buildConfidenceSnapshotsForTurn(turn, nextIslandAffinityAnalysis.byIslandId)),

@@ -210,6 +210,20 @@ function validateRatingEvent(value: unknown): value is RatingEvent {
   return true;
 }
 
+function validateRatingRefreshEvent(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isString(value.id) &&
+    isNumber(value.turn) &&
+    (value.kind === 'gamePatch' || value.kind === 'islandUpdate') &&
+    (value.islandId === undefined || value.islandId === null || isString(value.islandId)) &&
+    (value.reason === undefined || isString(value.reason))
+  );
+}
+
 function validateObservedBehaviorEvent(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
@@ -304,6 +318,12 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (!value.ratingEvents.every(validateRatingEvent) || !value.turnHistory.every(validateTurnSummary)) {
     return false;
+  }
+
+  if (value.refreshEvents !== undefined) {
+    if (!Array.isArray(value.refreshEvents) || !value.refreshEvents.every(validateRatingRefreshEvent)) {
+      return false;
+    }
   }
 
   if (value.hiddenTasteCohorts !== undefined) {

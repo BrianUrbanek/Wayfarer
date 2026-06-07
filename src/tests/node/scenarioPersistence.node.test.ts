@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DEFAULT_TAGS } from '../../data/defaultTags.js';
 import { createDefaultCohorts } from '../../data/defaultCohorts.js';
 import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
-import { advancePolicyTurn, createInitialSimulationState, serializeSimulationState } from '../../model/simulation.js';
+import { advancePolicyTurn, appendRefreshEvent, createInitialSimulationState, serializeSimulationState } from '../../model/simulation.js';
 import { exportSavedWayfarerScenario, parseSavedWayfarerScenario } from '../../model/scenarioPersistence.js';
 import { getScenarioPresetMetadata } from '../../model/scenarioPresets.js';
 import { DEFAULT_TURN_POLICY } from '../../model/turnPolicy.js';
@@ -76,6 +76,44 @@ describe('scenario persistence', () => {
       typeof scenario.simulationState.ratingEvents[0]?.raterSignalWeights[bootstrap.cohorts[0].id],
       'number'
     );
+  });
+
+  it('round-trips refresh events through persistence', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const refreshed = appendRefreshEvent(state, {
+      id: 'refresh-persistence:patch-1',
+      turn: 1,
+      kind: 'gamePatch',
+      reason: 'patch window'
+    });
+    const serialized = serializeSimulationState(refreshed);
+    const parsed = parseSavedWayfarerScenario(
+      JSON.stringify({
+        version: 1,
+        kind: 'simulation-state',
+        label: 'refresh persistence',
+        createdAt: '2026-05-13T02:30:00.000Z',
+        scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
+        generatorConfig: {
+          seed: bootstrap.seed,
+          numUsers: bootstrap.latentUsers.length,
+          numIslands: bootstrap.islands.length,
+          bootstrapRatingsPerUser: 0,
+          tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+          ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+        },
+        turnPolicy: buildTurnPolicy(),
+        turnsToRun: 5,
+        simulationState: serialized
+      })
+    );
+
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) {
+      assert.equal(parsed.restoredState.refreshEvents.length, 1);
+      assert.equal(parsed.restoredState.refreshEvents[0]?.kind, 'gamePatch');
+    }
   });
 
   it('rejects invalid saved scenario shapes', () => {
