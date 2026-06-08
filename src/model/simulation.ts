@@ -445,10 +445,11 @@ function buildConfidenceSnapshots(
     const turnEvents = ratingEvents.filter((event) => event.turn <= turn);
     const turnRefreshEvents = refreshEvents.filter((event) => event.turn <= turn);
     const currentVersions = buildCurrentRatingVersions(islands, turnRefreshEvents);
-    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents, currentVersions);
+    const activeTurnEvents = Array.from(latestActiveRatingsByPair(turnEvents, currentVersions).values());
+    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, activeTurnEvents, currentVersions);
     const inferenceByUserId = computeInferenceMap(visibleUsers, cohorts, islands, allTags);
     const signalAnalysis = buildRaterSignalProfiles(visibleUsers, inferenceByUserId, cohorts);
-    const affinityAnalysis = buildIslandAffinityReports(turnEvents, signalAnalysis.byUserId, cohorts, islands);
+    const affinityAnalysis = buildIslandAffinityReports(activeTurnEvents, signalAnalysis.byUserId, cohorts, islands);
 
     for (const report of affinityAnalysis.allReports) {
       for (const estimate of report.estimates) {

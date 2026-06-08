@@ -21,7 +21,6 @@ import { SelectedIslandTruthComparison } from './ui/routing/SelectedIslandTruthC
 import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEvidenceSummary';
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
-import { ModelingLabPanel } from './ui/modelingLab/ModelingLabPanel';
 import { buildLiveIslandEvidenceRead, buildLiveUserEvidenceRead } from './ui/liveEvidenceAdapter';
 import { resolveActiveRunModelEvidencePreset } from './ui/modelingLab/activeRunModelEvidence';
 import { DistributionList } from './ui/components/DistributionList';
@@ -105,6 +104,11 @@ import type { CohortAnchor, Island, User } from './model/types';
 const ReviewerArchetypeRecoveryModal = lazy(async () => {
   const module = await import('./ui/reviewerRecovery/ReviewerArchetypeRecoveryModal');
   return { default: module.ReviewerArchetypeRecoveryModal };
+});
+
+const ModelingLabPanel = lazy(async () => {
+  const module = await import('./ui/modelingLab/ModelingLabPanel');
+  return { default: module.ModelingLabPanel };
 });
 
 const INITIAL_SCENARIO_PRESET: ScenarioPreset = getScenarioPreset('golden-demo');
@@ -2455,7 +2459,16 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     modeling: {
       title: 'Modeling Lab',
       panels: [
-        <ModelingLabPanel key="modeling-lab" evidence={activeRunModelEvidence} />
+        <Suspense
+          key="modeling-lab"
+          fallback={
+            <Panel id="modeling-lab" title="Modeling Lab" className="panel--full modeling-lab-panel">
+              <EmptyState title="Loading modeling trace" description="Opening the Modeling Lab surface." />
+            </Panel>
+          }
+        >
+          <ModelingLabPanel evidence={activeRunModelEvidence} />
+        </Suspense>
       ]
     },
     recovery: {

@@ -402,6 +402,10 @@ describe('simulation layer', () => {
     assert.equal(hydrated.users[2]?.ratings[islandId], -1);
     assert.equal(hydrated.confidenceSnapshots.some((snapshot) => snapshot.turn === 2), true);
     assert.equal(hydrated.confidenceSnapshots.filter((snapshot) => snapshot.turn === 0).length > 0, true);
+    assert.equal(
+      hydrated.islandAffinityReports.get(islandId)?.estimates.every((estimate) => estimate.rawCount === 1),
+      true
+    );
   });
 
   it('appends turn-boundary snapshots without rebuilding earlier turns', () => {
