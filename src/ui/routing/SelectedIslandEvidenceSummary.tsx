@@ -7,6 +7,7 @@ import type { ObservedBehaviorIslandSummary, ObservedBehaviorRow } from '../../m
 import type { CohortId } from '../../model/types.js';
 import type { IslandEvidenceConstellation, IslandRatingTimelineRow } from '../../model/islandEvidenceVisualization.js';
 import type { LiveIslandEvidenceRead } from '../liveEvidenceAdapter';
+import type { StatedRevealedPreferenceDiagnostic } from '../../model/inferredRatingEvidence';
 
 interface SelectedIslandEvidenceSummaryProps {
   confidenceRadarData: readonly IslandConfidenceRadarDatum[];
@@ -18,6 +19,7 @@ interface SelectedIslandEvidenceSummaryProps {
   cohortLabelById: ReadonlyMap<CohortId, string>;
   islandLabel: string;
   liveEvidenceRead: LiveIslandEvidenceRead;
+  statedRevealedDiagnostic?: StatedRevealedPreferenceDiagnostic | null;
 }
 
 export function SelectedIslandEvidenceSummary({
@@ -29,7 +31,8 @@ export function SelectedIslandEvidenceSummary({
   constellation,
   cohortLabelById,
   islandLabel,
-  liveEvidenceRead
+  liveEvidenceRead,
+  statedRevealedDiagnostic
 }: SelectedIslandEvidenceSummaryProps) {
   return (
     <section className="detail-block">
@@ -84,6 +87,19 @@ export function SelectedIslandEvidenceSummary({
           behaviorSummary={observedBehaviorSummary}
           behaviorRows={observedBehaviorRows}
         />
+        {statedRevealedDiagnostic ? (
+          <section className="detail-block">
+            <div className="section-heading">
+              <h5>Stated vs revealed</h5>
+              <p className="muted">Explicit ratings remain separate from inferred evidence, which is attached as its own provenance-backed record.</p>
+            </div>
+            <div className="notice notice--subtle">
+              <strong>{statedRevealedDiagnostic.state}</strong>
+              <p>{statedRevealedDiagnostic.explanation}</p>
+              <p className="muted">{statedRevealedDiagnostic.provenance}</p>
+            </div>
+          </section>
+        ) : null}
       </div>
     </section>
   );

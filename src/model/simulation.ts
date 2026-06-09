@@ -36,6 +36,7 @@ import type {
   CohortAnchor,
   CohortId,
   DiagnosisType,
+  InferredRatingEvidenceRecord,
   Island,
   IslandId,
   MaybeRating,
@@ -109,6 +110,7 @@ export interface SimulationState {
   islands: Island[];
   hiddenTasteCohorts: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
+  inferredRatingEvidence: InferredRatingEvidenceRecord[];
   refreshEvents: RatingRefreshEvent[];
   observedBehaviorEvents: ObservedBehaviorEvent[];
   islandCohortRatingSnapshots: IslandCohortRatingState[];
@@ -130,6 +132,7 @@ export interface SerializedSimulationState {
   islands: Island[];
   hiddenTasteCohorts?: HiddenTasteCohort[];
   ratingEvents: RatingEvent[];
+  inferredRatingEvidence?: InferredRatingEvidenceRecord[];
   refreshEvents?: RatingRefreshEvent[];
   observedBehaviorEvents?: ObservedBehaviorEvent[];
   islandCohortRatingSnapshots?: IslandCohortRatingState[];
@@ -770,6 +773,7 @@ function recomputeState(
   islands: readonly Island[],
   hiddenTasteCohorts: readonly HiddenTasteCohort[] = [],
   ratingEvents: readonly RatingEvent[],
+  inferredRatingEvidence: readonly InferredRatingEvidenceRecord[] = [],
   turnHistory: readonly SimulationTurnSummary[],
   allTags: readonly TagId[],
   refreshEvents: readonly RatingRefreshEvent[] = [],
@@ -777,6 +781,7 @@ function recomputeState(
   islandCohortRatingSnapshots?: readonly IslandCohortRatingState[],
   confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
+  const normalizedInferredRatingEvidence = inferredRatingEvidence.map((entry) => ({ ...entry }));
   const currentVersions = buildCurrentRatingVersions(islands, refreshEvents);
   const activeRatingEvents = Array.from(latestActiveRatingsByPair(ratingEvents, currentVersions).values());
   const users = deriveVisibleUsersFromEvents(latentUsers, islands, activeRatingEvents, currentVersions);
@@ -854,7 +859,8 @@ function recomputeState(
     })),
     confidenceSnapshots: confidenceSnapshots
       ? confidenceSnapshots.map((snapshot) => cloneConfidenceSnapshot(snapshot))
-      : buildConfidenceSnapshots(latentUsers, cohorts, islands, ratingEvents, turnHistory, allTags, refreshEvents)
+      : buildConfidenceSnapshots(latentUsers, cohorts, islands, ratingEvents, turnHistory, allTags, refreshEvents),
+    inferredRatingEvidence: normalizedInferredRatingEvidence
   };
 }
 
@@ -864,6 +870,7 @@ export function recomputeSimulationStateFromCanonicalEvents(
     'seed' | 'allTags' | 'latentUsers' | 'cohorts' | 'islands' | 'ratingEvents' | 'turnHistory'
   > & {
     hiddenTasteCohorts?: readonly HiddenTasteCohort[];
+    inferredRatingEvidence?: readonly InferredRatingEvidenceRecord[];
     refreshEvents?: readonly RatingRefreshEvent[];
     observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
   }
@@ -875,6 +882,7 @@ export function recomputeSimulationStateFromCanonicalEvents(
     snapshot.islands,
     snapshot.hiddenTasteCohorts ?? deriveHiddenTasteCohortsFromUsers(snapshot.latentUsers, snapshot.cohorts),
     snapshot.ratingEvents,
+    snapshot.inferredRatingEvidence ?? [],
     snapshot.turnHistory,
     snapshot.allTags,
     snapshot.refreshEvents ?? [],
@@ -884,6 +892,7 @@ export function recomputeSimulationStateFromCanonicalEvents(
 
 function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulationState): SimulationState {
   const normalizedObservedBehaviorEvents = snapshot.observedBehaviorEvents?.map((entry) => ({ ...entry }));
+  const normalizedInferredRatingEvidence = snapshot.inferredRatingEvidence?.map((entry) => ({ ...entry })) ?? [];
   const normalizedIslandCohortRatingSnapshots = snapshot.islandCohortRatingSnapshots?.map((entry) => cloneIslandCohortRatingSnapshot(entry));
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
   const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
@@ -896,6 +905,7 @@ function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulatio
     snapshot.islands,
     normalizedHiddenTasteCohorts ?? deriveHiddenTasteCohortsFromUsers(snapshot.latentUsers, snapshot.cohorts),
     snapshot.ratingEvents,
+    normalizedInferredRatingEvidence,
     snapshot.turnHistory,
     snapshot.allTags,
     normalizedRefreshEvents,
@@ -928,6 +938,7 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
       ...event,
       raterSignalWeights: { ...event.raterSignalWeights }
     })),
+    inferredRatingEvidence: state.inferredRatingEvidence.map((entry) => ({ ...entry })),
     refreshEvents: state.refreshEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: state.observedBehaviorEvents.map((event) => ({ ...event })),
     islandCohortRatingSnapshots: state.islandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
@@ -955,6 +966,7 @@ export function appendRefreshEvent(state: SimulationState, refreshEvent: RatingR
     state.islands,
     state.hiddenTasteCohorts,
     state.ratingEvents,
+    state.inferredRatingEvidence,
     state.turnHistory,
     state.allTags,
     state.refreshEvents.concat(refreshEvent),
@@ -989,6 +1001,7 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     hiddenTasteCohorts,
     initialEvents,
     [],
+    [],
     config.allTags,
     [],
     []
@@ -1002,6 +1015,7 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
     initialState.islands,
     hiddenTasteCohorts,
     initialState.ratingEvents,
+    initialState.inferredRatingEvidence,
     [initialSummary],
     config.allTags,
     [],
@@ -1377,6 +1391,7 @@ export function advancePolicyTurn(
     islands: state.islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: nextEvents.map((event) => ({ ...event })),
+    inferredRatingEvidence: state.inferredRatingEvidence.map((entry) => ({ ...entry })),
     refreshEvents: nextRefreshEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: nextObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: nextIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),

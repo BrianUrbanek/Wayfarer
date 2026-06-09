@@ -116,6 +116,57 @@ describe('scenario persistence', () => {
     }
   });
 
+  it('round-trips inferred evidence records through persistence', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const withInference = {
+      ...state,
+      inferredRatingEvidence: [
+        {
+          id: 'inferred-1',
+          turn: 2,
+          userId: bootstrap.latentUsers[0].id,
+          islandId: bootstrap.islands[0].id,
+          rating: 1 as const,
+          source: 'inferred' as const,
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: 'v1',
+          sourceRunId: 'run-123',
+          confidence: 0.91,
+          provenance: 'Attached upstream black-box inference'
+        }
+      ]
+    };
+    const serialized = serializeSimulationState(withInference);
+    const parsed = parseSavedWayfarerScenario(
+      JSON.stringify({
+        version: 1,
+        kind: 'simulation-state',
+        label: 'inferred persistence',
+        createdAt: '2026-05-13T02:30:00.000Z',
+        scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
+        generatorConfig: {
+          seed: bootstrap.seed,
+          numUsers: bootstrap.latentUsers.length,
+          numIslands: bootstrap.islands.length,
+          bootstrapRatingsPerUser: 0,
+          tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+          ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+        },
+        turnPolicy: buildTurnPolicy(),
+        turnsToRun: 5,
+        simulationState: serialized
+      })
+    );
+
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) {
+      assert.equal(parsed.restoredState.inferredRatingEvidence.length, 1);
+      assert.equal(parsed.restoredState.inferredRatingEvidence[0]?.sourceSystem, 'upstream-telemetry');
+      assert.equal(parsed.restoredState.inferredRatingEvidence[0]?.provenance, 'Attached upstream black-box inference');
+    }
+  });
+
   it('rejects invalid saved scenario shapes', () => {
     const missingWeights = parseSavedWayfarerScenario(
       JSON.stringify({
@@ -232,6 +283,50 @@ describe('scenario persistence', () => {
         }
       })
     );
+    const malformedInferredEvidence = parseSavedWayfarerScenario(
+      JSON.stringify({
+        version: 1,
+        kind: 'simulation-state',
+        label: 'bad inferred evidence',
+        createdAt: '2026-05-13T02:30:00.000Z',
+        scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
+        generatorConfig: {
+          seed: 1,
+          numUsers: 1,
+          numIslands: 1,
+          bootstrapRatingsPerUser: 1,
+          tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+          ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+        },
+        turnPolicy: buildTurnPolicy(),
+        turnsToRun: 5,
+        simulationState: {
+          seed: 1,
+          currentTurn: 0,
+          allTags: [],
+          latentUsers: [],
+          cohorts: [],
+          islands: [],
+          ratingEvents: [],
+          inferredRatingEvidence: [
+            {
+              id: 'inf-1',
+              turn: 0,
+              userId: 'user-1',
+              islandId: 'island-1',
+              rating: 1,
+              source: 'inferred',
+              sourceSystem: 'upstream',
+              sourceVersion: 'v1',
+              sourceRunId: 2,
+              confidence: 0.9,
+              provenance: 'bad'
+            }
+          ],
+          turnHistory: []
+        }
+      })
+    );
     const legacyEventWithoutRevision = parseSavedWayfarerScenario(
       JSON.stringify({
         version: 1,
@@ -308,6 +403,7 @@ describe('scenario persistence', () => {
     assert.equal(legacyWithoutSnapshots.ok, true);
     assert.equal(badShape.ok, false);
     assert.equal(malformedRevisionFields.ok, false);
+    assert.equal(malformedInferredEvidence.ok, false);
     assert.equal(legacyEventWithoutRevision.ok, true);
     assert.equal(legacyTurnPolicyWithoutHeartbeat.ok, true);
   });

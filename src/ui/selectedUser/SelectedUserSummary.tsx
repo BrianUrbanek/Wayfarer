@@ -5,6 +5,7 @@ import type { InferenceAnalysis } from '../../model/inference';
 import type { UserSignalDiagnosisSummary } from '../userSignalDiagnosis';
 import type { ReactNode } from 'react';
 import type { LiveUserEvidenceRead } from '../liveEvidenceAdapter';
+import type { StatedRevealedPreferenceDiagnostic } from '../../model/inferredRatingEvidence';
 
 interface SelectedUserSummaryProps {
   selectedUserLabel: string;
@@ -24,6 +25,7 @@ interface SelectedUserSummaryProps {
   declaredDistributionChart: ReactNode;
   behaviorDistributionChart: ReactNode;
   liveEvidenceRead: LiveUserEvidenceRead;
+  statedRevealedDiagnostic?: StatedRevealedPreferenceDiagnostic | null;
 }
 
 export function SelectedUserSummary(props: SelectedUserSummaryProps) {
@@ -44,7 +46,8 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
     renderPrimarySignalTitle,
     declaredDistributionChart,
     behaviorDistributionChart,
-    liveEvidenceRead
+    liveEvidenceRead,
+    statedRevealedDiagnostic
   } = props;
 
   return (
@@ -199,6 +202,24 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
         </div>
         <p className="muted">{selectedInferenceDiagnosticsMessage ?? 'No additional provenance available.'}</p>
       </section>
+      {statedRevealedDiagnostic ? (
+        <section className="detail-block">
+          <div className="section-heading">
+            <h4>Stated vs revealed</h4>
+            <p className="muted">Explicit ratings stay separate from inferred evidence. This readout only appears when both exist.</p>
+          </div>
+          <div className="metric-grid metric-grid--compact">
+            <MetricCard label="Explicit" value={statedRevealedDiagnostic.explicitPolarity} helper="Stated preference." />
+            <MetricCard label="Revealed" value={statedRevealedDiagnostic.inferredPolarity} helper={statedRevealedDiagnostic.provenance} />
+          </div>
+          <div className="notice notice--subtle">
+            <strong>{statedRevealedDiagnostic.state}</strong>
+            <p>{statedRevealedDiagnostic.explanation}</p>
+            {statedRevealedDiagnostic.sourceSystem ? <p className="muted">{statedRevealedDiagnostic.sourceSystem} · {statedRevealedDiagnostic.sourceVersion}</p> : null}
+            {typeof statedRevealedDiagnostic.confidence === 'number' ? <p className="muted">Confidence {statedRevealedDiagnostic.confidence.toFixed(3)}</p> : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

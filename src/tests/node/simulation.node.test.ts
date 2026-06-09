@@ -6,6 +6,7 @@ import { generateColumbusDataset } from '../../generator/columbusGenerator.js';
 import { computeInference } from '../../model/inference.js';
 import { getScenarioPreset } from '../../model/scenarioPresets.js';
 import { recommendIslandsForUser } from '../../model/recommendations.js';
+import { buildStatedRevealedPreferenceDiagnosticForPair } from '../../ui/statedRevealedPreference.js';
 import {
   DEFAULT_HEARTBEAT_POLICY,
   type HeartbeatPolicy,
@@ -366,6 +367,47 @@ describe('simulation layer', () => {
     assert.equal(recomputed.users[0]?.ratings[islandId], -1);
     assert.equal(recomputed.ratingEvents[0]?.rating, 1);
     assert.equal(recomputed.ratingEvents[1]?.supersedesEventId, firstEvent.id);
+  });
+
+  it('keeps explicit ratings separate from inferred evidence and surfaces a contradiction diagnostic', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const diagnostic = buildStatedRevealedPreferenceDiagnosticForPair({
+      userId: bootstrap.latentUsers[0].id,
+      islandId: bootstrap.islands[0].id,
+      explicitRating: -1,
+      inferredEvidence: [
+        {
+          id: 'inferred-contradiction-1',
+          turn: 1,
+          userId: bootstrap.latentUsers[0].id,
+          islandId: bootstrap.islands[0].id,
+          rating: 1,
+          source: 'inferred',
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: '2026.06',
+          confidence: 0.94,
+          provenance: 'Black-box upstream engagement feed'
+        }
+      ]
+    });
+
+    assert.equal(state.users[0]?.ratings[bootstrap.islands[0].id], null);
+    assert.equal(diagnostic?.state, 'stated-negative-revealed-positive');
+    assert.equal(diagnostic?.sourceSystem, 'upstream-telemetry');
+    assert.equal(diagnostic?.provenance, 'Black-box upstream engagement feed');
+  });
+
+  it('returns insufficient evidence when only one side of preference is available', () => {
+    const bootstrap = buildBootstrap();
+    const diagnostic = buildStatedRevealedPreferenceDiagnosticForPair({
+      userId: bootstrap.latentUsers[0].id,
+      islandId: bootstrap.islands[0].id,
+      explicitRating: 1,
+      inferredEvidence: []
+    });
+
+    assert.equal(diagnostic?.state, 'insufficient-evidence');
   });
 
   it('uses only the latest active rating for a user-island pair when multiple current-version ratings exist', () => {

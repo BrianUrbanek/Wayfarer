@@ -2,7 +2,7 @@ import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import type { AdvancePolicyTurnConfig, IslandCohortConfidenceSnapshot, SimulationState, SimulationTurnSummary, RatingEvent, SerializedSimulationState } from './simulation.js';
 import { hydrateSimulationState, serializeSimulationState } from './simulation.js';
 import type { ScenarioPresetMetadata } from './scenarioPresets.js';
-import type { CohortAnchor, HiddenTasteCohort, Island, IslandClass, User } from './types.js';
+import type { CohortAnchor, HiddenTasteCohort, InferredRatingEvidenceRecord, Island, IslandClass, User } from './types.js';
 
 export type SavedScenarioKind = 'simulation-state';
 export const SAVED_SCENARIO_VERSION = 1 as const;
@@ -267,6 +267,27 @@ function validateObservedBehaviorEvent(value: unknown): boolean {
   );
 }
 
+function validateInferredRatingEvidenceRecord(value: unknown): value is InferredRatingEvidenceRecord {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isString(value.id) &&
+    isNumber(value.turn) &&
+    isString(value.userId) &&
+    isString(value.islandId) &&
+    isMaybeRating(value.rating) &&
+    value.source === 'inferred' &&
+    isString(value.sourceSystem) &&
+    isString(value.sourceVersion) &&
+    (value.sourceRunId === undefined || isString(value.sourceRunId)) &&
+    isNumber(value.confidence) &&
+    isString(value.provenance) &&
+    (value.sourceCategory === undefined || value.sourceCategory === 'black-box-upstream')
+  );
+}
+
 function validateIslandCohortRatingSnapshot(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
@@ -355,6 +376,12 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (value.observedBehaviorEvents !== undefined) {
     if (!Array.isArray(value.observedBehaviorEvents) || !value.observedBehaviorEvents.every(validateObservedBehaviorEvent)) {
+      return false;
+    }
+  }
+
+  if (value.inferredRatingEvidence !== undefined) {
+    if (!Array.isArray(value.inferredRatingEvidence) || !value.inferredRatingEvidence.every(validateInferredRatingEvidenceRecord)) {
       return false;
     }
   }

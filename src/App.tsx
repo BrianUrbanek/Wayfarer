@@ -22,6 +22,7 @@ import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEviden
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
 import { buildLiveIslandEvidenceRead, buildLiveUserEvidenceRead } from './ui/liveEvidenceAdapter';
+import { buildStatedRevealedPreferenceDiagnosticForPair } from './ui/statedRevealedPreference';
 import { resolveActiveRunModelEvidencePreset } from './ui/modelingLab/activeRunModelEvidence';
 import { DistributionList } from './ui/components/DistributionList';
 import { DistributionDonut } from './ui/components/DistributionDonut';
@@ -1218,6 +1219,21 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       }),
     [activeRunModelEvidence, selectedIsland, selectedIslandAffinityReport]
   );
+  const selectedUserStatedRevealedDiagnostic = useMemo(
+    () => {
+      if (!selectedUser || !selectedIsland) {
+        return null;
+      }
+
+      return buildStatedRevealedPreferenceDiagnosticForPair({
+        userId: selectedUser.id,
+        islandId: selectedIsland.id,
+        explicitRating: selectedUser.ratings[selectedIsland.id] ?? null,
+        inferredEvidence: dataset.inferredRatingEvidence
+      });
+    },
+    [dataset.inferredRatingEvidence, selectedIsland, selectedUser]
+  );
 
   const selectedUserSummary = selectedInference  ?  (
     <SelectedUserSummary
@@ -1242,6 +1258,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       declaredDistributionChart={declaredDistributionCard}
       behaviorDistributionChart={behaviorDistributionCard}
       liveEvidenceRead={selectedUserLiveEvidenceRead}
+      statedRevealedDiagnostic={selectedUserStatedRevealedDiagnostic}
     />
   ) : null;
   const discoveryRoutingSummary = selectedUser  ?  (
@@ -1343,6 +1360,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         cohortLabelById={selectedIslandCohortLabelById}
         islandLabel={selectedIsland.label}
         liveEvidenceRead={selectedIslandLiveEvidenceRead}
+        statedRevealedDiagnostic={selectedUserStatedRevealedDiagnostic}
       />
     </div>
   ) : null;

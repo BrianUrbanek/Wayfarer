@@ -16,6 +16,7 @@ export type ReviewerArchetype =
 
 export type Rating = -1 | 0 | 1;
 export type MaybeRating = Rating | null;
+export type InferredEvidenceSource = 'black-box-upstream';
 export type HiddenBehaviorProfile = 'aligned' | 'positive-drift' | 'negative-drift';
 export type HiddenTasteCohortKind = 'seed' | 'unseeded';
 export type HiddenTasteTruthClass = 'seed-cohort-match' | 'unseeded-cohort-match' | 'random';
@@ -101,4 +102,19 @@ export interface Diagnosis {
   suggestedTags?: TagId[];
   analystPriority: 'none' | 'low' | 'medium' | 'high' | 'critical';
   reasons: string[];
+}
+
+export interface InferredRatingEvidenceRecord {
+  id: string;
+  turn: number;
+  userId: UserId;
+  islandId: IslandId;
+  rating: Rating;
+  source: 'inferred';
+  sourceSystem: string;
+  sourceVersion: string;
+  sourceRunId?: string;
+  confidence: number;
+  provenance: string;
+  sourceCategory?: InferredEvidenceSource;
 }

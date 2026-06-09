@@ -59,6 +59,20 @@ describe('selected island evidence summary', () => {
           rdSummary: 'Top confidence: 0.500',
           volatilitySummary: 'Top volatility: 0.080'
         }}
+        statedRevealedDiagnostic={{
+          userId: 'user-1',
+          islandId: 'island-1',
+          explicitRating: -1,
+          inferredRating: 1,
+          explicitPolarity: 'negative',
+          inferredPolarity: 'positive',
+          state: 'stated-negative-revealed-positive',
+          explanation: 'The player said dislike, but the inferred evidence suggests instrumental engagement.',
+          provenance: 'Black-box upstream engagement feed',
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: 'v1',
+          confidence: 0.9
+        }}
       />
     );
 
@@ -80,6 +94,8 @@ describe('selected island evidence summary', () => {
     expect(html).toContain('Observed behavior');
     expect(html).toContain('generated from rating events');
     expect(html).toContain('Behavior events');
+    expect(html).toContain('Stated vs revealed');
+    expect(html).toContain('stated-negative-revealed-positive');
   });
 });
 

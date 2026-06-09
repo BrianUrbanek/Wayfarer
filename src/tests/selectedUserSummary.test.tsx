@@ -46,6 +46,20 @@ describe('selected user summary', () => {
           rdSummary: 'Observed rating evidence: 0.456',
           volatilitySummary: 'Behavior specificity: 0.432'
         }}
+        statedRevealedDiagnostic={{
+          userId: 'user-1',
+          islandId: 'island-1',
+          explicitRating: -1,
+          inferredRating: 1,
+          explicitPolarity: 'negative',
+          inferredPolarity: 'positive',
+          state: 'stated-negative-revealed-positive',
+          explanation: 'The player said dislike, but the inferred evidence suggests instrumental engagement.',
+          provenance: 'Black-box upstream engagement feed',
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: 'v1',
+          confidence: 0.9
+        }}
       />
     );
 
@@ -56,6 +70,8 @@ describe('selected user summary', () => {
     expect(html).toContain('Compatibility proxy only');
     expect(html).toContain('Legacy cohort-similarity proxy remains in use');
     expect(html).toContain('canonical modeling-core evidence');
+    expect(html).toContain('Stated vs revealed');
+    expect(html).toContain('stated-negative-revealed-positive');
     expect(html).not.toContain('Retrospective usefulness uses observed behavior and stored confidence snapshots.');
     expect(html).toContain('Expert provenance');
   });

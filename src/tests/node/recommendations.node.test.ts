@@ -6,6 +6,7 @@ import {
   recommendIslandsForUser,
   scoreIslandRecommendation
 } from '../../model/recommendations.js';
+import type { InferredRatingEvidenceRecord } from '../../model/types.js';
 import type { CohortAnchor, Island, MaybeRating, User } from '../../model/types.js';
 import { computeInference } from '../../model/inference.js';
 
@@ -456,5 +457,34 @@ describe('recommendation scoring', () => {
 
     assert.equal(recommendations.audit.alreadyRated, 3);
     assert.equal(recommendations.audit.eligibleSmartGamble, 1);
+  });
+
+  it('keeps inferred evidence separate from explicit rating state for recommendation gating', () => {
+    const { fixture, user, signalProfiles, affinityReports } = buildReports();
+    const inferredEvidence: InferredRatingEvidenceRecord[] = [
+      {
+        id: 'inferred-1',
+        turn: 3,
+        userId: user.id,
+        islandId: 'i-4',
+        rating: 1,
+        source: 'inferred',
+        sourceSystem: 'upstream-telemetry',
+        sourceVersion: 'v1',
+        confidence: 0.92,
+        provenance: 'Black-box upstream inference'
+      }
+    ];
+    const recommendation = recommendIslandsForUser(
+      user,
+      affinityReports.byIslandId,
+      signalProfiles.byUserId,
+      fixture.islands,
+      { topLimit: 10 }
+    );
+
+    assert.equal(inferredEvidence[0]?.source, 'inferred');
+    assert.equal(user.ratings['i-4'], null);
+    assert.equal(recommendation.recommendations.every((entry) => user.ratings[entry.islandId] === null), true);
   });
 });
