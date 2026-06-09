@@ -6,10 +6,19 @@ export type TurnMode = 'organic' | 'guided' | 'mixed';
 export type ParticipationModel = 'fixed-count' | 'chance-per-user';
 export type RatingCountModel = 'fixed-count' | 'dice-expression';
 export type RoutingRiskProfile = 'conservative' | 'balanced' | 'exploratory' | 'custom';
+export type HeartbeatCadenceProfile = 'dormant' | 'slow' | 'steady' | 'active' | 'frenetic';
 
 export interface RoutingRiskProfileValues {
   explorationWeight: number;
   badFitGuardThreshold: number;
+}
+
+export interface HeartbeatPolicy {
+  gamePatchEveryNTurns: number;
+  gamePatchTurnOffset: number;
+  maxIslandInspectionsPerTurn: number;
+  maxIslandUpdatesPerTurn: number;
+  islandCadenceProfileWeights: Record<HeartbeatCadenceProfile, number>;
 }
 
 export interface TurnPolicy {
@@ -26,6 +35,7 @@ export interface TurnPolicy {
   routingRiskProfile: RoutingRiskProfile;
   customRoutingValues: RoutingRiskProfileValues;
   turnBatchCount: number;
+  heartbeat?: HeartbeatPolicy;
 }
 
 export interface TurnModeVisibility {
@@ -72,6 +82,20 @@ export const ROUTING_RISK_PROFILE_PRESETS: Record<Exclude<RoutingRiskProfile, 'c
   }
 };
 
+export const DEFAULT_HEARTBEAT_POLICY: HeartbeatPolicy = {
+  gamePatchEveryNTurns: 0,
+  gamePatchTurnOffset: 0,
+  maxIslandInspectionsPerTurn: 0,
+  maxIslandUpdatesPerTurn: 0,
+  islandCadenceProfileWeights: {
+    dormant: 0.35,
+    slow: 0.25,
+    steady: 0.2,
+    active: 0.13,
+    frenetic: 0.07
+  }
+};
+
 export const DEFAULT_TURN_POLICY: TurnPolicy = {
   turnMode: 'organic',
   participationModel: 'fixed-count',
@@ -88,8 +112,27 @@ export const DEFAULT_TURN_POLICY: TurnPolicy = {
     explorationWeight: 0.55,
     badFitGuardThreshold: -0.35
   },
-  turnBatchCount: 5
+  turnBatchCount: 5,
+  heartbeat: { ...DEFAULT_HEARTBEAT_POLICY, islandCadenceProfileWeights: { ...DEFAULT_HEARTBEAT_POLICY.islandCadenceProfileWeights } }
 };
+
+export function normalizeHeartbeatPolicy(policy?: Partial<HeartbeatPolicy> | null): HeartbeatPolicy {
+  if (!policy) {
+    return {
+      ...DEFAULT_HEARTBEAT_POLICY,
+      islandCadenceProfileWeights: { ...DEFAULT_HEARTBEAT_POLICY.islandCadenceProfileWeights }
+    };
+  }
+
+  return {
+    ...DEFAULT_HEARTBEAT_POLICY,
+    ...policy,
+    islandCadenceProfileWeights: {
+      ...DEFAULT_HEARTBEAT_POLICY.islandCadenceProfileWeights,
+      ...(policy.islandCadenceProfileWeights ?? {})
+    }
+  };
+}
 
 export function getTurnModeVisibility(turnMode: TurnMode): TurnModeVisibility {
   return {

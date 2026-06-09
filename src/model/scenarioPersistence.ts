@@ -405,6 +405,20 @@ function validateTurnPolicy(value: unknown): value is AdvancePolicyTurnConfig {
     return false;
   }
 
+  if (value.heartbeat !== undefined) {
+    if (
+      !isRecord(value.heartbeat) ||
+      !isNumber(value.heartbeat.gamePatchEveryNTurns) ||
+      !isNumber(value.heartbeat.gamePatchTurnOffset) ||
+      !isNumber(value.heartbeat.maxIslandInspectionsPerTurn) ||
+      !isNumber(value.heartbeat.maxIslandUpdatesPerTurn) ||
+      !isRecord(value.heartbeat.islandCadenceProfileWeights) ||
+      !Object.values(value.heartbeat.islandCadenceProfileWeights).every(isNumber)
+    ) {
+      return false;
+    }
+  }
+
   return (
     (value.turnMode === 'organic' || value.turnMode === 'guided' || value.turnMode === 'mixed') &&
     (value.participationModel === 'fixed-count' || value.participationModel === 'chance-per-user') &&
@@ -441,7 +455,15 @@ export function exportSavedWayfarerScenario(input: {
     createdAt: input.createdAt,
     scenarioPreset: input.scenarioPreset ? { ...input.scenarioPreset } : undefined,
     generatorConfig: { ...input.generatorConfig },
-    turnPolicy: { ...input.turnPolicy },
+    turnPolicy: {
+      ...input.turnPolicy,
+      heartbeat: input.turnPolicy.heartbeat
+        ? {
+            ...input.turnPolicy.heartbeat,
+            islandCadenceProfileWeights: { ...input.turnPolicy.heartbeat.islandCadenceProfileWeights }
+          }
+        : undefined
+    },
     turnsToRun: input.turnsToRun,
     simulationState: serializeSimulationState(input.simulationState)
   };

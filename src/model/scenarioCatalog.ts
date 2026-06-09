@@ -98,7 +98,15 @@ function isTurnPolicy(value: unknown): value is AdvancePolicyTurnConfig {
       value.routingRiskProfile === 'exploratory' ||
       value.routingRiskProfile === 'custom') &&
     isNumber(value.customExplorationWeight) &&
-    isNumber(value.customBadFitGuardThreshold)
+    isNumber(value.customBadFitGuardThreshold) &&
+    (value.heartbeat === undefined ||
+      (isRecord(value.heartbeat) &&
+        isNumber(value.heartbeat.gamePatchEveryNTurns) &&
+        isNumber(value.heartbeat.gamePatchTurnOffset) &&
+        isNumber(value.heartbeat.maxIslandInspectionsPerTurn) &&
+        isNumber(value.heartbeat.maxIslandUpdatesPerTurn) &&
+        isRecord(value.heartbeat.islandCadenceProfileWeights) &&
+        Object.values(value.heartbeat.islandCadenceProfileWeights).every(isNumber)))
   );
 }
 

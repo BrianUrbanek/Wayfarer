@@ -7,13 +7,21 @@ import { computeInference } from '../../model/inference.js';
 import { getScenarioPreset } from '../../model/scenarioPresets.js';
 import { recommendIslandsForUser } from '../../model/recommendations.js';
 import {
+  DEFAULT_HEARTBEAT_POLICY,
+  type HeartbeatPolicy,
+} from '../../model/turnPolicy.js';
+import {
   advancePolicyTurn,
   appendRefreshEvent,
+  buildHeartbeatRefreshEvents,
   createInitialSimulationState,
   deriveVisibleUsersFromEvents,
   recomputeSimulationStateFromCanonicalEvents,
   hydrateSimulationState,
   serializeSimulationState,
+  shouldEmitGamePatchForTurn,
+  heartbeatPropensity,
+  resolveHeartbeatCadenceProfile,
   type RatingEvent,
   type RatingRefreshEvent
 } from '../../model/simulation.js';
@@ -55,6 +63,37 @@ function buildSingleUserBootstrap(seed = 13579) {
     latentUsers: dataset.users,
     cohorts: dataset.cohorts,
     islands: dataset.islands
+  };
+}
+
+function buildHeartbeatBootstrap(seed = 97531) {
+  const dataset = generateColumbusDataset({
+    seed,
+    numUsers: 1,
+    numIslands: 1,
+    allTags: DEFAULT_TAGS,
+    cohorts: createDefaultCohorts(),
+    tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+    ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+  });
+
+  return {
+    seed,
+    allTags: dataset.allTags,
+    latentUsers: dataset.users,
+    cohorts: dataset.cohorts,
+    islands: dataset.islands
+  };
+}
+
+function buildHeartbeatPolicy(overrides: Partial<HeartbeatPolicy> = {}) {
+  return {
+    ...DEFAULT_HEARTBEAT_POLICY,
+    ...overrides,
+    islandCadenceProfileWeights: {
+      ...DEFAULT_HEARTBEAT_POLICY.islandCadenceProfileWeights,
+      ...(overrides.islandCadenceProfileWeights ?? {})
+    }
   };
 }
 
@@ -106,6 +145,142 @@ function makeTurnSummary(turn: number) {
 }
 
 describe('simulation layer', () => {
+  it('emits scheduled heartbeat patches and deterministic island updates', () => {
+    const bootstrap = buildHeartbeatBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const patchPolicy = buildHeartbeatPolicy({
+      gamePatchEveryNTurns: 2,
+      gamePatchTurnOffset: 1
+    });
+    const islandPolicy = buildHeartbeatPolicy({
+      maxIslandInspectionsPerTurn: 1,
+      maxIslandUpdatesPerTurn: 1,
+      islandCadenceProfileWeights: {
+        dormant: 0,
+        slow: 0,
+        steady: 0,
+        active: 0,
+        frenetic: 1
+      }
+    });
+
+    assert.equal(shouldEmitGamePatchForTurn(1, patchPolicy), true);
+    assert.equal(shouldEmitGamePatchForTurn(2, patchPolicy), false);
+    assert.equal(shouldEmitGamePatchForTurn(3, patchPolicy), true);
+
+    const first = buildHeartbeatRefreshEvents(state, 1, islandPolicy);
+    const second = buildHeartbeatRefreshEvents(state, 1, islandPolicy);
+
+    assert.deepEqual(first, second);
+  });
+
+  it('treats cadence profiles as ordered propensity bands', () => {
+    assert.equal(heartbeatPropensity('dormant') < heartbeatPropensity('slow'), true);
+    assert.equal(heartbeatPropensity('slow') < heartbeatPropensity('steady'), true);
+    assert.equal(heartbeatPropensity('steady') < heartbeatPropensity('active'), true);
+    assert.equal(heartbeatPropensity('active') < heartbeatPropensity('frenetic'), true);
+
+    const bootstrap = buildHeartbeatBootstrap(97532);
+    const dormantPolicy = buildHeartbeatPolicy({
+      islandCadenceProfileWeights: {
+        dormant: 1,
+        slow: 0,
+        steady: 0,
+        active: 0,
+        frenetic: 0
+      }
+    });
+    const freneticPolicy = buildHeartbeatPolicy({
+      islandCadenceProfileWeights: {
+        dormant: 0,
+        slow: 0,
+        steady: 0,
+        active: 0,
+        frenetic: 1
+      }
+    });
+
+    assert.equal(resolveHeartbeatCadenceProfile(bootstrap.seed, bootstrap.islands[0], dormantPolicy), 'dormant');
+    assert.equal(resolveHeartbeatCadenceProfile(bootstrap.seed, bootstrap.islands[0], freneticPolicy), 'frenetic');
+  });
+
+  it('allows repeated nearby island updates without cooldown and respects update caps', () => {
+    const bootstrap = buildHeartbeatBootstrap(97533);
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const policy = buildHeartbeatPolicy({
+      maxIslandInspectionsPerTurn: 1,
+      maxIslandUpdatesPerTurn: 1,
+      islandCadenceProfileWeights: {
+        dormant: 0,
+        slow: 0,
+        steady: 0,
+        active: 0,
+        frenetic: 1
+      }
+    });
+
+    let turnOne: ReturnType<typeof buildHeartbeatRefreshEvents> | null = null;
+    let turnTwo: ReturnType<typeof buildHeartbeatRefreshEvents> | null = null;
+
+    for (let seed = 1; seed < 5000; seed += 1) {
+      const candidateBootstrap = buildHeartbeatBootstrap(seed);
+      const candidateState = createInitialSimulationState({ ...candidateBootstrap, initialRatingsPerUser: 0 });
+      const first = buildHeartbeatRefreshEvents(candidateState, 1, policy);
+      const second = buildHeartbeatRefreshEvents(candidateState, 2, policy);
+      if (first.some((event) => event.kind === 'islandUpdate') && second.some((event) => event.kind === 'islandUpdate')) {
+        turnOne = first;
+        turnTwo = second;
+        break;
+      }
+    }
+
+    assert.ok(turnOne);
+    assert.ok(turnTwo);
+    assert.equal(turnOne?.filter((event) => event.kind === 'islandUpdate').length, 1);
+    assert.equal(turnTwo?.filter((event) => event.kind === 'islandUpdate').length, 1);
+    assert.equal(turnOne?.[0]?.kind, 'islandUpdate');
+    assert.equal(turnTwo?.[0]?.kind, 'islandUpdate');
+    assert.equal(turnOne?.[0]?.islandId, turnTwo?.[0]?.islandId);
+
+    const cappedPolicy = buildHeartbeatPolicy({
+      maxIslandInspectionsPerTurn: 0,
+      maxIslandUpdatesPerTurn: 0
+    });
+    const capped = buildHeartbeatRefreshEvents(state, 1, cappedPolicy);
+    assert.equal(capped.length, 0);
+  });
+
+  it('emits heartbeat refreshes before rating generation in advancePolicyTurn', () => {
+    const bootstrap = buildHeartbeatBootstrap(97534);
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const next = advancePolicyTurn(state, {
+      turnMode: 'organic',
+      participationModel: 'fixed-count',
+      participatingUsersPerTurn: 1,
+      participationChance: 0.5,
+      organicRatingCountModel: 'fixed-count',
+      organicRatingsPerUser: 1,
+      organicRatingDice: '1d2',
+      guidedRatingCountModel: 'fixed-count',
+      guidedRecommendationsPerUser: 0,
+      guidedRecommendationDice: '1d2',
+      routingRiskProfile: 'custom',
+      customExplorationWeight: 0.55,
+      customBadFitGuardThreshold: -1,
+      heartbeat: buildHeartbeatPolicy({
+        gamePatchEveryNTurns: 1,
+        gamePatchTurnOffset: 1,
+        maxIslandInspectionsPerTurn: 0,
+        maxIslandUpdatesPerTurn: 0
+      })
+    });
+
+    assert.ok(next.refreshEvents.length > 0);
+    assert.equal(next.turnHistory.at(-1)?.refreshEventsCreated ?? 0, next.refreshEvents.length);
+    assert.equal(next.turnHistory.at(-1)?.gamePatchRefreshEventsCreated ?? 0, 1);
+    assert.equal(next.ratingEvents.every((event) => event.gameRulesVersionId === 'game-rules-v1'), true);
+  });
+
   it('starts sparse at turn 0 when no initial ratings are seeded', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });

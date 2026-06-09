@@ -1146,7 +1146,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       guidedRecommendationDice,
       routingRiskProfile,
       customExplorationWeight,
-      customBadFitGuardThreshold
+      customBadFitGuardThreshold,
+      heartbeat: DEFAULT_TURN_POLICY.heartbeat
     }),
     [
       customBadFitGuardThreshold,

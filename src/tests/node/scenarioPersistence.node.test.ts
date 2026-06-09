@@ -271,12 +271,45 @@ describe('scenario persistence', () => {
         }
       })
     );
+    const legacyTurnPolicyWithoutHeartbeat = parseSavedWayfarerScenario(
+      JSON.stringify({
+        version: 1,
+        kind: 'simulation-state',
+        label: 'legacy turn policy',
+        createdAt: '2026-05-13T02:30:00.000Z',
+        scenarioPreset: getScenarioPresetMetadata('small-smoke-test'),
+        generatorConfig: {
+          seed: 1,
+          numUsers: 1,
+          numIslands: 1,
+          bootstrapRatingsPerUser: 1,
+          tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+          ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+        },
+        turnPolicy: {
+          ...buildTurnPolicy(),
+          heartbeat: undefined
+        },
+        turnsToRun: 5,
+        simulationState: {
+          seed: 1,
+          currentTurn: 0,
+          allTags: [],
+          latentUsers: [],
+          cohorts: [],
+          islands: [],
+          ratingEvents: [],
+          turnHistory: []
+        }
+      })
+    );
 
     assert.equal(missingWeights.ok, false);
     assert.equal(legacyWithoutSnapshots.ok, true);
     assert.equal(badShape.ok, false);
     assert.equal(malformedRevisionFields.ok, false);
     assert.equal(legacyEventWithoutRevision.ok, true);
+    assert.equal(legacyTurnPolicyWithoutHeartbeat.ok, true);
   });
 
   it('restores a valid saved simulation and continues deterministically', () => {

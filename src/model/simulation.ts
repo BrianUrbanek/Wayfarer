@@ -22,8 +22,11 @@ import {
   resolveRatingCount,
   resolveRoutingRiskProfileValues,
   selectParticipatingUsers,
+  normalizeHeartbeatPolicy,
   type ParticipationModel,
   type RatingCountModel,
+  type HeartbeatPolicy,
+  type HeartbeatCadenceProfile,
   type RoutingRiskProfile,
   type TurnMode
 } from './turnPolicy.js';
@@ -87,6 +90,9 @@ export interface SimulationTurnSummary {
   ratingsCreated: number;
   organicRatingsCreated: number;
   guidedRatingsCreated: number;
+  refreshEventsCreated?: number;
+  gamePatchRefreshEventsCreated?: number;
+  islandUpdateRefreshEventsCreated?: number;
   newlyRatedIslandIds: IslandId[];
   routedIslandIds: IslandId[];
   recommendationKinds: Record<RecommendationKind, number>;
@@ -155,6 +161,7 @@ export interface AdvancePolicyTurnConfig {
   routingRiskProfile: RoutingRiskProfile;
   customExplorationWeight: number;
   customBadFitGuardThreshold: number;
+  heartbeat?: HeartbeatPolicy;
 }
 
 function buildBlankRatings(islands: readonly Island[]): Record<IslandId, MaybeRating> {
@@ -251,6 +258,138 @@ function buildCurrentRatingVersions(
   }
 
   return versions;
+}
+
+function hashString(input: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function heartbeatTurnSeed(seed: number, turn: number): number {
+  return (seed ^ Math.imul(turn + 1, 2654435761)) >>> 0;
+}
+
+export function shouldEmitGamePatchForTurn(turn: number, heartbeat: HeartbeatPolicy): boolean {
+  if (heartbeat.gamePatchEveryNTurns <= 0) {
+    return false;
+  }
+
+  return turn >= heartbeat.gamePatchTurnOffset && ((turn - heartbeat.gamePatchTurnOffset) % heartbeat.gamePatchEveryNTurns === 0);
+}
+
+export function resolveHeartbeatCadenceProfile(
+  seed: number,
+  island: Island,
+  heartbeat: HeartbeatPolicy
+): HeartbeatCadenceProfile {
+  const weightEntries = Object.entries(heartbeat.islandCadenceProfileWeights) as Array<[HeartbeatCadenceProfile, number]>;
+  const totalWeight = weightEntries.reduce((sum, [, weight]) => sum + Math.max(0, weight), 0);
+  const hashed = hashString(`${seed}:${island.id}:${island.label}`);
+  const roll = (hashed % 10000) / 10000;
+
+  if (totalWeight <= 0) {
+    return 'steady';
+  }
+
+  let cumulative = 0;
+  for (const [profile, weight] of weightEntries) {
+    cumulative += Math.max(0, weight) / totalWeight;
+    if (roll <= cumulative) {
+      return profile;
+    }
+  }
+
+  return 'steady';
+}
+
+export function heartbeatPropensity(profile: HeartbeatCadenceProfile): number {
+  switch (profile) {
+    case 'dormant':
+      return 0.02;
+    case 'slow':
+      return 0.12;
+    case 'steady':
+      return 0.28;
+    case 'active':
+      return 0.55;
+    case 'frenetic':
+      return 0.82;
+  }
+}
+
+export function buildHeartbeatRefreshEvents(
+  state: Pick<SimulationState, 'seed' | 'islands' | 'refreshEvents'>,
+  turn: number,
+  heartbeat: HeartbeatPolicy
+): RatingRefreshEvent[] {
+  const refreshEvents: RatingRefreshEvent[] = [];
+
+  if (shouldEmitGamePatchForTurn(turn, heartbeat)) {
+    refreshEvents.push({
+      id: `heartbeat:gamePatch:${turn}`,
+      turn,
+      kind: 'gamePatch',
+      reason: 'scheduled heartbeat patch'
+    });
+  }
+
+  const inspectionCap = Math.max(0, heartbeat.maxIslandInspectionsPerTurn);
+  const emissionCap = Math.max(0, heartbeat.maxIslandUpdatesPerTurn);
+  if (inspectionCap === 0 || emissionCap === 0 || state.islands.length === 0) {
+    return refreshEvents;
+  }
+
+  const rng = createSeededRandom(heartbeatTurnSeed(state.seed, turn));
+  const shuffledIslands = rng.shuffle(state.islands.slice());
+  let inspected = 0;
+  let emitted = 0;
+
+  for (const island of shuffledIslands) {
+    if (inspected >= inspectionCap || emitted >= emissionCap) {
+      break;
+    }
+
+    inspected += 1;
+    const profile = resolveHeartbeatCadenceProfile(state.seed, island, heartbeat);
+    const propensity = heartbeatPropensity(profile);
+    if (rng.next() >= propensity) {
+      continue;
+    }
+
+    refreshEvents.push({
+      id: `heartbeat:islandUpdate:${turn}:${island.id}`,
+      turn,
+      kind: 'islandUpdate',
+      islandId: island.id,
+      reason: `scheduled heartbeat ${profile} island update`
+    });
+    emitted += 1;
+  }
+
+  return refreshEvents;
+}
+
+function countHeartbeatRefreshEvents(refreshEvents: readonly RatingRefreshEvent[]): {
+  total: number;
+  gamePatch: number;
+  islandUpdate: number;
+} {
+  return refreshEvents.reduce(
+    (counts, event) => {
+      counts.total += 1;
+      if (event.kind === 'gamePatch') {
+        counts.gamePatch += 1;
+      } else if (event.kind === 'islandUpdate') {
+        counts.islandUpdate += 1;
+      }
+      return counts;
+    },
+    { total: 0, gamePatch: 0, islandUpdate: 0 }
+  );
 }
 
 function isCurrentRatingEvent(
@@ -602,7 +741,8 @@ function summarizeTurn(
   routedIslandIds: IslandId[] = [],
   recommendationKinds: Record<RecommendationKind, number> = buildRecommendationCounts(),
   organicRatingsCreated = newEvents.length,
-  guidedRatingsCreated = 0
+  guidedRatingsCreated = 0,
+  refreshCounts: { total: number; gamePatch: number; islandUpdate: number } = { total: 0, gamePatch: 0, islandUpdate: 0 }
 ): SimulationTurnSummary {
   const newlyRatedIslandIds = Array.from(new Set(newEvents.map((event) => event.islandId))).sort();
 
@@ -613,6 +753,9 @@ function summarizeTurn(
     ratingsCreated: newEvents.length,
     organicRatingsCreated,
     guidedRatingsCreated,
+    refreshEventsCreated: refreshCounts.total,
+    gamePatchRefreshEventsCreated: refreshCounts.gamePatch,
+    islandUpdateRefreshEventsCreated: refreshCounts.islandUpdate,
     newlyRatedIslandIds,
     routedIslandIds: routedIslandIds.slice().sort(),
     recommendationKinds: normalizeRecommendationCounts(recommendationKinds),
@@ -1064,7 +1207,10 @@ export function advancePolicyTurn(
 ): SimulationState {
   const turn = state.currentTurn + 1;
   const rng = createSeededRandom(state.seed ^ (turn * 2654435761));
-  const currentVersions = buildCurrentRatingVersions(state.islands, state.refreshEvents);
+  const heartbeat = normalizeHeartbeatPolicy(config.heartbeat);
+  const heartbeatRefreshEvents = buildHeartbeatRefreshEvents(state, turn, heartbeat);
+  const nextRefreshEvents = state.refreshEvents.concat(heartbeatRefreshEvents);
+  const currentVersions = buildCurrentRatingVersions(state.islands, nextRefreshEvents);
   const visibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, state.ratingEvents, currentVersions);
   const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
   const organicCandidates = state.latentUsers.filter((user) => {
@@ -1191,7 +1337,8 @@ export function advancePolicyTurn(
       guided.routedIslandIds,
       guided.recommendationKinds,
       organicEvents.length,
-      guided.events.length
+      guided.events.length,
+      countHeartbeatRefreshEvents(heartbeatRefreshEvents)
     )
   );
 
@@ -1230,7 +1377,7 @@ export function advancePolicyTurn(
     islands: state.islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: nextEvents.map((event) => ({ ...event })),
-    refreshEvents: state.refreshEvents.map((event) => ({ ...event })),
+    refreshEvents: nextRefreshEvents.map((event) => ({ ...event })),
     observedBehaviorEvents: nextObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: nextIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     confidenceSnapshots: state.confidenceSnapshots.concat(buildConfidenceSnapshotsForTurn(turn, nextIslandAffinityAnalysis.byIslandId)),

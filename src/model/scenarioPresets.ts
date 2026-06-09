@@ -1,6 +1,7 @@
 import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import { SCENARIO_CATALOG, type ScenarioCatalogDemoPreset } from './scenarioCatalog.js';
 import type { IslandClass } from './types.js';
+import { normalizeHeartbeatPolicy } from './turnPolicy.js';
 import type { AdvancePolicyTurnConfig } from './simulation.js';
 
 export type ScenarioPresetId =
@@ -128,6 +129,9 @@ export function resolveScenarioPresetFromControls(controls: ScenarioPresetContro
 }
 
 export function matchesScenarioPreset(preset: ScenarioPreset, controls: ScenarioPresetControls): boolean {
+  const presetHeartbeat = normalizeHeartbeatPolicy(preset.turnPolicy.heartbeat);
+  const controlHeartbeat = normalizeHeartbeatPolicy(controls.turnPolicy.heartbeat);
+
   return (
     preset.generatorConfig.seed === controls.seed &&
     preset.generatorConfig.numUsers === controls.numUsers &&
@@ -149,6 +153,7 @@ export function matchesScenarioPreset(preset: ScenarioPreset, controls: Scenario
     preset.turnPolicy.routingRiskProfile === controls.turnPolicy.routingRiskProfile &&
     preset.turnPolicy.customExplorationWeight === controls.turnPolicy.customExplorationWeight &&
     preset.turnPolicy.customBadFitGuardThreshold === controls.turnPolicy.customBadFitGuardThreshold &&
+    JSON.stringify(presetHeartbeat) === JSON.stringify(controlHeartbeat) &&
     preset.turnsToRun === controls.turnsToRun
   );
 }
@@ -162,7 +167,10 @@ export function applyScenarioPreset(preset: ScenarioPreset): ScenarioPresetContr
     tagAlignmentDistribution: preset.generatorConfig.tagAlignmentDistribution,
     ratingAlignmentDistribution: preset.generatorConfig.ratingAlignmentDistribution,
     islandClassWeights: preset.generatorConfig.islandClassWeights,
-    turnPolicy: { ...preset.turnPolicy },
+    turnPolicy: {
+      ...preset.turnPolicy,
+      heartbeat: normalizeHeartbeatPolicy(preset.turnPolicy.heartbeat)
+    },
     turnsToRun: preset.turnsToRun
   };
 }
