@@ -410,6 +410,57 @@ describe('simulation layer', () => {
     assert.equal(diagnostic?.state, 'insufficient-evidence');
   });
 
+  it('prefers the latest inferred evidence and breaks ties by confidence then id', () => {
+    const bootstrap = buildBootstrap();
+    const diagnostic = buildStatedRevealedPreferenceDiagnosticForPair({
+      userId: bootstrap.latentUsers[0].id,
+      islandId: bootstrap.islands[0].id,
+      explicitRating: -1,
+      inferredEvidence: [
+        {
+          id: 'stale-older',
+          turn: 1,
+          userId: bootstrap.latentUsers[0].id,
+          islandId: bootstrap.islands[0].id,
+          rating: -1,
+          source: 'inferred',
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: 'v1',
+          confidence: 0.99,
+          provenance: 'Older stale record'
+        },
+        {
+          id: 'current-newer-low-confidence',
+          turn: 2,
+          userId: bootstrap.latentUsers[0].id,
+          islandId: bootstrap.islands[0].id,
+          rating: 1,
+          source: 'inferred',
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: 'v1',
+          confidence: 0.8,
+          provenance: 'Newer record'
+        },
+        {
+          id: 'current-newer-high-confidence',
+          turn: 2,
+          userId: bootstrap.latentUsers[0].id,
+          islandId: bootstrap.islands[0].id,
+          rating: 1,
+          source: 'inferred',
+          sourceSystem: 'upstream-telemetry',
+          sourceVersion: 'v1',
+          confidence: 0.95,
+          provenance: 'Newest and strongest record'
+        }
+      ]
+    });
+
+    assert.equal(diagnostic?.inferredRating, 1);
+    assert.equal(diagnostic?.state, 'stated-negative-revealed-positive');
+    assert.equal(diagnostic?.provenance, 'Newest and strongest record');
+  });
+
   it('uses only the latest active rating for a user-island pair when multiple current-version ratings exist', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });

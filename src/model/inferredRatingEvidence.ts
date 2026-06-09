@@ -1,20 +1,7 @@
-import type { IslandId, Rating, UserId } from './types.js';
+import type { InferredRatingEvidenceRecord, IslandId, Rating, UserId } from './types.js';
 
 export type InferredPreferencePolarity = 'positive' | 'negative' | 'neutral';
-
-export interface InferredRatingEvidence {
-  readonly id: string;
-  readonly turn: number;
-  readonly userId: UserId;
-  readonly islandId: IslandId;
-  readonly rating: Rating;
-  readonly source: 'inferred';
-  readonly sourceSystem: string;
-  readonly sourceVersion: string;
-  readonly sourceRunId?: string;
-  readonly confidence: number;
-  readonly provenance: string;
-}
+export type InferredRatingEvidence = InferredRatingEvidenceRecord;
 
 export type StatedRevealedDiagnosticState =
   | 'aligned-positive'
@@ -157,4 +144,24 @@ export function buildStatedRevealedPreferenceDiagnostic(input: {
     sourceVersion: input.inferredEvidence.sourceVersion,
     confidence: input.inferredEvidence.confidence
   };
+}
+
+export function chooseCurrentInferredEvidence(
+  inferredEvidence: readonly InferredRatingEvidence[]
+): InferredRatingEvidence | null {
+  if (inferredEvidence.length === 0) {
+    return null;
+  }
+
+  return [...inferredEvidence].sort((left, right) => {
+    if (left.turn !== right.turn) {
+      return right.turn - left.turn;
+    }
+
+    if (left.confidence !== right.confidence) {
+      return right.confidence - left.confidence;
+    }
+
+    return left.id.localeCompare(right.id);
+  })[0] ?? null;
 }
