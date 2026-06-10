@@ -417,6 +417,54 @@ describe('simulation layer', () => {
     assert.equal(recomputed.ratingEvents[1]?.supersedesEventId, firstEvent.id);
   });
 
+  it('reopens island RD on refresh without treating the refresh itself as volatility', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const userId = bootstrap.latentUsers[0].id;
+    const islandId = bootstrap.islands[0].id;
+    const firstEvent: RatingEvent = {
+      id: 'rd-refresh:event-0',
+      turn: 0,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      islandVersionId: 'island:' + islandId + ':v0',
+      gameRulesVersionId: 'game-rules-v0'
+    };
+    const refreshed = appendRefreshEvent({
+      ...state,
+      ratingEvents: [firstEvent],
+      refreshEvents: []
+    } as typeof state, {
+      id: 'rd-refresh:patch-1',
+      turn: 1,
+      kind: 'islandUpdate',
+      islandId,
+      reason: 'creator update'
+    });
+    const recomputed = recomputeSimulationStateFromCanonicalEvents({
+      seed: refreshed.seed,
+      allTags: refreshed.allTags,
+      latentUsers: refreshed.latentUsers,
+      cohorts: refreshed.cohorts,
+      islands: refreshed.islands,
+      ratingEvents: [firstEvent],
+      refreshEvents: refreshed.refreshEvents,
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(1)],
+      hiddenTasteCohorts: refreshed.hiddenTasteCohorts
+    });
+    const before = state.islandCohortRatingSnapshots.find((snapshot) => snapshot.turn === 0 && snapshot.islandId === islandId && snapshot.cohortId === bootstrap.cohorts[0].id);
+    const after = recomputed.islandCohortRatingSnapshots.find((snapshot) => snapshot.turn === 1 && snapshot.islandId === islandId && snapshot.cohortId === bootstrap.cohorts[0].id);
+
+    assert.ok(before);
+    assert.ok(after);
+    assert.equal(after!.ratingDeviation >= before!.ratingDeviation, true);
+    assert.equal(after!.volatility >= before!.volatility, true);
+    assert.equal(after!.turn, 1);
+  });
+
   it('keeps explicit ratings separate from inferred evidence and surfaces a contradiction diagnostic', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });

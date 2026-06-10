@@ -263,6 +263,30 @@ function buildCurrentRatingVersions(
   return versions;
 }
 
+function buildCurrentContextTurnByIsland(
+  islands: readonly Island[],
+  refreshEvents: readonly RatingRefreshEvent[]
+): Record<IslandId, number> {
+  const currentTurns = Object.fromEntries(islands.map((island) => [island.id, -1])) as Record<IslandId, number>;
+  let currentGamePatchTurn = -1;
+
+  for (const event of refreshEvents.slice().sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id))) {
+    if (event.kind === 'gamePatch') {
+      currentGamePatchTurn = Math.max(currentGamePatchTurn, event.turn);
+      for (const island of islands) {
+        currentTurns[island.id] = Math.max(currentTurns[island.id], currentGamePatchTurn);
+      }
+      continue;
+    }
+
+    if (event.kind === 'islandUpdate' && event.islandId) {
+      currentTurns[event.islandId] = Math.max(currentTurns[event.islandId] ?? -1, event.turn);
+    }
+  }
+
+  return currentTurns;
+}
+
 function hashString(input: string): number {
   let hash = 2166136261;
   for (let index = 0; index < input.length; index += 1) {
@@ -401,27 +425,20 @@ function countHeartbeatRefreshEvents(refreshEvents: readonly RatingRefreshEvent[
 
 function isCurrentRatingEvent(
   event: RatingEvent,
-  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> }
+  currentContextTurnByIsland: Record<IslandId, number>
 ): boolean {
-  if (!event.gameRulesVersionId || !event.islandVersionId) {
-    return true;
-  }
-
-  return (
-    event.gameRulesVersionId === currentVersions.gameRulesVersionId &&
-    event.islandVersionId === currentVersions.islandVersionById[event.islandId]
-  );
+  return event.turn >= (currentContextTurnByIsland[event.islandId] ?? -1);
 }
 
 function latestActiveRatingsByPair(
   events: readonly RatingEvent[],
-  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> }
+  currentContextTurnByIsland: Record<IslandId, number>
 ): ReadonlyMap<string, RatingEvent> {
   const superseded = new Set(events.map((event) => event.supersedesEventId).filter((entryId): entryId is string => Boolean(entryId)));
   const active = new Map<string, RatingEvent>();
 
   for (const event of events) {
-    if (!isCurrentRatingEvent(event, currentVersions) || superseded.has(event.id)) {
+    if (!isCurrentRatingEvent(event, currentContextTurnByIsland) || superseded.has(event.id)) {
       continue;
     }
     const key = pairKey(event.userId, event.islandId);
@@ -504,11 +521,11 @@ function cloneUsers(users: readonly User[]): User[] {
 function applyEventsToVisibleUsers(
   users: readonly User[],
   events: readonly RatingEvent[],
-  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> }
+  currentContextTurnByIsland: Record<IslandId, number>
 ): User[] {
   const nextUsers = cloneUsers(users);
   const usersById = new Map(nextUsers.map((user) => [user.id, user]));
-  const activeRatings = latestActiveRatingsByPair(events, currentVersions);
+  const activeRatings = latestActiveRatingsByPair(events, currentContextTurnByIsland);
 
   for (const event of activeRatings.values()) {
     const user = usersById.get(event.userId);
@@ -591,12 +608,14 @@ function buildConfidenceSnapshots(
   for (const turn of uniqueTurns) {
     const turnEvents = ratingEvents.filter((event) => event.turn <= turn);
     const turnRefreshEvents = refreshEvents.filter((event) => event.turn <= turn);
-    const currentVersions = buildCurrentRatingVersions(islands, turnRefreshEvents);
-    const activeTurnEvents = Array.from(latestActiveRatingsByPair(turnEvents, currentVersions).values());
-    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, activeTurnEvents, currentVersions);
+    const currentContextTurnByIsland = buildCurrentContextTurnByIsland(islands, turnRefreshEvents);
+    const activeTurnEvents = Array.from(latestActiveRatingsByPair(turnEvents, currentContextTurnByIsland).values());
+    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, activeTurnEvents, currentContextTurnByIsland);
     const inferenceByUserId = computeInferenceMap(visibleUsers, cohorts, islands, allTags);
     const signalAnalysis = buildRaterSignalProfiles(visibleUsers, inferenceByUserId, cohorts);
-    const affinityAnalysis = buildIslandAffinityReports(activeTurnEvents, signalAnalysis.byUserId, cohorts, islands);
+    const affinityAnalysis = buildIslandAffinityReports(activeTurnEvents, signalAnalysis.byUserId, cohorts, islands, {
+      refreshEvents: turnRefreshEvents
+    });
 
     for (const report of affinityAnalysis.allReports) {
       for (const estimate of report.estimates) {
@@ -620,10 +639,10 @@ export function deriveVisibleUsersFromEvents(
   latentUsers: readonly User[],
   islands: readonly Island[],
   events: readonly RatingEvent[],
-  currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> } = buildInitialRatingVersions(islands)
+  currentContextTurnByIsland: Record<IslandId, number> = Object.fromEntries(islands.map((island) => [island.id, -1])) as Record<IslandId, number>
 ): User[] {
   const ratingsByUserId = new Map<UserId, Record<IslandId, MaybeRating>>();
-  const activeRatings = latestActiveRatingsByPair(events, currentVersions);
+  const activeRatings = latestActiveRatingsByPair(events, currentContextTurnByIsland);
 
   for (const user of latentUsers) {
     ratingsByUserId.set(user.id, buildBlankRatings(islands));
@@ -787,9 +806,9 @@ function recomputeState(
   confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
   const normalizedInferredRatingEvidence = inferredRatingEvidence.map((entry) => ({ ...entry }));
-  const currentVersions = buildCurrentRatingVersions(islands, refreshEvents);
-  const activeRatingEvents = Array.from(latestActiveRatingsByPair(ratingEvents, currentVersions).values());
-  const users = deriveVisibleUsersFromEvents(latentUsers, islands, activeRatingEvents, currentVersions);
+  const currentContextTurnByIsland = buildCurrentContextTurnByIsland(islands, refreshEvents);
+  const activeRatingEvents = Array.from(latestActiveRatingsByPair(ratingEvents, currentContextTurnByIsland).values());
+  const users = deriveVisibleUsersFromEvents(latentUsers, islands, activeRatingEvents, currentContextTurnByIsland);
   const inferenceByUserId = computeInferenceMap(
     users,
     cohorts,
@@ -806,6 +825,7 @@ function recomputeState(
       cohorts,
       ratingEvents: activeRatingEvents,
       turnHistory,
+      refreshEvents,
       observedBehaviorEvents: normalizedObservedBehaviorEvents,
       signalProfiles: raterSignalAnalysis.byUserId
     });
@@ -817,6 +837,7 @@ function recomputeState(
     {
       ratingSnapshots: derivedIslandCohortRatingSnapshots,
       turnHistory,
+      refreshEvents,
       observedBehaviorEvents: normalizedObservedBehaviorEvents
     }
   );
@@ -986,12 +1007,12 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
   const hiddenTasteCohorts =
     config.hiddenTasteCohorts?.map((cohort) => cloneHiddenTasteCohort(cohort)) ??
     deriveHiddenTasteCohortsFromUsers(config.latentUsers, config.cohorts);
-  const initialVersions = buildInitialRatingVersions(config.islands);
+  const initialContextTurnByIsland = Object.fromEntries(config.islands.map((island) => [island.id, -1])) as Record<IslandId, number>;
   const initialEvents = createRatingEventsForUsers(
     rng,
     0,
     config.latentUsers,
-    deriveVisibleUsersFromEvents(config.latentUsers, config.islands, [], initialVersions),
+    deriveVisibleUsersFromEvents(config.latentUsers, config.islands, [], initialContextTurnByIsland),
     config.islands,
     config.cohorts,
     hiddenTasteCohorts,
@@ -1230,7 +1251,8 @@ export function advancePolicyTurn(
   const heartbeatRefreshEvents = buildHeartbeatRefreshEvents(state, turn, heartbeat);
   const nextRefreshEvents = state.refreshEvents.concat(heartbeatRefreshEvents);
   const currentVersions = buildCurrentRatingVersions(state.islands, nextRefreshEvents);
-  const visibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, state.ratingEvents, currentVersions);
+  const currentContextTurnByIsland = buildCurrentContextTurnByIsland(state.islands, nextRefreshEvents);
+  const visibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, state.ratingEvents, currentContextTurnByIsland);
   const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
   const organicCandidates = state.latentUsers.filter((user) => {
     const visible = visibleById.get(user.id);
@@ -1325,12 +1347,12 @@ export function advancePolicyTurn(
         );
   const newEvents = organicEvents.concat(guided.events);
   const nextEvents = state.ratingEvents.concat(newEvents);
-  const activeNextEvents = Array.from(latestActiveRatingsByPair(nextEvents, currentVersions).values());
+  const activeNextEvents = Array.from(latestActiveRatingsByPair(nextEvents, currentContextTurnByIsland).values());
   const turnObservedBehaviorEvents = buildObservedBehaviorEvents(newEvents, state.latentUsers, state.seed);
   const nextObservedBehaviorEvents = state.observedBehaviorEvents.concat(
     turnObservedBehaviorEvents
   );
-  const nextUsers = applyEventsToVisibleUsers(state.users, newEvents, currentVersions);
+  const nextUsers = applyEventsToVisibleUsers(state.users, newEvents, currentContextTurnByIsland);
   const nextHistory = state.turnHistory.slice();
   const participatingUserIds = Array.from(new Set(combineUniqueUsers(selectedOrganicUsers, selectedGuidedUsers).map((user) => user.id))).sort();
   const nextVisibleUsers = nextUsers;
@@ -1343,7 +1365,8 @@ export function advancePolicyTurn(
     ratingEvents: newEvents,
     previousSnapshots: state.islandCohortRatingSnapshots,
     observedBehaviorEvents: turnObservedBehaviorEvents,
-    signalProfiles: nextRaterSignalAnalysis.byUserId
+    signalProfiles: nextRaterSignalAnalysis.byUserId,
+    refreshEvents: heartbeatRefreshEvents
   });
   const nextIslandCohortRatingSnapshots = state.islandCohortRatingSnapshots.concat(nextTurnIslandCohortRatingSnapshots);
   nextHistory.push(
@@ -1369,6 +1392,7 @@ export function advancePolicyTurn(
     {
       ratingSnapshots: nextIslandCohortRatingSnapshots,
       turnHistory: nextHistory,
+      refreshEvents: nextRefreshEvents,
       observedBehaviorEvents: nextObservedBehaviorEvents
     }
   );

@@ -64,52 +64,38 @@ function islandVersionIdForTurn(turn: number, islandId: IslandId): string {
   return `island:${islandId}:v${turn}`;
 }
 
-function activeVersionsForPair(
+function latestRelevantRefreshTurnForPair(
   islandId: IslandId,
   refreshEvents: readonly RatingRefreshEvent[]
-): { gameRulesVersionId: string; islandVersionId: string } {
-  let gameRulesVersionId = globalVersionIdForTurn(0);
-  let islandVersionId = islandVersionIdForTurn(0, islandId);
+): number {
+  let latestRelevantTurn = -1;
 
   for (const event of refreshEvents.slice().sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id))) {
     if (event.kind === 'gamePatch') {
-      gameRulesVersionId = globalVersionIdForTurn(event.turn);
-      islandVersionId = islandVersionIdForTurn(event.turn, islandId);
+      latestRelevantTurn = Math.max(latestRelevantTurn, event.turn);
       continue;
     }
 
     if (event.kind === 'islandUpdate' && event.islandId === islandId) {
-      islandVersionId = islandVersionIdForTurn(event.turn, islandId);
+      latestRelevantTurn = Math.max(latestRelevantTurn, event.turn);
     }
   }
 
-  return { gameRulesVersionId, islandVersionId };
+  return latestRelevantTurn;
 }
 
 function isCurrentExplicitEvent(
   event: RatingEvent,
-  versions: { gameRulesVersionId: string; islandVersionId: string }
+  latestRelevantTurn: number
 ): boolean {
-  if (!event.gameRulesVersionId || !event.islandVersionId) {
-    return true;
-  }
-
-  return event.gameRulesVersionId === versions.gameRulesVersionId && event.islandVersionId === versions.islandVersionId;
+  return event.turn >= latestRelevantTurn;
 }
 
 function isCurrentInferredEvent(
   event: InferredRatingEvidenceRecord,
-  versions: { gameRulesVersionId: string; islandVersionId: string }
+  latestRelevantTurn: number
 ): boolean {
-  if (!event.gameRulesVersionId || !event.islandVersionId) {
-    return true;
-  }
-
-  return event.gameRulesVersionId === versions.gameRulesVersionId && event.islandVersionId === versions.islandVersionId;
-}
-
-function isVersionedInferredEvent(event: InferredRatingEvidenceRecord): boolean {
-  return Boolean(event.gameRulesVersionId && event.islandVersionId);
+  return event.turn >= latestRelevantTurn;
 }
 
 function compareLatestRatingEvent(left: RatingEvent, right: RatingEvent): number {
@@ -123,11 +109,11 @@ function compareLatestRatingEvent(left: RatingEvent, right: RatingEvent): number
 function currentExplicitRating(
   ratingEvents: readonly RatingEvent[],
   supersededIds: ReadonlySet<string>,
-  versions: { gameRulesVersionId: string; islandVersionId: string }
+  latestRelevantTurn: number
 ): RatingEvent | null {
   return (
     ratingEvents
-      .filter((event) => !supersededIds.has(event.id) && isCurrentExplicitEvent(event, versions))
+      .filter((event) => !supersededIds.has(event.id) && isCurrentExplicitEvent(event, latestRelevantTurn))
       .sort(compareLatestRatingEvent)[0] ?? null
   );
 }
@@ -137,7 +123,7 @@ function explicitStateForEvent(event: RatingEvent | null): LiveEvidenceState {
     return 'degraded';
   }
 
-  return event.gameRulesVersionId && event.islandVersionId ? 'canonical' : 'compatibility';
+  return 'canonical';
 }
 
 function inferredStateForEvent(event: InferredRatingEvidenceRecord | null): LiveEvidenceState {
@@ -145,7 +131,7 @@ function inferredStateForEvent(event: InferredRatingEvidenceRecord | null): Live
     return 'degraded';
   }
 
-  return isVersionedInferredEvent(event) ? 'canonical' : 'compatibility';
+  return 'canonical';
 }
 
 function diagnosticForPair(input: {
@@ -186,13 +172,15 @@ export function buildPairEvidenceViewModel(input: {
   const relevantRefreshEvents = input.refreshEvents.filter(
     (event) => event.kind === 'gamePatch' || event.islandId === input.islandId
   );
-  const versions = activeVersionsForPair(input.islandId, relevantRefreshEvents);
+  const latestRelevantTurn = latestRelevantRefreshTurnForPair(input.islandId, relevantRefreshEvents);
   const supersededIds = new Set(relevantRatings.map((event) => event.supersedesEventId).filter((id): id is string => Boolean(id)));
-  const current = currentExplicitRating(relevantRatings, supersededIds, versions);
-  const currentInferredCandidates = relevantInferred.filter((entry) => isCurrentInferredEvent(entry, versions));
+  const current = currentExplicitRating(relevantRatings, supersededIds, latestRelevantTurn);
+  const currentInferredCandidates = relevantInferred.filter((entry) => isCurrentInferredEvent(entry, latestRelevantTurn));
   const inferred = chooseCurrentInferredEvidence(currentInferredCandidates);
   const explicitState = explicitStateForEvent(current);
   const inferredState = inferredStateForEvent(inferred);
+  const explicitHistoricalEvents = relevantRatings.filter((event) => !isCurrentExplicitEvent(event, latestRelevantTurn));
+  const inferredHistoricalEvents = relevantInferred.filter((entry) => !isCurrentInferredEvent(entry, latestRelevantTurn));
 
   return {
     userId: input.userId,
@@ -201,27 +189,28 @@ export function buildPairEvidenceViewModel(input: {
       category: 'explicit-stated-rating-evidence',
       state: explicitState,
       current,
-      historical: relevantRatings.filter((event) => event.id !== current?.id),
+      historical: explicitHistoricalEvents,
       superseded: relevantRatings.filter((event) => supersededIds.has(event.id)),
       note:
         explicitState === 'canonical'
-          ? 'Current explicit stated rating is version-aware.'
-          : explicitState === 'compatibility'
-            ? 'Current explicit stated rating is a legacy event without full version context.'
+          ? current
+            ? latestRelevantTurn >= 0
+              ? 'Current explicit stated rating is selected from the latest refresh boundary.'
+              : 'Current explicit stated rating is selected from the event log.'
             : 'No explicit stated rating evidence is available for this pair.'
+          : 'No explicit stated rating evidence is available for this pair.'
     },
     inferredRevealed: {
       category: 'inferred-revealed-preference-evidence',
       state: inferredState,
       current: inferred,
       records: relevantInferred.slice().sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id)),
-      historical: relevantInferred
-        .filter((entry) => entry.id !== inferred?.id)
+      historical: inferredHistoricalEvents
         .sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id)),
       note: inferred
-        ? inferredState === 'canonical'
-          ? 'Current inferred revealed-preference evidence is version-aware and remains separate from explicit rating state.'
-          : 'Current inferred revealed-preference evidence lacks refresh version context and remains a compatibility read.'
+        ? latestRelevantTurn >= 0
+          ? 'Current inferred revealed-preference evidence is selected from the latest refresh boundary and remains separate from explicit rating state.'
+          : 'Current inferred revealed-preference evidence is selected from the event log and remains separate from explicit rating state.'
         : 'No inferred revealed-preference evidence is available for this pair.'
     },
     syntheticObservedBehavior: {
@@ -236,8 +225,8 @@ export function buildPairEvidenceViewModel(input: {
     refreshContext: {
       category: 'refresh-revision-context',
       state: 'canonical',
-      activeGameRulesVersionId: versions.gameRulesVersionId,
-      activeIslandVersionId: versions.islandVersionId,
+      activeGameRulesVersionId: globalVersionIdForTurn(latestRelevantTurn >= 0 ? latestRelevantTurn : 0),
+      activeIslandVersionId: islandVersionIdForTurn(latestRelevantTurn >= 0 ? latestRelevantTurn : 0, input.islandId),
       refreshEvents: relevantRefreshEvents.slice().sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id)),
       note: 'Refresh and revision context controls current evidence eligibility without deleting history.'
     },

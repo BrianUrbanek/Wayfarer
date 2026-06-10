@@ -1,5 +1,5 @@
 import type { ObservedBehaviorEvent } from './observedBehavior.js';
-import type { RatingEventSource } from './simulation.js';
+import type { RatingEventSource, RatingRefreshEvent } from './simulation.js';
 import type { CohortAnchor, CohortId, Island, IslandId, Rating, UserId } from './types.js';
 import type { RaterSignalProfile } from './raterSignal.js';
 
@@ -42,6 +42,7 @@ export interface BuildIslandCohortRatingSnapshotsInput {
   cohorts: readonly CohortAnchor[];
   ratingEvents: readonly IslandCohortRatingRatingEvent[];
   turnHistory: readonly { turn: number }[];
+  refreshEvents?: readonly RatingRefreshEvent[];
   observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
   signalProfiles?: ReadonlyMap<UserId, RaterSignalProfile>;
 }
@@ -52,6 +53,7 @@ export interface BuildIslandCohortRatingSnapshotsForTurnInput {
   turn: number;
   ratingEvents: readonly IslandCohortRatingRatingEvent[];
   previousSnapshots: readonly IslandCohortRatingState[];
+  refreshEvents?: readonly RatingRefreshEvent[];
   observedBehaviorEvents?: readonly ObservedBehaviorEvent[];
   signalProfiles?: ReadonlyMap<UserId, RaterSignalProfile>;
 }
@@ -294,6 +296,35 @@ function aggregateTurnEvidenceForPair(
   return aggregateTurnEvidence(turn, islandId, cohortId, events, behaviorLookup, signalProfiles);
 }
 
+function refreshEventsForTurn(
+  refreshEvents: readonly RatingRefreshEvent[] | undefined,
+  turn: number
+): readonly RatingRefreshEvent[] {
+  return (refreshEvents ?? []).filter((event) => event.turn === turn);
+}
+
+function hasRefreshForIsland(
+  refreshEvents: readonly RatingRefreshEvent[],
+  islandId: IslandId
+): boolean {
+  return refreshEvents.some((event) => event.kind === 'gamePatch' || (event.kind === 'islandUpdate' && event.islandId === islandId));
+}
+
+function resetForRefresh(
+  previous: IslandCohortRatingState,
+  turnRefreshEvents: readonly RatingRefreshEvent[],
+  islandId: IslandId
+): IslandCohortRatingState {
+  if (!hasRefreshForIsland(turnRefreshEvents, islandId)) {
+    return previous;
+  }
+
+  return softResetIslandCohortRatingState(previous, {
+    ratingDeviationBoost: 0.24,
+    volatilityBoost: 0
+  });
+}
+
 export function buildIslandCohortRatingSnapshots(
   input: BuildIslandCohortRatingSnapshotsInput
 ): IslandCohortRatingState[] {
@@ -303,10 +334,11 @@ export function buildIslandCohortRatingSnapshots(
   const snapshots: IslandCohortRatingState[] = [];
 
   for (const turn of turns) {
+    const turnRefreshEvents = refreshEventsForTurn(input.refreshEvents, turn);
     for (const island of input.islands) {
       for (const cohort of input.cohorts) {
         const pairKey = `${island.id}:${cohort.id}`;
-        const previous = latestByPair.get(pairKey) ?? createBlankState(island.id, cohort.id);
+        const previous = resetForRefresh(latestByPair.get(pairKey) ?? createBlankState(island.id, cohort.id), turnRefreshEvents, island.id);
         const turnEvidence = aggregateTurnEvidence(
           turn,
           island.id,
@@ -315,11 +347,17 @@ export function buildIslandCohortRatingSnapshots(
           behaviorLookup,
           input.signalProfiles
         );
-
-        const nextState = advanceIslandCohortRatingState(previous, {
-          turn,
-          ...turnEvidence
-        });
+        const nextState =
+          turnEvidence.primaryEvidenceWeight <= 0
+            ? {
+                ...previous,
+                turn,
+                version: 1 as const
+              }
+            : advanceIslandCohortRatingState(previous, {
+                turn,
+                ...turnEvidence
+              });
         latestByPair.set(pairKey, nextState);
         snapshots.push({ ...nextState });
       }
@@ -337,11 +375,12 @@ export function buildIslandCohortRatingSnapshotsForTurn(
     input.previousSnapshots.map((snapshot) => [`${snapshot.islandId}:${snapshot.cohortId}`, snapshot])
   );
   const nextSnapshots: IslandCohortRatingState[] = [];
+  const turnRefreshEvents = refreshEventsForTurn(input.refreshEvents, input.turn);
 
   for (const island of input.islands) {
     for (const cohort of input.cohorts) {
       const pairKey = `${island.id}:${cohort.id}`;
-      const previous = previousByPair.get(pairKey) ?? createBlankState(island.id, cohort.id);
+      const previous = resetForRefresh(previousByPair.get(pairKey) ?? createBlankState(island.id, cohort.id), turnRefreshEvents, island.id);
       const turnEvidence = aggregateTurnEvidenceForPair(
         input.turn,
         island.id,
@@ -350,10 +389,17 @@ export function buildIslandCohortRatingSnapshotsForTurn(
         behaviorLookup,
         input.signalProfiles
       );
-      const nextState = advanceIslandCohortRatingState(previous, {
-        turn: input.turn,
-        ...turnEvidence
-      });
+      const nextState =
+        turnEvidence.primaryEvidenceWeight <= 0
+          ? {
+              ...previous,
+              turn: input.turn,
+              version: 1 as const
+            }
+          : advanceIslandCohortRatingState(previous, {
+              turn: input.turn,
+              ...turnEvidence
+            });
       nextSnapshots.push({ ...nextState });
     }
   }

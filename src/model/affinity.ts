@@ -58,6 +58,13 @@ export interface BuildAffinityOptions {
   confidenceK?: number;
   ratingSnapshots?: readonly IslandCohortRatingState[];
   turnHistory?: readonly { turn: number }[];
+  refreshEvents?: readonly {
+    id: string;
+    turn: number;
+    kind: 'gamePatch' | 'islandUpdate';
+    islandId?: IslandId;
+    reason?: string;
+  }[];
   observedBehaviorEvents?: readonly {
     id: string;
     turn: number;
@@ -187,6 +194,7 @@ export function buildIslandAffinityReports(
         Array.from(new Set(normalizedRatingEvents.map((event) => event.turn)))
           .sort((left, right) => left - right)
           .map((turn) => ({ turn })),
+      refreshEvents: mergedOptions.refreshEvents,
       observedBehaviorEvents: mergedOptions.observedBehaviorEvents,
       signalProfiles
     });

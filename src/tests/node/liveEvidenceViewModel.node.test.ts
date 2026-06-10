@@ -51,6 +51,65 @@ describe('canonical live evidence view model', () => {
     assert.equal(view.refreshContext.state, 'canonical');
   });
 
+  it('derives current and historical explicit evidence from refresh boundaries instead of version fields', () => {
+    const view = buildPairEvidenceViewModel({
+      userId: 'user-1',
+      islandId: 'island-1',
+      ratingEvents: [
+        {
+          id: 'rating-before-update',
+          turn: 0,
+          userId: 'user-1',
+          islandId: 'island-1',
+          rating: 1,
+          source: 'organic',
+          raterSignalWeights: weights
+        },
+        {
+          id: 'rating-after-update',
+          turn: 2,
+          userId: 'user-1',
+          islandId: 'island-1',
+          rating: -1,
+          source: 'organic',
+          raterSignalWeights: weights
+        }
+      ],
+      inferredRatingEvidence: [],
+      observedBehaviorEvents: [],
+      refreshEvents: [{ id: 'update-1', turn: 1, kind: 'islandUpdate', islandId: 'island-1' }]
+    });
+
+    assert.equal(view.explicitStated.current?.id, 'rating-after-update');
+    assert.deepEqual(view.explicitStated.historical.map((event) => event.id), ['rating-before-update']);
+    assert.equal(view.explicitStated.state, 'canonical');
+  });
+
+  it('does not invent a pseudo-current explicit category when version fields are missing', () => {
+    const view = buildPairEvidenceViewModel({
+      userId: 'user-1',
+      islandId: 'island-1',
+      ratingEvents: [
+        {
+          id: 'rating-before-update',
+          turn: 0,
+          userId: 'user-1',
+          islandId: 'island-1',
+          rating: 1,
+          source: 'organic',
+          raterSignalWeights: weights
+        }
+      ],
+      inferredRatingEvidence: [],
+      observedBehaviorEvents: [],
+      refreshEvents: [{ id: 'update-1', turn: 1, kind: 'gamePatch' }]
+    });
+
+    assert.equal(view.explicitStated.current, null);
+    assert.deepEqual(view.explicitStated.historical.map((event) => event.id), ['rating-before-update']);
+    assert.equal(view.explicitStated.state, 'degraded');
+  });
+
   it('keeps inferred revealed evidence and synthetic observed behavior distinct', () => {
     const inferred: InferredRatingEvidenceRecord[] = [
       {
@@ -106,7 +165,7 @@ describe('canonical live evidence view model', () => {
     assert.equal(view.diagnostics.state, 'insufficient-evidence');
   });
 
-  it('treats stale versioned inferred evidence as historical after refresh', () => {
+  it('treats stale inferred evidence as historical after refresh', () => {
     const inferred: InferredRatingEvidenceRecord[] = [
       {
         id: 'stale-inferred',
@@ -147,12 +206,12 @@ describe('canonical live evidence view model', () => {
       refreshEvents: [{ id: 'patch-3', turn: 3, kind: 'gamePatch' }]
     });
 
-    assert.equal(view.inferredRevealed.current?.id, 'current-inferred');
-    assert.equal(view.inferredRevealed.historical.map((entry) => entry.id).includes('stale-inferred'), true);
-    assert.equal(view.inferredRevealed.state, 'canonical');
+    assert.equal(view.inferredRevealed.current, null);
+    assert.deepEqual(view.inferredRevealed.historical.map((entry) => entry.id), ['stale-inferred', 'current-inferred']);
+    assert.equal(view.inferredRevealed.state, 'degraded');
   });
 
-  it('marks legacy inferred evidence without version context as compatibility current evidence', () => {
+  it('keeps inferred evidence without version context current when no refresh boundary excludes it', () => {
     const view = buildPairEvidenceViewModel({
       userId: 'user-1',
       islandId: 'island-1',
@@ -172,14 +231,14 @@ describe('canonical live evidence view model', () => {
         }
       ],
       observedBehaviorEvents: [],
-      refreshEvents: [{ id: 'patch-3', turn: 3, kind: 'gamePatch' }]
+      refreshEvents: []
     });
 
     assert.equal(view.inferredRevealed.current?.id, 'legacy-inferred');
-    assert.equal(view.inferredRevealed.state, 'compatibility');
+    assert.equal(view.inferredRevealed.state, 'canonical');
   });
 
-  it('marks legacy explicit ratings without version context as compatibility evidence', () => {
+  it('keeps explicit ratings without version context current when no refresh boundary excludes them', () => {
     const view = buildPairEvidenceViewModel({
       userId: 'user-1',
       islandId: 'island-1',
@@ -200,7 +259,7 @@ describe('canonical live evidence view model', () => {
     });
 
     assert.equal(view.explicitStated.current?.id, 'legacy-rating');
-    assert.equal(view.explicitStated.state, 'compatibility');
-    assert.match(view.explicitStated.note, /legacy/i);
+    assert.equal(view.explicitStated.state, 'canonical');
+    assert.match(view.explicitStated.note, /event log/i);
   });
 });
