@@ -46,4 +46,28 @@ describe('glossary data', () => {
     assert.match(glossaryTermById('seed-proxy')?.fullDefinition ?? '', /does not mean the seed directly rated/i);
     assert.match(glossaryTermById('unsupported-concept')?.fullDefinition ?? '', /silently approximated/i);
   });
+
+  it('defines the canonical issue 82 evidence taxonomy terms', () => {
+    const expectedTerms = [
+      'explicit-stated-rating-evidence',
+      'inferred-revealed-preference-evidence',
+      'synthetic-observed-behavior',
+      'external-observed-behavior',
+      'projected-model-evidence',
+      'diagnostic-interpretation',
+      'refresh-revision-context',
+      'compatibility-proxy-evidence'
+    ] as const;
+
+    for (const termId of expectedTerms) {
+      const term = glossaryTermById(termId);
+      assert.ok(term, `Missing canonical taxonomy term: ${termId}`);
+      assert.match(term.fullDefinition, /not|separate|distinct|preserve|context|compatibility/i);
+    }
+
+    assert.match(glossaryTermById('confidence-composite')?.fullDefinition ?? '', /not a model primitive/i);
+    assert.match(glossaryTermById('rating-deviation')?.fullDefinition ?? '', /not confidence/i);
+    assert.match(glossaryTermById('volatility')?.fullDefinition ?? '', /not ignorance/i);
+    assert.match(glossaryTermById('source-authority')?.fullDefinition ?? '', /not global trust/i);
+  });
 });

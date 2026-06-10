@@ -289,6 +289,10 @@ export function resolveHeartbeatCadenceProfile(
   island: Island,
   heartbeat: HeartbeatPolicy
 ): HeartbeatCadenceProfile {
+  if (island.updateCadenceProfile) {
+    return island.updateCadenceProfile;
+  }
+
   const weightEntries = Object.entries(heartbeat.islandCadenceProfileWeights) as Array<[HeartbeatCadenceProfile, number]>;
   const totalWeight = weightEntries.reduce((sum, [, weight]) => sum + Math.max(0, weight), 0);
   const hashed = hashString(`${seed}:${island.id}:${island.label}`);
@@ -475,7 +479,8 @@ function cloneIsland(island: Island): Island {
   return {
     ...island,
     hiddenAppealPattern: island.hiddenAppealPattern ? { ...island.hiddenAppealPattern } : undefined,
-    hiddenAppealVector: island.hiddenAppealVector ? { ...island.hiddenAppealVector } : undefined
+    hiddenAppealVector: island.hiddenAppealVector ? { ...island.hiddenAppealVector } : undefined,
+    updateCadenceProfile: island.updateCadenceProfile
   };
 }
 

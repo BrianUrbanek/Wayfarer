@@ -12,7 +12,12 @@
         "numIslands": 36,
         "bootstrapRatingsPerUser": 6,
         "tagAlignmentDistribution": { "kind": "uniform", "min": 6, "max": 10 },
-        "ratingAlignmentDistribution": { "kind": "uniform", "min": 6, "max": 10 }
+        "ratingAlignmentDistribution": { "kind": "uniform", "min": 6, "max": 10 },
+        "islandUpdateCadenceProfiles": {
+          "island-1": "dormant",
+          "island-2": "steady",
+          "island-3": "frenetic"
+        }
       },
       "turnPolicy": {
         "turnMode": "mixed",

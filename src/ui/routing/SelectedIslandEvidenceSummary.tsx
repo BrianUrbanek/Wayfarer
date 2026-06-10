@@ -8,6 +8,7 @@ import type { CohortId } from '../../model/types.js';
 import type { IslandEvidenceConstellation, IslandRatingTimelineRow } from '../../model/islandEvidenceVisualization.js';
 import type { LiveIslandEvidenceRead } from '../liveEvidenceAdapter';
 import type { StatedRevealedPreferenceDiagnostic } from '../../model/inferredRatingEvidence';
+import type { PairEvidenceViewModel } from '../liveEvidenceViewModel';
 
 interface SelectedIslandEvidenceSummaryProps {
   confidenceRadarData: readonly IslandConfidenceRadarDatum[];
@@ -20,6 +21,7 @@ interface SelectedIslandEvidenceSummaryProps {
   islandLabel: string;
   liveEvidenceRead: LiveIslandEvidenceRead;
   statedRevealedDiagnostic?: StatedRevealedPreferenceDiagnostic | null;
+  pairEvidenceViewModel?: PairEvidenceViewModel | null;
 }
 
 export function SelectedIslandEvidenceSummary({
@@ -32,7 +34,8 @@ export function SelectedIslandEvidenceSummary({
   cohortLabelById,
   islandLabel,
   liveEvidenceRead,
-  statedRevealedDiagnostic
+  statedRevealedDiagnostic,
+  pairEvidenceViewModel
 }: SelectedIslandEvidenceSummaryProps) {
   return (
     <section className="detail-block">
@@ -87,6 +90,36 @@ export function SelectedIslandEvidenceSummary({
           behaviorSummary={observedBehaviorSummary}
           behaviorRows={observedBehaviorRows}
         />
+        {pairEvidenceViewModel ? (
+          <section className="detail-block">
+            <div className="section-heading">
+              <h5>Canonical pair evidence</h5>
+              <p className="muted">Read-only evidence categories for the selected user and island. These do not alter routing behavior.</p>
+            </div>
+            <div className="metric-grid metric-grid--compact">
+              <MetricCard
+                label={pairEvidenceViewModel.explicitStated.category}
+                value={pairEvidenceViewModel.explicitStated.state}
+                helper={pairEvidenceViewModel.explicitStated.note}
+              />
+              <MetricCard
+                label={pairEvidenceViewModel.inferredRevealed.category}
+                value={pairEvidenceViewModel.inferredRevealed.state}
+                helper={pairEvidenceViewModel.inferredRevealed.note}
+              />
+              <MetricCard
+                label={pairEvidenceViewModel.syntheticObservedBehavior.category}
+                value={pairEvidenceViewModel.syntheticObservedBehavior.state}
+                helper={pairEvidenceViewModel.syntheticObservedBehavior.note}
+              />
+              <MetricCard
+                label={pairEvidenceViewModel.refreshContext.category}
+                value={pairEvidenceViewModel.refreshContext.state}
+                helper={pairEvidenceViewModel.refreshContext.note}
+              />
+            </div>
+          </section>
+        ) : null}
         {statedRevealedDiagnostic ? (
           <section className="detail-block">
             <div className="section-heading">

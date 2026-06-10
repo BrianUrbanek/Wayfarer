@@ -1,12 +1,12 @@
 import type { SeededRng } from '../generator/seededRandom.js';
-import type { User } from './types.js';
+import type { IslandUpdateCadenceProfile, User } from './types.js';
 import { rollSupportedDice, type SupportedDiceExpression } from './dice.js';
 
 export type TurnMode = 'organic' | 'guided' | 'mixed';
 export type ParticipationModel = 'fixed-count' | 'chance-per-user';
 export type RatingCountModel = 'fixed-count' | 'dice-expression';
 export type RoutingRiskProfile = 'conservative' | 'balanced' | 'exploratory' | 'custom';
-export type HeartbeatCadenceProfile = 'dormant' | 'slow' | 'steady' | 'active' | 'frenetic';
+export type HeartbeatCadenceProfile = IslandUpdateCadenceProfile;
 
 export interface RoutingRiskProfileValues {
   explorationWeight: number;

@@ -2,7 +2,7 @@ import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import type { AdvancePolicyTurnConfig, IslandCohortConfidenceSnapshot, SimulationState, SimulationTurnSummary, RatingEvent, SerializedSimulationState } from './simulation.js';
 import { hydrateSimulationState, serializeSimulationState } from './simulation.js';
 import type { ScenarioPresetMetadata } from './scenarioPresets.js';
-import type { CohortAnchor, HiddenTasteCohort, InferredRatingEvidenceRecord, Island, IslandClass, User } from './types.js';
+import type { CohortAnchor, HiddenTasteCohort, InferredRatingEvidenceRecord, Island, IslandClass, IslandUpdateCadenceProfile, User } from './types.js';
 
 export type SavedScenarioKind = 'simulation-state';
 export const SAVED_SCENARIO_VERSION = 1 as const;
@@ -15,6 +15,7 @@ export interface SavedScenarioGeneratorConfig {
   tagAlignmentDistribution: AlignmentDistribution;
   ratingAlignmentDistribution: AlignmentDistribution;
   islandClassWeights?: Partial<Record<IslandClass, number>>;
+  islandUpdateCadenceProfiles?: Partial<Record<string, IslandUpdateCadenceProfile>>;
 }
 
 export interface SavedWayfarerScenarioV1 {
@@ -68,6 +69,10 @@ function isRatingWeights(value: unknown): value is Record<string, number> {
 
 function isHiddenBehaviorProfile(value: unknown): value is 'aligned' | 'positive-drift' | 'negative-drift' {
   return value === 'aligned' || value === 'positive-drift' || value === 'negative-drift';
+}
+
+function isIslandUpdateCadenceProfile(value: unknown): value is Island['updateCadenceProfile'] {
+  return value === 'dormant' || value === 'slow' || value === 'steady' || value === 'active' || value === 'frenetic';
 }
 
 function validateConfidenceSnapshot(value: unknown): value is IslandCohortConfidenceSnapshot {
@@ -162,6 +167,10 @@ function validateIsland(value: unknown): value is Island {
   }
 
   if (value.hiddenAppealVector !== undefined && (!isRecord(value.hiddenAppealVector) || !Object.values(value.hiddenAppealVector).every(isNumber))) {
+    return false;
+  }
+
+  if (value.updateCadenceProfile !== undefined && !isIslandUpdateCadenceProfile(value.updateCadenceProfile)) {
     return false;
   }
 
@@ -284,7 +293,9 @@ function validateInferredRatingEvidenceRecord(value: unknown): value is Inferred
     (value.sourceRunId === undefined || isString(value.sourceRunId)) &&
     isNumber(value.confidence) &&
     isString(value.provenance) &&
-    (value.sourceCategory === undefined || value.sourceCategory === 'black-box-upstream')
+    (value.sourceCategory === undefined || value.sourceCategory === 'black-box-upstream') &&
+    (value.islandVersionId === undefined || isString(value.islandVersionId)) &&
+    (value.gameRulesVersionId === undefined || isString(value.gameRulesVersionId))
   );
 }
 
@@ -420,6 +431,15 @@ function validateGeneratorConfig(value: unknown): value is SavedScenarioGenerato
   if (
     value.islandClassWeights !== undefined &&
     (value.islandClassWeights === null || !isRecord(value.islandClassWeights) || !Object.values(value.islandClassWeights).every(isNumber))
+  ) {
+    return false;
+  }
+
+  if (
+    value.islandUpdateCadenceProfiles !== undefined &&
+    (value.islandUpdateCadenceProfiles === null ||
+      !isRecord(value.islandUpdateCadenceProfiles) ||
+      !Object.values(value.islandUpdateCadenceProfiles).every(isIslandUpdateCadenceProfile))
   ) {
     return false;
   }

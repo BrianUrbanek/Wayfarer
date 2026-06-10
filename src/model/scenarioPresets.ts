@@ -1,6 +1,6 @@
 import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import { SCENARIO_CATALOG, type ScenarioCatalogDemoPreset } from './scenarioCatalog.js';
-import type { IslandClass } from './types.js';
+import type { IslandClass, IslandUpdateCadenceProfile } from './types.js';
 import { normalizeHeartbeatPolicy } from './turnPolicy.js';
 import type { AdvancePolicyTurnConfig } from './simulation.js';
 
@@ -32,6 +32,7 @@ export interface ScenarioPresetGeneratorConfig {
   tagAlignmentDistribution: AlignmentDistribution;
   ratingAlignmentDistribution: AlignmentDistribution;
   islandClassWeights?: Partial<Record<IslandClass, number>>;
+  islandUpdateCadenceProfiles?: Partial<Record<string, IslandUpdateCadenceProfile>>;
 }
 
 export interface ScenarioPreset {
@@ -52,6 +53,7 @@ export interface ScenarioPresetControls {
   tagAlignmentDistribution: AlignmentDistribution;
   ratingAlignmentDistribution: AlignmentDistribution;
   islandClassWeights?: Partial<Record<IslandClass, number>>;
+  islandUpdateCadenceProfiles?: Partial<Record<string, IslandUpdateCadenceProfile>>;
   turnPolicy: AdvancePolicyTurnConfig;
   turnsToRun: number;
 }
@@ -77,7 +79,8 @@ function toScenarioPreset(preset: ScenarioCatalogDemoPreset): ScenarioPreset {
       bootstrapRatingsPerUser: preset.generatorConfig.bootstrapRatingsPerUser,
       tagAlignmentDistribution: preset.generatorConfig.tagAlignmentDistribution,
       ratingAlignmentDistribution: preset.generatorConfig.ratingAlignmentDistribution,
-      islandClassWeights: preset.generatorConfig.islandClassWeights
+      islandClassWeights: preset.generatorConfig.islandClassWeights,
+      islandUpdateCadenceProfiles: preset.generatorConfig.islandUpdateCadenceProfiles
     },
     turnPolicy: { ...preset.turnPolicy },
     turnsToRun: preset.turnsToRun
@@ -140,6 +143,7 @@ export function matchesScenarioPreset(preset: ScenarioPreset, controls: Scenario
     JSON.stringify(preset.generatorConfig.tagAlignmentDistribution) === JSON.stringify(controls.tagAlignmentDistribution) &&
     JSON.stringify(preset.generatorConfig.ratingAlignmentDistribution) === JSON.stringify(controls.ratingAlignmentDistribution) &&
     JSON.stringify(preset.generatorConfig.islandClassWeights ?? null) === JSON.stringify(controls.islandClassWeights ?? null) &&
+    JSON.stringify(preset.generatorConfig.islandUpdateCadenceProfiles ?? null) === JSON.stringify(controls.islandUpdateCadenceProfiles ?? null) &&
     preset.turnPolicy.turnMode === controls.turnPolicy.turnMode &&
     preset.turnPolicy.participationModel === controls.turnPolicy.participationModel &&
     preset.turnPolicy.participatingUsersPerTurn === controls.turnPolicy.participatingUsersPerTurn &&
@@ -167,6 +171,7 @@ export function applyScenarioPreset(preset: ScenarioPreset): ScenarioPresetContr
     tagAlignmentDistribution: preset.generatorConfig.tagAlignmentDistribution,
     ratingAlignmentDistribution: preset.generatorConfig.ratingAlignmentDistribution,
     islandClassWeights: preset.generatorConfig.islandClassWeights,
+    islandUpdateCadenceProfiles: preset.generatorConfig.islandUpdateCadenceProfiles,
     turnPolicy: {
       ...preset.turnPolicy,
       heartbeat: normalizeHeartbeatPolicy(preset.turnPolicy.heartbeat)

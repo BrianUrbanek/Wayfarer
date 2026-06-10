@@ -11,6 +11,14 @@ export type GlossaryTermId =
   | 'rating-period'
   | 'rating-event-weight'
   | 'observed-behavior'
+  | 'explicit-stated-rating-evidence'
+  | 'inferred-revealed-preference-evidence'
+  | 'synthetic-observed-behavior'
+  | 'external-observed-behavior'
+  | 'projected-model-evidence'
+  | 'diagnostic-interpretation'
+  | 'refresh-revision-context'
+  | 'compatibility-proxy-evidence'
   | 'soft-reset'
   | 'cohort'
   | 'declared-preference'
@@ -70,9 +78,11 @@ Where the UI has RD, volatility, and evidence support together, confidence is sh
 
 Hidden truth and generator truth are validation layers only. They can be shown as oracle / test generator truth for audit and debugging, but they are never treated as model input or production-visible truth.
 
-## Ratings, Behavior, and Hidden Truth
+## Ratings, Behavior, Evidence, and Hidden Truth
 
-Ratings are early proxy evidence. They help the prototype route and explain fit before stronger evidence exists. Observed behavior is a separate evidence layer and should eventually outweigh early proxy ratings when it is available.
+Explicit ratings are stated-preference evidence. Inferred ratings are revealed-preference evidence from an upstream source. Synthetic observed behavior is generated from explicit rating events in the current prototype and is not raw telemetry. Projected evidence is model-consumable evidence after source, authority, version, and eligibility rules are applied. Diagnostics are interpretations of evidence, not primary evidence.
+
+These categories must remain separate. Observed behavior is not automatically inferred preference, and inferred revealed-preference evidence must not be written into explicit rating state.
 
 The generator also has hidden truth layers for auditability: seed cohorts, unseeded cohorts, user preference vectors, island appeal vectors, and truth classes. Those hidden layers explain why the synthetic ratings and later behavior look the way they do.
 
@@ -152,7 +162,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Rating Deviation / RD',
     shortDefinition: 'Uncertainty width around an island/cohort fit estimate.',
     fullDefinition:
-      'The uncertainty width around an island/cohort fit estimate. Lower RD means the read is more mature and should move less from new evidence; higher RD means the read is less certain and should move more. RD is an analogue, not a claim of canonical Glicko-2 implementation.',
+      'The uncertainty width around an island/cohort fit estimate. Lower RD means the read is more mature and should move less from new evidence; higher RD means the read is less certain and should move more. RD is not confidence, although confidence-like UI summaries may derive from it. RD is an analogue, not a claim of canonical Glicko-2 implementation.',
     scope: 'internal',
     implementedStatus: 'implemented',
     relatedTerms: ['glicko-shaped', 'island-cohort-rating-state', 'island-confidence', 'rating-period', 'volatility']
@@ -162,7 +172,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Volatility',
     shortDefinition: 'Freshness or instability analogue for an island/cohort read.',
     fullDefinition:
-      'A freshness or instability analogue that tracks how erratic an island/cohort read appears over time. Consistent evidence should keep volatility lower and stable, while surprising or contradictory evidence may raise it. It is an analogue used for Wayfarer\'s Glicko-shaped substrate, not canonical Glicko-2 volatility.',
+      'A freshness or instability analogue that tracks how erratic an island/cohort read appears over time. Volatility is not ignorance: it can represent observed instability, contradiction, split preference, context sensitivity, or change over time. It is an analogue used for Wayfarer\'s Glicko-shaped substrate, not canonical Glicko-2 volatility.',
     scope: 'internal',
     implementedStatus: 'implemented',
     relatedTerms: ['glicko-shaped', 'rating-deviation', 'island-cohort-rating-state', 'soft-reset', 'rating-period']
@@ -200,11 +210,91 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     id: 'observed-behavior',
     term: 'Observed Behavior',
-    shortDefinition: 'Outcome evidence that can confirm or contradict ratings.',
-    fullDefinition: 'Behavioral outcomes such as completion, replay, return, bounce, or abandonment that eventually serve as stronger truth signals than early proxy ratings.',
+    shortDefinition: 'Reserved umbrella for behavior evidence, not inferred preference by itself.',
+    fullDefinition: 'Behavioral outcomes such as completion, replay, return, bounce, or abandonment. Observed behavior is not automatically inferred preference; current Wayfarer behavior rows are synthetic observed behavior generated from explicit rating events.',
+    scope: 'future-facing',
+    implementedStatus: 'partial',
+    relatedTerms: ['synthetic-observed-behavior', 'external-observed-behavior', 'inferred-revealed-preference-evidence']
+  },
+  {
+    id: 'explicit-stated-rating-evidence',
+    term: 'Explicit Stated Rating Evidence',
+    shortDefinition: 'A player directly says like, neutral, or dislike.',
+    fullDefinition:
+      'Evidence from an explicit rating event. It represents stated or declarative preference and must remain distinct from inferred revealed-preference evidence, synthetic observed behavior, and diagnostic interpretation.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['rating-event', 'refresh-revision-context', 'diagnostic-interpretation']
+  },
+  {
+    id: 'inferred-revealed-preference-evidence',
+    term: 'Inferred Revealed-Preference Evidence',
+    shortDefinition: 'A provenance-backed upstream estimate of demonstrated preference.',
+    fullDefinition:
+      'Evidence from a black-box or upstream source that estimates revealed preference. It preserves source and provenance, stays separate from explicit stated rating evidence, and must not be written into user rating state.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['explicit-stated-rating-evidence', 'diagnostic-interpretation']
+  },
+  {
+    id: 'synthetic-observed-behavior',
+    term: 'Synthetic Observed Behavior',
+    shortDefinition: 'Prototype behavior rows generated from explicit rating events.',
+    fullDefinition:
+      'Current Wayfarer behavior evidence generated deterministically from explicit rating events. It is separate from ratings and inferred revealed-preference evidence, and it is not raw telemetry or an upstream behavioral interpretation.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['observed-behavior', 'explicit-stated-rating-evidence']
+  },
+  {
+    id: 'external-observed-behavior',
+    term: 'External Observed Behavior',
+    shortDefinition: 'Reserved future behavior telemetry from outside the simulation.',
+    fullDefinition:
+      'Reserved term for future raw or processed behavior records supplied by an external system. It must preserve source and provenance and stay distinct from synthetic observed behavior and inferred revealed-preference evidence.',
     scope: 'future-facing',
     implementedStatus: 'future',
-    relatedTerms: ['discovery-signal', 'island-confidence']
+    relatedTerms: ['observed-behavior', 'synthetic-observed-behavior', 'inferred-revealed-preference-evidence']
+  },
+  {
+    id: 'projected-model-evidence',
+    term: 'Projected / Model-Consumable Evidence',
+    shortDefinition: 'Evidence after model projection, eligibility, source, and version rules.',
+    fullDefinition:
+      'Evidence transformed into a model-consumable projection with eligibility, source class, authority basis, version context, and contribution flags. It is distinct from raw evidence and from diagnostic interpretation.',
+    scope: 'internal',
+    implementedStatus: 'partial',
+    relatedTerms: ['source-authority', 'refresh-revision-context', 'compatibility-proxy-evidence']
+  },
+  {
+    id: 'diagnostic-interpretation',
+    term: 'Diagnostic Interpretation',
+    shortDefinition: 'A read about evidence, not evidence itself.',
+    fullDefinition:
+      'An interpretation of one or more evidence records, such as stated-vs-revealed alignment, contradiction, cohort split, or compatibility state. Diagnostics must preserve the underlying evidence categories instead of flattening them.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['explicit-stated-rating-evidence', 'inferred-revealed-preference-evidence', 'compatibility-proxy-evidence']
+  },
+  {
+    id: 'refresh-revision-context',
+    term: 'Refresh / Revision Context',
+    shortDefinition: 'Current-context eligibility without deleting history.',
+    fullDefinition:
+      'The game patch, island update, revision, and supersession context that determines which historical evidence is active now. Refresh and revision preserve history; they do not delete past evidence.',
+    scope: 'internal',
+    implementedStatus: 'implemented',
+    relatedTerms: ['rating-event', 'explicit-stated-rating-evidence', 'projected-model-evidence']
+  },
+  {
+    id: 'compatibility-proxy-evidence',
+    term: 'Compatibility / Proxy / Degraded Evidence',
+    shortDefinition: 'A labeled bridge when canonical evidence is unavailable.',
+    fullDefinition:
+      'A compatibility bridge used when canonical projected evidence is unavailable. Proxy and degraded states must be labeled honestly so consumers do not mistake legacy live-app values for canonical modeling-core evidence.',
+    scope: 'analyst-facing',
+    implementedStatus: 'implemented',
+    relatedTerms: ['projected-model-evidence', 'source-authority', 'unsupported-concept']
   },
   {
     id: 'soft-reset',
@@ -274,7 +364,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Confidence Composite',
     shortDefinition: 'Composite confidence read built from RD, volatility, and evidence support.',
     fullDefinition:
-      'A novice-facing confidence read shown only when the UI has honest RD, volatility, and evidence support available together. It is a composite summary, not a replacement for the separate uncertainty, stability, or evidence fields.',
+      'A novice-facing confidence read shown only when the UI has honest RD, volatility, and evidence support available together. It is a composite summary, not a model primitive and not a replacement for the separate uncertainty, stability, or evidence fields.',
     scope: 'analyst-facing',
     implementedStatus: 'implemented',
     relatedTerms: ['rating-deviation', 'volatility', 'rating-event-weight', 'island-confidence']
@@ -304,7 +394,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     term: 'Source Authority',
     shortDefinition: 'How useful a player is as an evidence source.',
     fullDefinition:
-      'A signal-source read describing whether and how a player can contribute evidence to other estimates. It is separate from what that player personally prefers.',
+      'A signal-source read describing whether and how a player can contribute evidence to other estimates. It is separate from what that player personally prefers and is not global trust.',
     scope: 'internal',
     implementedStatus: 'partial',
     relatedTerms: ['seed-proxy', 'inverse-signal', 'trust']
@@ -459,6 +549,14 @@ export const REQUIRED_GLOSSARY_TERMS: GlossaryTermId[] = [
   'volatility',
   'rating-period',
   'observed-behavior',
+  'explicit-stated-rating-evidence',
+  'inferred-revealed-preference-evidence',
+  'synthetic-observed-behavior',
+  'external-observed-behavior',
+  'projected-model-evidence',
+  'diagnostic-interpretation',
+  'refresh-revision-context',
+  'compatibility-proxy-evidence',
   'soft-reset',
   'cohort',
   'declared-preference',

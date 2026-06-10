@@ -4,6 +4,7 @@ import type {
   HiddenBehaviorProfile,
   Island,
   IslandClass,
+  IslandUpdateCadenceProfile,
   TagId,
   User
 } from '../model/types.js';
@@ -46,6 +47,7 @@ export interface GeneratorConfig {
   // Deprecated legacy config: no longer mutates archetype behavior generation.
   ratingAlignmentDistribution: AlignmentDistribution;
   islandClassWeights?: Partial<Record<IslandClass, number>>;
+  islandUpdateCadenceProfiles?: Partial<Record<string, IslandUpdateCadenceProfile>>;
 }
 
 export interface ColumbusDataset {
@@ -170,7 +172,8 @@ export function generateColumbusDataset(config: GeneratorConfig): ColumbusDatase
       ...island,
       hiddenTruthClass: truth.hiddenTruthClass,
       hiddenTargetTasteCohortId: truth.hiddenTargetTasteCohortId,
-      hiddenAppealVector: truth.hiddenAppealVector
+      hiddenAppealVector: truth.hiddenAppealVector,
+      updateCadenceProfile: config.islandUpdateCadenceProfiles?.[island.id]
     };
   });
   const cohorts = materializeCohortRatings(baseCohorts, truthAnnotatedIslands, hiddenTasteCohorts);

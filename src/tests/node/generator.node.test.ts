@@ -148,6 +148,26 @@ describe('Columbus generator', () => {
     assert.equal(tagsToVector(user.declaredTags, dataset.allTags).length, dataset.allTags.length);
   });
 
+  it('stamps authored island update cadence profiles from generator config', () => {
+    const dataset = generateColumbusDataset({
+      seed: 12345,
+      numUsers: 2,
+      numIslands: 3,
+      allTags: DEFAULT_TAGS,
+      cohorts: createDefaultCohorts(),
+      tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+      ratingAlignmentDistribution: { kind: 'fixed', value: 10 },
+      islandUpdateCadenceProfiles: {
+        'island-1': 'dormant',
+        'island-3': 'frenetic'
+      }
+    });
+
+    assert.equal(dataset.islands[0]?.updateCadenceProfile, 'dormant');
+    assert.equal(dataset.islands[1]?.updateCadenceProfile, undefined);
+    assert.equal(dataset.islands[2]?.updateCadenceProfile, 'frenetic');
+  });
+
   it('clean cohort archetype preserves strong behavior alignment at high rating alignment', () => {
     const dataset = generateColumbusDataset({ ...baseConfig, numUsers: 18, ratingAlignmentDistribution: { kind: 'fixed', value: 10 } });
     const clean = dataset.users.find((user) => user.hiddenReviewerArchetype === 'CLEAN_COHORT_MATCH');

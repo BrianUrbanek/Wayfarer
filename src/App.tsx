@@ -22,6 +22,7 @@ import { SelectedIslandEvidenceSummary } from './ui/routing/SelectedIslandEviden
 import { DiscoveryRoutingSummary } from './ui/routing/DiscoveryRoutingSummary';
 import { HiddenCohortRecoveryPanel } from './ui/recovery/HiddenCohortRecoveryPanel';
 import { buildLiveIslandEvidenceRead, buildLiveUserEvidenceRead } from './ui/liveEvidenceAdapter';
+import { buildPairEvidenceViewModel } from './ui/liveEvidenceViewModel';
 import { buildStatedRevealedPreferenceDiagnosticForPair } from './ui/statedRevealedPreference';
 import { resolveActiveRunModelEvidencePreset } from './ui/modelingLab/activeRunModelEvidence';
 import { DistributionList } from './ui/components/DistributionList';
@@ -149,6 +150,7 @@ function buildDataset(config: {
   tagAlignmentDistribution: SavedScenarioGeneratorConfig['tagAlignmentDistribution'];
   ratingAlignmentDistribution: SavedScenarioGeneratorConfig['ratingAlignmentDistribution'];
   islandClassWeights ? : SavedScenarioGeneratorConfig['islandClassWeights'];
+  islandUpdateCadenceProfiles ? : SavedScenarioGeneratorConfig['islandUpdateCadenceProfiles'];
 }) {
   return generateColumbusDataset({
     seed: config.seed,
@@ -158,7 +160,8 @@ function buildDataset(config: {
     allTags: DEFAULT_TAGS,
     tagAlignmentDistribution: config.tagAlignmentDistribution,
     ratingAlignmentDistribution: config.ratingAlignmentDistribution,
-    islandClassWeights: config.islandClassWeights
+    islandClassWeights: config.islandClassWeights,
+    islandUpdateCadenceProfiles: config.islandUpdateCadenceProfiles
   });
 }
 
@@ -169,7 +172,8 @@ function buildSimulationStateFromControls(controls: ScenarioPresetControls) {
     numIslands: controls.numIslands,
     tagAlignmentDistribution: controls.tagAlignmentDistribution,
     ratingAlignmentDistribution: controls.ratingAlignmentDistribution,
-    islandClassWeights: controls.islandClassWeights
+    islandClassWeights: controls.islandClassWeights,
+    islandUpdateCadenceProfiles: controls.islandUpdateCadenceProfiles
   });
 
   return createInitialSimulationState({
@@ -422,6 +426,9 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
   const [ratingAlignmentDistribution, setRatingAlignmentDistribution] = useState(
     INITIAL_SCENARIO_PRESET.generatorConfig.ratingAlignmentDistribution
   );
+  const [islandUpdateCadenceProfiles, setIslandUpdateCadenceProfiles] = useState(
+    INITIAL_SCENARIO_PRESET.generatorConfig.islandUpdateCadenceProfiles
+  );
   const [turnMode, setTurnMode] = useState<TurnMode>(INITIAL_SCENARIO_PRESET.turnPolicy.turnMode);
   const [participationModel, setParticipationModel] = useState<ParticipationModel>(INITIAL_SCENARIO_PRESET.turnPolicy.participationModel);
   const [participatingUsersPerTurn, setParticipatingUsersPerTurn] = useState(INITIAL_SCENARIO_PRESET.turnPolicy.participatingUsersPerTurn);
@@ -505,9 +512,10 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         numUsers,
         numIslands,
         tagAlignmentDistribution,
-        ratingAlignmentDistribution
+        ratingAlignmentDistribution,
+        islandUpdateCadenceProfiles
       }),
-    [numIslands, numUsers, ratingAlignmentDistribution, seed, tagAlignmentDistribution]
+    [islandUpdateCadenceProfiles, numIslands, numUsers, ratingAlignmentDistribution, seed, tagAlignmentDistribution]
   );
 
   const initialSimulationState = useMemo(
@@ -1174,12 +1182,14 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       bootstrapRatingsPerUser,
       tagAlignmentDistribution,
       ratingAlignmentDistribution,
+      islandUpdateCadenceProfiles,
       turnPolicy: currentTurnPolicy,
       turnsToRun
     }),
     [
       bootstrapRatingsPerUser,
       currentTurnPolicy,
+      islandUpdateCadenceProfiles,
       numIslands,
       numUsers,
       ratingAlignmentDistribution,
@@ -1234,6 +1244,23 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     },
     [dataset.inferredRatingEvidence, selectedIsland, selectedUser]
   );
+  const selectedPairEvidenceViewModel = useMemo(
+    () => {
+      if (!selectedUser || !selectedIsland) {
+        return null;
+      }
+
+      return buildPairEvidenceViewModel({
+        userId: selectedUser.id,
+        islandId: selectedIsland.id,
+        ratingEvents: dataset.ratingEvents,
+        inferredRatingEvidence: dataset.inferredRatingEvidence,
+        observedBehaviorEvents: dataset.observedBehaviorEvents,
+        refreshEvents: dataset.refreshEvents
+      });
+    },
+    [dataset.inferredRatingEvidence, dataset.observedBehaviorEvents, dataset.ratingEvents, dataset.refreshEvents, selectedIsland, selectedUser]
+  );
 
   const selectedUserSummary = selectedInference  ?  (
     <SelectedUserSummary
@@ -1259,6 +1286,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       behaviorDistributionChart={behaviorDistributionCard}
       liveEvidenceRead={selectedUserLiveEvidenceRead}
       statedRevealedDiagnostic={selectedUserStatedRevealedDiagnostic}
+      pairEvidenceViewModel={selectedPairEvidenceViewModel}
     />
   ) : null;
   const discoveryRoutingSummary = selectedUser  ?  (
@@ -1361,6 +1389,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         islandLabel={selectedIsland.label}
         liveEvidenceRead={selectedIslandLiveEvidenceRead}
         statedRevealedDiagnostic={selectedUserStatedRevealedDiagnostic}
+        pairEvidenceViewModel={selectedPairEvidenceViewModel}
       />
     </div>
   ) : null;
@@ -1825,6 +1854,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setBootstrapRatingsPerUser(controls.bootstrapRatingsPerUser);
     setTagAlignmentDistribution(controls.tagAlignmentDistribution);
     setRatingAlignmentDistribution(controls.ratingAlignmentDistribution);
+    setIslandUpdateCadenceProfiles(controls.islandUpdateCadenceProfiles);
     setTurnMode(controls.turnPolicy.turnMode);
     setParticipationModel(controls.turnPolicy.participationModel);
     setParticipatingUsersPerTurn(controls.turnPolicy.participatingUsersPerTurn);
@@ -1853,7 +1883,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         numIslands,
         bootstrapRatingsPerUser,
         tagAlignmentDistribution,
-        ratingAlignmentDistribution
+        ratingAlignmentDistribution,
+        islandUpdateCadenceProfiles
       },
       turnPolicy: currentTurnPolicy,
       turnsToRun,
@@ -1909,6 +1940,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       tagAlignmentDistribution: scenario.generatorConfig.tagAlignmentDistribution,
       ratingAlignmentDistribution: scenario.generatorConfig.ratingAlignmentDistribution,
       islandClassWeights: scenario.generatorConfig.islandClassWeights,
+      islandUpdateCadenceProfiles: scenario.generatorConfig.islandUpdateCadenceProfiles,
       turnPolicy: scenario.turnPolicy,
       turnsToRun: scenario.turnsToRun
     });
@@ -1924,6 +1956,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
     setBootstrapRatingsPerUser(scenario.generatorConfig.bootstrapRatingsPerUser);
     setTagAlignmentDistribution(scenario.generatorConfig.tagAlignmentDistribution);
     setRatingAlignmentDistribution(scenario.generatorConfig.ratingAlignmentDistribution);
+    setIslandUpdateCadenceProfiles(scenario.generatorConfig.islandUpdateCadenceProfiles);
     setTurnMode(scenario.turnPolicy.turnMode);
     setParticipationModel(scenario.turnPolicy.participationModel);
     setParticipatingUsersPerTurn(scenario.turnPolicy.participatingUsersPerTurn);
@@ -2140,7 +2173,8 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
       numUsers: INITIAL_SCENARIO_PRESET.generatorConfig.numUsers,
       numIslands: INITIAL_SCENARIO_PRESET.generatorConfig.numIslands,
       tagAlignmentDistribution: INITIAL_SCENARIO_PRESET.generatorConfig.tagAlignmentDistribution,
-      ratingAlignmentDistribution: INITIAL_SCENARIO_PRESET.generatorConfig.ratingAlignmentDistribution
+      ratingAlignmentDistribution: INITIAL_SCENARIO_PRESET.generatorConfig.ratingAlignmentDistribution,
+      islandUpdateCadenceProfiles: INITIAL_SCENARIO_PRESET.generatorConfig.islandUpdateCadenceProfiles
     });
     setSimulationState(
       createInitialSimulationState({
@@ -2175,6 +2209,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         bootstrapRatingsPerUser: importedScenario.generatorConfig.bootstrapRatingsPerUser,
         tagAlignmentDistribution: importedScenario.generatorConfig.tagAlignmentDistribution,
         ratingAlignmentDistribution: importedScenario.generatorConfig.ratingAlignmentDistribution,
+        islandUpdateCadenceProfiles: importedScenario.generatorConfig.islandUpdateCadenceProfiles,
         turnPolicy: importedScenario.turnPolicy,
         turnsToRun: importedScenario.turnsToRun
       };
@@ -2185,6 +2220,7 @@ export default function App({ initialGuidanceMode = 'novice' }: AppProps = {}) {
         importedControls.bootstrapRatingsPerUser === currentScenarioControls.bootstrapRatingsPerUser &&
         JSON.stringify(importedControls.tagAlignmentDistribution) === JSON.stringify(currentScenarioControls.tagAlignmentDistribution) &&
         JSON.stringify(importedControls.ratingAlignmentDistribution) === JSON.stringify(currentScenarioControls.ratingAlignmentDistribution) &&
+        JSON.stringify(importedControls.islandUpdateCadenceProfiles ?? null) === JSON.stringify(currentScenarioControls.islandUpdateCadenceProfiles ?? null) &&
         importedControls.turnPolicy.turnMode === currentScenarioControls.turnPolicy.turnMode &&
         importedControls.turnPolicy.participationModel === currentScenarioControls.turnPolicy.participationModel &&
         importedControls.turnPolicy.participatingUsersPerTurn === currentScenarioControls.turnPolicy.participatingUsersPerTurn &&

@@ -60,6 +60,55 @@ describe('selected user summary', () => {
           sourceVersion: 'v1',
           confidence: 0.9
         }}
+        pairEvidenceViewModel={{
+          userId: 'user-1',
+          islandId: 'island-1',
+          explicitStated: {
+            category: 'explicit-stated-rating-evidence',
+            state: 'canonical',
+            current: null,
+            historical: [],
+            superseded: [],
+            note: 'Current explicit stated rating is version-aware.'
+          },
+          inferredRevealed: {
+            category: 'inferred-revealed-preference-evidence',
+            state: 'compatibility',
+            current: null,
+            records: [],
+            historical: [],
+            note: 'Legacy inferred revealed-preference evidence lacks refresh version context.'
+          },
+          syntheticObservedBehavior: {
+            category: 'synthetic-observed-behavior',
+            state: 'compatibility',
+            records: [],
+            note: 'Synthetic observed behavior is generated from explicit rating events.'
+          },
+          refreshContext: {
+            category: 'refresh-revision-context',
+            state: 'canonical',
+            activeGameRulesVersionId: 'game-rules-v1',
+            activeIslandVersionId: 'island:island-1:v1',
+            refreshEvents: [],
+            note: 'Refresh and revision context controls current evidence eligibility without deleting history.'
+          },
+          diagnostics: {
+            userId: 'user-1',
+            islandId: 'island-1',
+            explicitRating: -1,
+            inferredRating: 1,
+            explicitPolarity: 'negative',
+            inferredPolarity: 'positive',
+            state: 'stated-negative-revealed-positive',
+            explanation: 'The player said dislike, but the inferred evidence suggests instrumental engagement.',
+            provenance: 'Black-box upstream engagement feed',
+            sourceSystem: 'upstream-telemetry',
+            sourceVersion: 'v1',
+            confidence: 0.9,
+            category: 'diagnostic-interpretation'
+          }
+        }}
       />
     );
 
@@ -72,6 +121,11 @@ describe('selected user summary', () => {
     expect(html).toContain('canonical modeling-core evidence');
     expect(html).toContain('Stated vs revealed');
     expect(html).toContain('stated-negative-revealed-positive');
+    expect(html).toContain('Canonical pair evidence');
+    expect(html).toContain('explicit-stated-rating-evidence');
+    expect(html).toContain('inferred-revealed-preference-evidence');
+    expect(html).toContain('synthetic-observed-behavior');
+    expect(html).toContain('refresh-revision-context');
     expect(html).not.toContain('Retrospective usefulness uses observed behavior and stored confidence snapshots.');
     expect(html).toContain('Expert provenance');
   });

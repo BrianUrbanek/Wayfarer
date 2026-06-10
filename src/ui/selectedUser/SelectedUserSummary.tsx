@@ -6,6 +6,7 @@ import type { UserSignalDiagnosisSummary } from '../userSignalDiagnosis';
 import type { ReactNode } from 'react';
 import type { LiveUserEvidenceRead } from '../liveEvidenceAdapter';
 import type { StatedRevealedPreferenceDiagnostic } from '../../model/inferredRatingEvidence';
+import type { PairEvidenceViewModel } from '../liveEvidenceViewModel';
 
 interface SelectedUserSummaryProps {
   selectedUserLabel: string;
@@ -26,6 +27,7 @@ interface SelectedUserSummaryProps {
   behaviorDistributionChart: ReactNode;
   liveEvidenceRead: LiveUserEvidenceRead;
   statedRevealedDiagnostic?: StatedRevealedPreferenceDiagnostic | null;
+  pairEvidenceViewModel?: PairEvidenceViewModel | null;
 }
 
 export function SelectedUserSummary(props: SelectedUserSummaryProps) {
@@ -47,7 +49,8 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
     declaredDistributionChart,
     behaviorDistributionChart,
     liveEvidenceRead,
-    statedRevealedDiagnostic
+    statedRevealedDiagnostic,
+    pairEvidenceViewModel
   } = props;
 
   return (
@@ -175,6 +178,36 @@ export function SelectedUserSummary(props: SelectedUserSummaryProps) {
           <p className="muted">{liveEvidenceRead.volatilitySummary}</p>
         </div>
       </section>
+      {pairEvidenceViewModel ? (
+        <section className="detail-block">
+          <div className="section-heading">
+            <h4>Canonical pair evidence</h4>
+            <p className="muted">Read-only evidence categories for the selected user and island. These do not alter routing behavior.</p>
+          </div>
+          <div className="metric-grid metric-grid--compact">
+            <MetricCard
+              label={pairEvidenceViewModel.explicitStated.category}
+              value={pairEvidenceViewModel.explicitStated.state}
+              helper={pairEvidenceViewModel.explicitStated.note}
+            />
+            <MetricCard
+              label={pairEvidenceViewModel.inferredRevealed.category}
+              value={pairEvidenceViewModel.inferredRevealed.state}
+              helper={pairEvidenceViewModel.inferredRevealed.note}
+            />
+            <MetricCard
+              label={pairEvidenceViewModel.syntheticObservedBehavior.category}
+              value={pairEvidenceViewModel.syntheticObservedBehavior.state}
+              helper={pairEvidenceViewModel.syntheticObservedBehavior.note}
+            />
+            <MetricCard
+              label={pairEvidenceViewModel.refreshContext.category}
+              value={pairEvidenceViewModel.refreshContext.state}
+              helper={pairEvidenceViewModel.refreshContext.note}
+            />
+          </div>
+        </section>
+      ) : null}
       <div className="summary-inline">
         <Badge
           tone={

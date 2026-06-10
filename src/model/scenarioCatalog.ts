@@ -1,7 +1,7 @@
 import rawScenarioCatalog from '../data/scenario-catalog.json' with { type: 'json' };
 import type { AlignmentDistribution } from '../generator/columbusGenerator.js';
 import type { AdvancePolicyTurnConfig } from './simulation.js';
-import type { IslandClass } from './types.js';
+import type { IslandClass, IslandUpdateCadenceProfile } from './types.js';
 
 export interface ScenarioCatalogDemoPreset {
   id: string;
@@ -16,6 +16,7 @@ export interface ScenarioCatalogDemoPreset {
     tagAlignmentDistribution: AlignmentDistribution;
     ratingAlignmentDistribution: AlignmentDistribution;
     islandClassWeights?: Partial<Record<IslandClass, number>>;
+    islandUpdateCadenceProfiles?: Partial<Record<string, IslandUpdateCadenceProfile>>;
   };
   turnPolicy: AdvancePolicyTurnConfig;
   turnsToRun: number;
@@ -69,6 +70,10 @@ function isNumber(value: unknown): value is number {
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
+}
+
+function isIslandUpdateCadenceProfile(value: unknown): value is IslandUpdateCadenceProfile {
+  return value === 'dormant' || value === 'slow' || value === 'steady' || value === 'active' || value === 'frenetic';
 }
 
 function isAlignmentDistribution(value: unknown): value is AlignmentDistribution {
@@ -127,6 +132,9 @@ function isDemoPreset(value: unknown): value is ScenarioCatalogDemoPreset {
     (value.generatorConfig.islandClassWeights === undefined ||
       (isRecord(value.generatorConfig.islandClassWeights) &&
         Object.values(value.generatorConfig.islandClassWeights).every(isNumber))) &&
+    (value.generatorConfig.islandUpdateCadenceProfiles === undefined ||
+      (isRecord(value.generatorConfig.islandUpdateCadenceProfiles) &&
+        Object.values(value.generatorConfig.islandUpdateCadenceProfiles).every(isIslandUpdateCadenceProfile))) &&
     isTurnPolicy(value.turnPolicy) &&
     isNumber(value.turnsToRun)
   );

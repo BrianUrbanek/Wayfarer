@@ -205,6 +205,54 @@ describe('simulation layer', () => {
     assert.equal(resolveHeartbeatCadenceProfile(bootstrap.seed, bootstrap.islands[0], freneticPolicy), 'frenetic');
   });
 
+  it('uses authored island update cadence before seeded fallback cadence', () => {
+    const bootstrap = buildHeartbeatBootstrap(97535);
+    const authoredIsland = {
+      ...bootstrap.islands[0],
+      updateCadenceProfile: 'frenetic' as const
+    };
+    const fallbackPolicy = buildHeartbeatPolicy({
+      islandCadenceProfileWeights: {
+        dormant: 1,
+        slow: 0,
+        steady: 0,
+        active: 0,
+        frenetic: 0
+      }
+    });
+
+    assert.equal(resolveHeartbeatCadenceProfile(bootstrap.seed, authoredIsland, fallbackPolicy), 'frenetic');
+    assert.equal(resolveHeartbeatCadenceProfile(bootstrap.seed, bootstrap.islands[0], fallbackPolicy), 'dormant');
+  });
+
+  it('keeps authored island cadence deterministic and limited to refresh timing', () => {
+    const bootstrap = buildHeartbeatBootstrap(97536);
+    const authoredState = createInitialSimulationState({
+      ...bootstrap,
+      islands: [{ ...bootstrap.islands[0], updateCadenceProfile: 'frenetic' }],
+      initialRatingsPerUser: 0
+    });
+    const policy = buildHeartbeatPolicy({
+      maxIslandInspectionsPerTurn: 1,
+      maxIslandUpdatesPerTurn: 1,
+      islandCadenceProfileWeights: {
+        dormant: 1,
+        slow: 0,
+        steady: 0,
+        active: 0,
+        frenetic: 0
+      }
+    });
+
+    const first = buildHeartbeatRefreshEvents(authoredState, 1, policy);
+    const second = buildHeartbeatRefreshEvents(authoredState, 1, policy);
+
+    assert.deepEqual(first, second);
+    assert.equal(first.filter((event) => event.kind === 'islandUpdate').length, 1);
+    assert.equal(authoredState.islands[0]?.updateCadenceProfile, 'frenetic');
+    assert.deepEqual(authoredState.latentUsers[0]?.ratings, bootstrap.latentUsers[0]?.ratings);
+  });
+
   it('allows repeated nearby island updates without cooldown and respects update caps', () => {
     const bootstrap = buildHeartbeatBootstrap(97533);
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });

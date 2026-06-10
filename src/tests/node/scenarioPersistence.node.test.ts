@@ -167,6 +167,66 @@ describe('scenario persistence', () => {
     }
   });
 
+  it('round-trips authored island update cadence and keeps it optional for legacy scenarios', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({
+      ...bootstrap,
+      islands: bootstrap.islands.map((island, index) =>
+        index === 0 ? { ...island, updateCadenceProfile: 'active' as const } : island
+      ),
+      initialRatingsPerUser: 0
+    });
+    const serialized = serializeSimulationState(state);
+    const parsed = parseSavedWayfarerScenario(JSON.stringify({
+      version: 1,
+      kind: 'simulation-state',
+      label: 'authored cadence',
+      createdAt: new Date(0).toISOString(),
+      generatorConfig: {
+        seed: bootstrap.seed,
+        numUsers: bootstrap.latentUsers.length,
+        numIslands: bootstrap.islands.length,
+        bootstrapRatingsPerUser: 0,
+        tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+        ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+      },
+      turnPolicy: buildTurnPolicy(),
+      turnsToRun: 1,
+      simulationState: serialized
+    }));
+
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) {
+      return;
+    }
+
+    assert.equal(parsed.restoredState.islands[0]?.updateCadenceProfile, 'active');
+    assert.equal(parsed.restoredState.islands[1]?.updateCadenceProfile, undefined);
+
+    const legacyParsed = parseSavedWayfarerScenario(JSON.stringify({
+      version: 1,
+      kind: 'simulation-state',
+      label: 'legacy cadence',
+      createdAt: new Date(0).toISOString(),
+      generatorConfig: {
+        seed: bootstrap.seed,
+        numUsers: bootstrap.latentUsers.length,
+        numIslands: bootstrap.islands.length,
+        bootstrapRatingsPerUser: 0,
+        tagAlignmentDistribution: { kind: 'fixed', value: 10 },
+        ratingAlignmentDistribution: { kind: 'fixed', value: 10 }
+      },
+      turnPolicy: buildTurnPolicy(),
+      turnsToRun: 1,
+      simulationState: {
+        ...serialized,
+        islands: serialized.islands.map(({ updateCadenceProfile: _unused, ...island }) => island)
+      }
+    }));
+
+    assert.equal(legacyParsed.ok, true);
+  });
+
   it('rejects invalid saved scenario shapes', () => {
     const missingWeights = parseSavedWayfarerScenario(
       JSON.stringify({

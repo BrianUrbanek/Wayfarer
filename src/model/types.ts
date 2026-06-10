@@ -20,6 +20,7 @@ export type InferredEvidenceSource = 'black-box-upstream';
 export type HiddenBehaviorProfile = 'aligned' | 'positive-drift' | 'negative-drift';
 export type HiddenTasteCohortKind = 'seed' | 'unseeded';
 export type HiddenTasteTruthClass = 'seed-cohort-match' | 'unseeded-cohort-match' | 'random';
+export type IslandUpdateCadenceProfile = 'dormant' | 'slow' | 'steady' | 'active' | 'frenetic';
 
 export type IslandClass =
   | 'BROAD_HIT'
@@ -36,6 +37,7 @@ export interface Island {
   hiddenTruthClass?: HiddenTasteTruthClass;
   hiddenTargetTasteCohortId?: CohortId | null;
   hiddenAppealVector?: Record<TagId, number>;
+  updateCadenceProfile?: IslandUpdateCadenceProfile;
 }
 
 export interface CohortAnchor {
@@ -117,4 +119,6 @@ export interface InferredRatingEvidenceRecord {
   confidence: number;
   provenance: string;
   sourceCategory?: InferredEvidenceSource;
+  islandVersionId?: string;
+  gameRulesVersionId?: string;
 }

@@ -31,10 +31,10 @@ export function ObservedBehaviorEvidencePanel({
   return (
     <section className="detail-block">
       <div className="section-heading">
-        <h4>Observed behavior</h4>
+        <h4>Synthetic observed behavior</h4>
         <p>
-          Synthetic observed behavior is generated from rating events for now. It is stored separately from ratings and does
-          not yet drive confidence, routing, recommendations, or Discovery Signal.
+          Synthetic observed behavior is generated from explicit rating events for now. It is stored separately from ratings and
+          inferred revealed-preference evidence, and it is not raw telemetry.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export function ObservedBehaviorEvidencePanel({
       />
 
       {behaviorSummary ? (
-        <p className="muted">Behavior polarity is stored as a separate evidence layer; current ratings still control affinity and routing.</p>
+        <p className="muted">Synthetic behavior polarity is stored as a separate evidence layer; current explicit ratings still control affinity and routing.</p>
       ) : null}
     </section>
   );

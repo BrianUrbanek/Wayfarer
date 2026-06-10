@@ -35,6 +35,9 @@ describe('scenario presets', () => {
     assert.equal(preset.turnPolicy.guidedRatingCountModel, 'fixed-count');
     assert.equal(preset.turnPolicy.guidedRecommendationsPerUser, 2);
     assert.equal(preset.turnsToRun, 18);
+    assert.equal(preset.generatorConfig.islandUpdateCadenceProfiles?.['island-1'], 'dormant');
+    assert.equal(preset.generatorConfig.islandUpdateCadenceProfiles?.['island-2'], 'steady');
+    assert.equal(preset.generatorConfig.islandUpdateCadenceProfiles?.['island-3'], 'frenetic');
   });
 
   it('attaches the modeling-backed demo metadata without changing persistence fields', () => {
