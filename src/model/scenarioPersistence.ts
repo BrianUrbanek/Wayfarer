@@ -67,6 +67,16 @@ function isRatingWeights(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every(isNumber);
 }
 
+function validateEvidenceEpoch(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const world = value.world;
+  const island = value.island;
+  return typeof world === 'number' && typeof island === 'number' && Number.isInteger(world) && Number.isInteger(island) && world >= 0 && island >= 0;
+}
+
 function isHiddenBehaviorProfile(value: unknown): value is 'aligned' | 'positive-drift' | 'negative-drift' {
   return value === 'aligned' || value === 'positive-drift' || value === 'negative-drift';
 }
@@ -237,6 +247,10 @@ function validateRatingEvent(value: unknown): value is RatingEvent {
     return false;
   }
 
+  if (value.epoch !== undefined && !validateEvidenceEpoch(value.epoch)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -294,6 +308,7 @@ function validateInferredRatingEvidenceRecord(value: unknown): value is Inferred
     isNumber(value.confidence) &&
     isString(value.provenance) &&
     (value.sourceCategory === undefined || value.sourceCategory === 'black-box-upstream') &&
+    (value.epoch === undefined || validateEvidenceEpoch(value.epoch)) &&
     (value.islandVersionId === undefined || isString(value.islandVersionId)) &&
     (value.gameRulesVersionId === undefined || isString(value.gameRulesVersionId))
   );
@@ -375,6 +390,22 @@ function validateSerializedSimulationState(value: unknown): value is SerializedS
 
   if (value.refreshEvents !== undefined) {
     if (!Array.isArray(value.refreshEvents) || !value.refreshEvents.every(validateRatingRefreshEvent)) {
+      return false;
+    }
+  }
+
+  if (value.currentWorldEpoch !== undefined) {
+    const currentWorldEpoch = value.currentWorldEpoch;
+    if (typeof currentWorldEpoch !== 'number' || !Number.isInteger(currentWorldEpoch) || currentWorldEpoch < 0) {
+      return false;
+    }
+  }
+
+  if (value.islandEpochById !== undefined) {
+    if (
+      !isRecord(value.islandEpochById) ||
+      !Object.values(value.islandEpochById).every((entry) => typeof entry === 'number' && Number.isInteger(entry) && entry >= 0)
+    ) {
       return false;
     }
   }

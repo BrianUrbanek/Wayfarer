@@ -22,6 +22,11 @@ export type HiddenTasteCohortKind = 'seed' | 'unseeded';
 export type HiddenTasteTruthClass = 'seed-cohort-match' | 'unseeded-cohort-match' | 'random';
 export type IslandUpdateCadenceProfile = 'dormant' | 'slow' | 'steady' | 'active' | 'frenetic';
 
+export interface EvidenceEpoch {
+  world: number;
+  island: number;
+}
+
 export type IslandClass =
   | 'BROAD_HIT'
   | 'BROAD_DUD'
@@ -119,6 +124,7 @@ export interface InferredRatingEvidenceRecord {
   confidence: number;
   provenance: string;
   sourceCategory?: InferredEvidenceSource;
+  epoch?: EvidenceEpoch;
   islandVersionId?: string;
   gameRulesVersionId?: string;
 }

@@ -80,6 +80,9 @@ describe('selected island evidence summary', () => {
             category: 'explicit-stated-rating-evidence',
             state: 'canonical',
             current: null,
+            currentEpoch: null,
+            currentIslandEpoch: { world: 0, island: 0 },
+            freshness: 'context-unknown',
             historical: [],
             superseded: [],
             note: 'Current explicit stated rating is version-aware.'
@@ -88,6 +91,9 @@ describe('selected island evidence summary', () => {
             category: 'inferred-revealed-preference-evidence',
             state: 'compatibility',
             current: null,
+            currentEpoch: null,
+            currentIslandEpoch: { world: 0, island: 0 },
+            freshness: 'context-unknown',
             records: [],
             historical: [],
             note: 'Legacy inferred revealed-preference evidence lacks refresh version context.'

@@ -11,6 +11,14 @@ import {
   buildObservedBehaviorEvents,
   type ObservedBehaviorEvent
 } from './observedBehavior.js';
+import {
+  buildEvidenceEpochState,
+  compareEvidenceEpoch,
+  createInitialEpoch,
+  createInitialEvidenceEpoch,
+  getCurrentEpochForIsland,
+  type EvidenceEpochState
+} from './evidenceEpoch.js';
 import { buildRaterSignalProfiles, type RaterSignalProfile } from './raterSignal.js';
 import {
   recommendIslandsForUser,
@@ -36,6 +44,7 @@ import type {
   CohortAnchor,
   CohortId,
   DiagnosisType,
+  EvidenceEpoch,
   InferredRatingEvidenceRecord,
   Island,
   IslandId,
@@ -70,6 +79,7 @@ export interface RatingEvent {
   readonly raterSignalWeights: Record<CohortId, number>;
   readonly revisionReason?: RatingRevisionReason;
   readonly supersedesEventId?: string;
+  readonly epoch?: EvidenceEpoch;
   readonly islandVersionId?: string;
   readonly gameRulesVersionId?: string;
 }
@@ -112,6 +122,8 @@ export interface SimulationState {
   ratingEvents: RatingEvent[];
   inferredRatingEvidence: InferredRatingEvidenceRecord[];
   refreshEvents: RatingRefreshEvent[];
+  currentWorldEpoch: number;
+  islandEpochById: Record<IslandId, number>;
   observedBehaviorEvents: ObservedBehaviorEvent[];
   islandCohortRatingSnapshots: IslandCohortRatingState[];
   confidenceSnapshots: IslandCohortConfidenceSnapshot[];
@@ -134,6 +146,8 @@ export interface SerializedSimulationState {
   ratingEvents: RatingEvent[];
   inferredRatingEvidence?: InferredRatingEvidenceRecord[];
   refreshEvents?: RatingRefreshEvent[];
+  currentWorldEpoch?: number;
+  islandEpochById?: Record<IslandId, number>;
   observedBehaviorEvents?: ObservedBehaviorEvent[];
   islandCohortRatingSnapshots?: IslandCohortRatingState[];
   confidenceSnapshots?: IslandCohortConfidenceSnapshot[];
@@ -202,11 +216,33 @@ function latestHistoricalRatingEvent(
   return null;
 }
 
+function normalizeRatingEventEpochs(events: readonly RatingEvent[]): RatingEvent[] {
+  return events.map((event) => ({
+    ...event,
+    epoch: event.epoch ? { ...event.epoch } : createInitialEpoch(),
+    raterSignalWeights: { ...event.raterSignalWeights }
+  }));
+}
+
 function resolveRevisionReason(
   previousEvent: RatingEvent | null,
-  nextEvent: { rating: Rating; source: RatingEventSource; islandVersionId: string; gameRulesVersionId: string }
+  nextEvent: { rating: Rating; source: RatingEventSource; islandVersionId: string; gameRulesVersionId: string; epoch?: EvidenceEpoch }
 ): RatingRevisionReason | null {
   if (!previousEvent) {
+    return null;
+  }
+
+  if (previousEvent.epoch && nextEvent.epoch) {
+    const freshness = compareEvidenceEpoch(previousEvent.epoch, nextEvent.epoch);
+    if (freshness === 'prior-world-context') {
+      return 'gamePatchRefresh';
+    }
+    if (freshness === 'prior-island-context') {
+      return 'islandUpdateRefresh';
+    }
+    if (previousEvent.rating !== nextEvent.rating) {
+      return 'playerChangedMind';
+    }
     return null;
   }
 
@@ -261,30 +297,6 @@ function buildCurrentRatingVersions(
   }
 
   return versions;
-}
-
-function buildCurrentContextTurnByIsland(
-  islands: readonly Island[],
-  refreshEvents: readonly RatingRefreshEvent[]
-): Record<IslandId, number> {
-  const currentTurns = Object.fromEntries(islands.map((island) => [island.id, -1])) as Record<IslandId, number>;
-  let currentGamePatchTurn = -1;
-
-  for (const event of refreshEvents.slice().sort((left, right) => left.turn - right.turn || left.id.localeCompare(right.id))) {
-    if (event.kind === 'gamePatch') {
-      currentGamePatchTurn = Math.max(currentGamePatchTurn, event.turn);
-      for (const island of islands) {
-        currentTurns[island.id] = Math.max(currentTurns[island.id], currentGamePatchTurn);
-      }
-      continue;
-    }
-
-    if (event.kind === 'islandUpdate' && event.islandId) {
-      currentTurns[event.islandId] = Math.max(currentTurns[event.islandId] ?? -1, event.turn);
-    }
-  }
-
-  return currentTurns;
 }
 
 function hashString(input: string): number {
@@ -425,20 +437,20 @@ function countHeartbeatRefreshEvents(refreshEvents: readonly RatingRefreshEvent[
 
 function isCurrentRatingEvent(
   event: RatingEvent,
-  currentContextTurnByIsland: Record<IslandId, number>
+  epochState: EvidenceEpochState
 ): boolean {
-  return event.turn >= (currentContextTurnByIsland[event.islandId] ?? -1);
+  return compareEvidenceEpoch(event.epoch, getCurrentEpochForIsland(epochState, event.islandId)) === 'current-context';
 }
 
 function latestActiveRatingsByPair(
   events: readonly RatingEvent[],
-  currentContextTurnByIsland: Record<IslandId, number>
+  epochState: EvidenceEpochState
 ): ReadonlyMap<string, RatingEvent> {
   const superseded = new Set(events.map((event) => event.supersedesEventId).filter((entryId): entryId is string => Boolean(entryId)));
   const active = new Map<string, RatingEvent>();
 
   for (const event of events) {
-    if (!isCurrentRatingEvent(event, currentContextTurnByIsland) || superseded.has(event.id)) {
+    if (!isCurrentRatingEvent(event, epochState) || superseded.has(event.id)) {
       continue;
     }
     const key = pairKey(event.userId, event.islandId);
@@ -449,6 +461,24 @@ function latestActiveRatingsByPair(
   }
 
   return active;
+}
+
+function latestStatedRatingsByPair(events: readonly RatingEvent[]): ReadonlyMap<string, RatingEvent> {
+  const superseded = new Set(events.map((event) => event.supersedesEventId).filter((entryId): entryId is string => Boolean(entryId)));
+  const latest = new Map<string, RatingEvent>();
+
+  for (const event of events) {
+    if (superseded.has(event.id)) {
+      continue;
+    }
+    const key = pairKey(event.userId, event.islandId);
+    const existing = latest.get(key);
+    if (!existing || existing.turn < event.turn || (existing.turn === event.turn && existing.id.localeCompare(event.id) < 0)) {
+      latest.set(key, event);
+    }
+  }
+
+  return latest;
 }
 
 function buildRecommendationCounts(): Record<RecommendationKind, number> {
@@ -516,27 +546,6 @@ function cloneUsers(users: readonly User[]): User[] {
     ratings: { ...user.ratings },
     hiddenTastePreferenceVector: user.hiddenTastePreferenceVector ? { ...user.hiddenTastePreferenceVector } : undefined
   }));
-}
-
-function applyEventsToVisibleUsers(
-  users: readonly User[],
-  events: readonly RatingEvent[],
-  currentContextTurnByIsland: Record<IslandId, number>
-): User[] {
-  const nextUsers = cloneUsers(users);
-  const usersById = new Map(nextUsers.map((user) => [user.id, user]));
-  const activeRatings = latestActiveRatingsByPair(events, currentContextTurnByIsland);
-
-  for (const event of activeRatings.values()) {
-    const user = usersById.get(event.userId);
-    if (!user) {
-      continue;
-    }
-
-    user.ratings[event.islandId] = event.rating;
-  }
-
-  return nextUsers;
 }
 
 function buildConfidenceSnapshotsForTurn(
@@ -608,9 +617,9 @@ function buildConfidenceSnapshots(
   for (const turn of uniqueTurns) {
     const turnEvents = ratingEvents.filter((event) => event.turn <= turn);
     const turnRefreshEvents = refreshEvents.filter((event) => event.turn <= turn);
-    const currentContextTurnByIsland = buildCurrentContextTurnByIsland(islands, turnRefreshEvents);
-    const activeTurnEvents = Array.from(latestActiveRatingsByPair(turnEvents, currentContextTurnByIsland).values());
-    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, activeTurnEvents, currentContextTurnByIsland);
+    const epochState = buildEvidenceEpochState(islands, turnRefreshEvents);
+    const activeTurnEvents = Array.from(latestActiveRatingsByPair(turnEvents, epochState).values());
+    const visibleUsers = deriveVisibleUsersFromEvents(latentUsers, islands, turnEvents);
     const inferenceByUserId = computeInferenceMap(visibleUsers, cohorts, islands, allTags);
     const signalAnalysis = buildRaterSignalProfiles(visibleUsers, inferenceByUserId, cohorts);
     const affinityAnalysis = buildIslandAffinityReports(activeTurnEvents, signalAnalysis.byUserId, cohorts, islands, {
@@ -638,11 +647,10 @@ function buildConfidenceSnapshots(
 export function deriveVisibleUsersFromEvents(
   latentUsers: readonly User[],
   islands: readonly Island[],
-  events: readonly RatingEvent[],
-  currentContextTurnByIsland: Record<IslandId, number> = Object.fromEntries(islands.map((island) => [island.id, -1])) as Record<IslandId, number>
+  events: readonly RatingEvent[]
 ): User[] {
   const ratingsByUserId = new Map<UserId, Record<IslandId, MaybeRating>>();
-  const activeRatings = latestActiveRatingsByPair(events, currentContextTurnByIsland);
+  const activeRatings = latestStatedRatingsByPair(events);
 
   for (const user of latentUsers) {
     ratingsByUserId.set(user.id, buildBlankRatings(islands));
@@ -658,6 +666,16 @@ export function deriveVisibleUsersFromEvents(
   }
 
   return latentUsers.map((user) => cloneUserWithRatings(user, ratingsByUserId.get(user.id) ?? buildBlankRatings(islands)));
+}
+
+function deriveCurrentContextVisibleUsers(
+  latentUsers: readonly User[],
+  islands: readonly Island[],
+  events: readonly RatingEvent[],
+  epochState: EvidenceEpochState
+): User[] {
+  const activeRatings = Array.from(latestActiveRatingsByPair(events, epochState).values());
+  return deriveVisibleUsersFromEvents(latentUsers, islands, activeRatings);
 }
 
 function computeInferenceMap(
@@ -699,6 +717,7 @@ function createRatingEventsForUsers(
   islands: readonly Island[],
   cohorts: readonly CohortAnchor[],
   _hiddenTasteCohorts: readonly HiddenTasteCohort[] = [],
+  epochState: EvidenceEpochState,
   participatingUsersPerTurn: number,
   maxRatingsPerUser: number
 ): RatingEvent[] {
@@ -750,6 +769,7 @@ function createRatingEventsForUsers(
         rating,
         source: 'organic',
         raterSignalWeights: buildBootstrapSignalWeightSnapshot(cohorts),
+        epoch: getCurrentEpochForIsland(epochState, islandId),
         islandVersionId: `island:${islandId}:v0`,
         gameRulesVersionId: 'game-rules-v0'
       });
@@ -805,10 +825,11 @@ function recomputeState(
   islandCohortRatingSnapshots?: readonly IslandCohortRatingState[],
   confidenceSnapshots?: readonly IslandCohortConfidenceSnapshot[]
 ): SimulationState {
+  const normalizedRatingEvents = normalizeRatingEventEpochs(ratingEvents);
   const normalizedInferredRatingEvidence = inferredRatingEvidence.map((entry) => ({ ...entry }));
-  const currentContextTurnByIsland = buildCurrentContextTurnByIsland(islands, refreshEvents);
-  const activeRatingEvents = Array.from(latestActiveRatingsByPair(ratingEvents, currentContextTurnByIsland).values());
-  const users = deriveVisibleUsersFromEvents(latentUsers, islands, activeRatingEvents, currentContextTurnByIsland);
+  const epochState = buildEvidenceEpochState(islands, refreshEvents);
+  const activeRatingEvents = Array.from(latestActiveRatingsByPair(normalizedRatingEvents, epochState).values());
+  const users = deriveVisibleUsersFromEvents(latentUsers, islands, normalizedRatingEvents);
   const inferenceByUserId = computeInferenceMap(
     users,
     cohorts,
@@ -817,7 +838,7 @@ function recomputeState(
   );
   const raterSignalAnalysis = buildRaterSignalProfiles(users, inferenceByUserId, cohorts);
   const normalizedObservedBehaviorEvents =
-    observedBehaviorEvents ?? buildObservedBehaviorEvents(ratingEvents, latentUsers, seed);
+    observedBehaviorEvents ?? buildObservedBehaviorEvents(normalizedRatingEvents, latentUsers, seed);
   const derivedIslandCohortRatingSnapshots =
     islandCohortRatingSnapshots ??
     buildIslandCohortRatingSnapshots({
@@ -869,8 +890,10 @@ function recomputeState(
     })),
     islands: islands.map((island) => cloneIsland(island)),
     hiddenTasteCohorts: hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
-    ratingEvents: ratingEvents.map((event) => ({ ...event })),
+    ratingEvents: normalizedRatingEvents.map((event) => ({ ...event })),
     refreshEvents: refreshEvents.map((event) => ({ ...event })),
+    currentWorldEpoch: epochState.currentWorldEpoch,
+    islandEpochById: { ...epochState.islandEpochById },
     observedBehaviorEvents: normalizedObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: derivedIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     inferenceByUserId,
@@ -885,7 +908,7 @@ function recomputeState(
     })),
     confidenceSnapshots: confidenceSnapshots
       ? confidenceSnapshots.map((snapshot) => cloneConfidenceSnapshot(snapshot))
-      : buildConfidenceSnapshots(latentUsers, cohorts, islands, ratingEvents, turnHistory, allTags, refreshEvents),
+      : buildConfidenceSnapshots(latentUsers, cohorts, islands, normalizedRatingEvents, turnHistory, allTags, refreshEvents),
     inferredRatingEvidence: normalizedInferredRatingEvidence
   };
 }
@@ -962,10 +985,16 @@ export function serializeSimulationState(state: SimulationState): SerializedSimu
     hiddenTasteCohorts: state.hiddenTasteCohorts.map((cohort) => cloneHiddenTasteCohort(cohort)),
     ratingEvents: state.ratingEvents.map((event) => ({
       ...event,
+      epoch: event.epoch ? { ...event.epoch } : undefined,
       raterSignalWeights: { ...event.raterSignalWeights }
     })),
-    inferredRatingEvidence: state.inferredRatingEvidence.map((entry) => ({ ...entry })),
+    inferredRatingEvidence: state.inferredRatingEvidence.map((entry) => ({
+      ...entry,
+      epoch: entry.epoch ? { ...entry.epoch } : undefined
+    })),
     refreshEvents: state.refreshEvents.map((event) => ({ ...event })),
+    currentWorldEpoch: state.currentWorldEpoch,
+    islandEpochById: { ...state.islandEpochById },
     observedBehaviorEvents: state.observedBehaviorEvents.map((event) => ({ ...event })),
     islandCohortRatingSnapshots: state.islandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     confidenceSnapshots: state.confidenceSnapshots.map((snapshot) => ({ ...snapshot })),
@@ -1007,15 +1036,16 @@ export function createInitialSimulationState(config: SimulationBootstrapConfig):
   const hiddenTasteCohorts =
     config.hiddenTasteCohorts?.map((cohort) => cloneHiddenTasteCohort(cohort)) ??
     deriveHiddenTasteCohortsFromUsers(config.latentUsers, config.cohorts);
-  const initialContextTurnByIsland = Object.fromEntries(config.islands.map((island) => [island.id, -1])) as Record<IslandId, number>;
+  const initialEpochState = createInitialEvidenceEpoch(config.islands);
   const initialEvents = createRatingEventsForUsers(
     rng,
     0,
     config.latentUsers,
-    deriveVisibleUsersFromEvents(config.latentUsers, config.islands, [], initialContextTurnByIsland),
+    deriveVisibleUsersFromEvents(config.latentUsers, config.islands, []),
     config.islands,
     config.cohorts,
     hiddenTasteCohorts,
+    initialEpochState,
     config.latentUsers.length,
     config.initialRatingsPerUser
   );
@@ -1089,6 +1119,7 @@ function createOrganicEventsForUsers(
   selectedUsers: readonly User[],
   historicalEvents: readonly RatingEvent[],
   currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> },
+  epochState: EvidenceEpochState,
   ratingCountModel: RatingCountModel,
   fixedRatingsPerUser: number,
   diceExpression: SupportedDiceExpression,
@@ -1135,6 +1166,7 @@ function createOrganicEventsForUsers(
         rating,
         source: 'organic' as const,
         raterSignalWeights: weights,
+        epoch: getCurrentEpochForIsland(epochState, islandId),
         islandVersionId: currentVersions.islandVersionById[islandId],
         gameRulesVersionId: currentVersions.gameRulesVersionId
       };
@@ -1165,6 +1197,7 @@ function createGuidedRatingEventsForUsers(
   selectedUsers: readonly User[],
   historicalEvents: readonly RatingEvent[],
   currentVersions: { gameRulesVersionId: string; islandVersionById: Record<IslandId, string> },
+  epochState: EvidenceEpochState,
   ratingCountModel: RatingCountModel,
   fixedRecommendationsPerUser: number,
   diceExpression: SupportedDiceExpression,
@@ -1215,6 +1248,7 @@ function createGuidedRatingEventsForUsers(
         rating,
         source: 'guided' as const,
         raterSignalWeights: weights,
+        epoch: getCurrentEpochForIsland(epochState, recommendation.islandId),
         islandVersionId: currentVersions.islandVersionById[recommendation.islandId],
         gameRulesVersionId: currentVersions.gameRulesVersionId
       };
@@ -1251,8 +1285,8 @@ export function advancePolicyTurn(
   const heartbeatRefreshEvents = buildHeartbeatRefreshEvents(state, turn, heartbeat);
   const nextRefreshEvents = state.refreshEvents.concat(heartbeatRefreshEvents);
   const currentVersions = buildCurrentRatingVersions(state.islands, nextRefreshEvents);
-  const currentContextTurnByIsland = buildCurrentContextTurnByIsland(state.islands, nextRefreshEvents);
-  const visibleUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, state.ratingEvents, currentContextTurnByIsland);
+  const epochState = buildEvidenceEpochState(state.islands, nextRefreshEvents);
+  const visibleUsers = deriveCurrentContextVisibleUsers(state.latentUsers, state.islands, state.ratingEvents, epochState);
   const visibleById = new Map(visibleUsers.map((user) => [user.id, user]));
   const organicCandidates = state.latentUsers.filter((user) => {
     const visible = visibleById.get(user.id);
@@ -1320,6 +1354,7 @@ export function advancePolicyTurn(
           selectedOrganicUsers,
           state.ratingEvents,
           currentVersions,
+          epochState,
           config.organicRatingCountModel,
           config.organicRatingsPerUser,
           config.organicRatingDice,
@@ -1339,6 +1374,7 @@ export function advancePolicyTurn(
           selectedGuidedUsers,
           state.ratingEvents,
           currentVersions,
+          epochState,
           config.guidedRatingCountModel,
           config.guidedRecommendationsPerUser,
           config.guidedRecommendationDice,
@@ -1347,12 +1383,12 @@ export function advancePolicyTurn(
         );
   const newEvents = organicEvents.concat(guided.events);
   const nextEvents = state.ratingEvents.concat(newEvents);
-  const activeNextEvents = Array.from(latestActiveRatingsByPair(nextEvents, currentContextTurnByIsland).values());
+  const activeNextEvents = Array.from(latestActiveRatingsByPair(nextEvents, epochState).values());
   const turnObservedBehaviorEvents = buildObservedBehaviorEvents(newEvents, state.latentUsers, state.seed);
   const nextObservedBehaviorEvents = state.observedBehaviorEvents.concat(
     turnObservedBehaviorEvents
   );
-  const nextUsers = applyEventsToVisibleUsers(state.users, newEvents, currentContextTurnByIsland);
+  const nextUsers = deriveVisibleUsersFromEvents(state.latentUsers, state.islands, nextEvents);
   const nextHistory = state.turnHistory.slice();
   const participatingUserIds = Array.from(new Set(combineUniqueUsers(selectedOrganicUsers, selectedGuidedUsers).map((user) => user.id))).sort();
   const nextVisibleUsers = nextUsers;
@@ -1422,6 +1458,8 @@ export function advancePolicyTurn(
     ratingEvents: nextEvents.map((event) => ({ ...event })),
     inferredRatingEvidence: state.inferredRatingEvidence.map((entry) => ({ ...entry })),
     refreshEvents: nextRefreshEvents.map((event) => ({ ...event })),
+    currentWorldEpoch: epochState.currentWorldEpoch,
+    islandEpochById: { ...epochState.islandEpochById },
     observedBehaviorEvents: nextObservedBehaviorEvents.map((event) => cloneObservedBehaviorEvent(event)),
     islandCohortRatingSnapshots: nextIslandCohortRatingSnapshots.map((snapshot) => cloneIslandCohortRatingSnapshot(snapshot)),
     confidenceSnapshots: state.confidenceSnapshots.concat(buildConfidenceSnapshotsForTurn(turn, nextIslandAffinityAnalysis.byIslandId)),

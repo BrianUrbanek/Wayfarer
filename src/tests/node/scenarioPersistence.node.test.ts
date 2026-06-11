@@ -336,7 +336,8 @@ describe('scenario persistence', () => {
               revisionReason: 'bad-revision',
               supersedesEventId: 123,
               islandVersionId: 99,
-              gameRulesVersionId: false
+              gameRulesVersionId: false,
+              epoch: { world: 'bad', island: 0 }
             }
           ],
           turnHistory: []
@@ -380,7 +381,8 @@ describe('scenario persistence', () => {
               sourceVersion: 'v1',
               sourceRunId: 2,
               confidence: 0.9,
-              provenance: 'bad'
+              provenance: 'bad',
+              epoch: { world: 0, island: 'bad' }
             }
           ],
           turnHistory: []

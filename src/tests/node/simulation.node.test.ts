@@ -12,6 +12,12 @@ import {
   type HeartbeatPolicy,
 } from '../../model/turnPolicy.js';
 import {
+  advanceEpochForRefreshEvent,
+  compareEvidenceEpoch,
+  createInitialEvidenceEpoch,
+  getCurrentEpochForIsland
+} from '../../model/evidenceEpoch.js';
+import {
   advancePolicyTurn,
   appendRefreshEvent,
   buildHeartbeatRefreshEvents,
@@ -146,6 +152,33 @@ function makeTurnSummary(turn: number) {
 }
 
 describe('simulation layer', () => {
+  it('creates and advances explicit evidence epochs', () => {
+    const bootstrap = buildBootstrap();
+    const islandA = bootstrap.islands[0].id;
+    const islandB = bootstrap.islands[1].id;
+    const initial = createInitialEvidenceEpoch(bootstrap.islands);
+    const islandUpdated = advanceEpochForRefreshEvent(initial, {
+      id: 'epoch:island-update',
+      turn: 1,
+      kind: 'islandUpdate',
+      islandId: islandA
+    });
+    const worldUpdated = advanceEpochForRefreshEvent(islandUpdated, {
+      id: 'epoch:world-update',
+      turn: 2,
+      kind: 'gamePatch'
+    });
+
+    assert.deepEqual(getCurrentEpochForIsland(initial, islandA), { world: 0, island: 0 });
+    assert.deepEqual(getCurrentEpochForIsland(islandUpdated, islandA), { world: 0, island: 1 });
+    assert.deepEqual(getCurrentEpochForIsland(islandUpdated, islandB), { world: 0, island: 0 });
+    assert.deepEqual(getCurrentEpochForIsland(worldUpdated, islandA), { world: 1, island: 0 });
+    assert.deepEqual(getCurrentEpochForIsland(worldUpdated, islandB), { world: 1, island: 0 });
+    assert.equal(compareEvidenceEpoch({ world: 1, island: 0 }, { world: 1, island: 0 }), 'current-context');
+    assert.equal(compareEvidenceEpoch({ world: 1, island: 0 }, { world: 1, island: 1 }), 'prior-island-context');
+    assert.equal(compareEvidenceEpoch({ world: 0, island: 4 }, { world: 1, island: 0 }), 'prior-world-context');
+  });
+
   it('emits scheduled heartbeat patches and deterministic island updates', () => {
     const bootstrap = buildHeartbeatBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
@@ -328,6 +361,8 @@ describe('simulation layer', () => {
     assert.equal(next.turnHistory.at(-1)?.refreshEventsCreated ?? 0, next.refreshEvents.length);
     assert.equal(next.turnHistory.at(-1)?.gamePatchRefreshEventsCreated ?? 0, 1);
     assert.equal(next.ratingEvents.every((event) => event.gameRulesVersionId === 'game-rules-v1'), true);
+    assert.equal(next.currentWorldEpoch, 1);
+    assert.equal(next.ratingEvents.every((event) => event.epoch?.world === 1), true);
   });
 
   it('starts sparse at turn 0 when no initial ratings are seeded', () => {
@@ -353,6 +388,7 @@ describe('simulation layer', () => {
 
     assert.ok(firstEvent);
     assert.equal(firstEvent.turn, 0);
+    assert.deepEqual(firstEvent.epoch, { world: 0, island: 0 });
     assert.equal(
       Object.values(firstEvent.raterSignalWeights).every((weight) => weight === 0),
       true
@@ -372,6 +408,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -396,6 +433,7 @@ describe('simulation layer', () => {
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
       revisionReason: 'gamePatchRefresh',
       supersedesEventId: firstEvent.id,
+      epoch: { world: 1, island: 0 },
       islandVersionId: 'island:' + islandId + ':v1',
       gameRulesVersionId: 'game-rules-v1'
     };
@@ -415,6 +453,38 @@ describe('simulation layer', () => {
     assert.equal(recomputed.users[0]?.ratings[islandId], -1);
     assert.equal(recomputed.ratingEvents[0]?.rating, 1);
     assert.equal(recomputed.ratingEvents[1]?.supersedesEventId, firstEvent.id);
+    assert.deepEqual(recomputed.ratingEvents[1]?.epoch, { world: 1, island: 0 });
+  });
+
+  it('preserves visible latest stated ratings across epoch updates', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const userId = bootstrap.latentUsers[0].id;
+    const islandId = bootstrap.islands[0].id;
+    const firstEvent: RatingEvent = {
+      id: 'visible-epoch:event-0',
+      turn: 0,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 }
+    };
+    const refreshed = recomputeSimulationStateFromCanonicalEvents({
+      seed: state.seed,
+      allTags: state.allTags,
+      latentUsers: state.latentUsers,
+      cohorts: state.cohorts,
+      islands: state.islands,
+      ratingEvents: [firstEvent],
+      refreshEvents: [{ id: 'visible-epoch:update-1', turn: 1, kind: 'islandUpdate', islandId }],
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(1)],
+      hiddenTasteCohorts: state.hiddenTasteCohorts
+    });
+
+    assert.equal(refreshed.users[0]?.ratings[islandId], 1);
+    assert.equal(refreshed.islandAffinityReports.get(islandId)?.estimates[0]?.rawCount ?? 0, 0);
   });
 
   it('reopens island RD on refresh without treating the refresh itself as volatility', () => {
@@ -430,6 +500,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -570,6 +641,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -581,6 +653,7 @@ describe('simulation layer', () => {
       rating: -1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -592,6 +665,48 @@ describe('simulation layer', () => {
       islands: state.islands,
       ratingEvents: [firstEvent, secondEvent],
       turnHistory: [makeTurnSummary(0), makeTurnSummary(2)],
+      hiddenTasteCohorts: state.hiddenTasteCohorts
+    });
+
+    assert.equal(recomputed.users[0]?.ratings[islandId], -1);
+    assert.equal(recomputed.islandAffinityReports.get(islandId)?.estimates[0]?.rawCount ?? 0, 1);
+  });
+
+  it('treats ratings with different turns but the same epoch as same-context evidence', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const userId = bootstrap.latentUsers[0].id;
+    const islandId = bootstrap.islands[0].id;
+    const firstEvent: RatingEvent = {
+      id: 'same-epoch:event-0',
+      turn: 0,
+      userId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 }
+    };
+    const secondEvent: RatingEvent = {
+      id: 'same-epoch:event-10',
+      turn: 10,
+      userId,
+      islandId,
+      rating: -1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      revisionReason: 'playerChangedMind',
+      supersedesEventId: firstEvent.id,
+      epoch: { world: 0, island: 0 }
+    };
+    const recomputed = recomputeSimulationStateFromCanonicalEvents({
+      seed: state.seed,
+      allTags: state.allTags,
+      latentUsers: state.latentUsers,
+      cohorts: state.cohorts,
+      islands: state.islands,
+      ratingEvents: [firstEvent, secondEvent],
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(10)],
       hiddenTasteCohorts: state.hiddenTasteCohorts
     });
 
@@ -612,6 +727,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -634,6 +750,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 1, island: 0 },
       islandVersionId: 'island:' + islandId + ':v1',
       gameRulesVersionId: 'game-rules-v1'
     };
@@ -666,6 +783,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -691,6 +809,7 @@ describe('simulation layer', () => {
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
       revisionReason: 'islandUpdateRefresh',
       supersedesEventId: firstEvent.id,
+      epoch: { world: 0, island: 1 },
       islandVersionId: 'island:' + islandId + ':v1',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -725,6 +844,7 @@ describe('simulation layer', () => {
       rating: 1,
       source: 'organic',
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
+      epoch: { world: 0, island: 0 },
       islandVersionId: 'island:' + islandId + ':v0',
       gameRulesVersionId: 'game-rules-v0'
     };
@@ -749,6 +869,7 @@ describe('simulation layer', () => {
       raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 0])) as Record<string, number>,
       revisionReason: 'gamePatchRefresh',
       supersedesEventId: initialEvent.id,
+      epoch: { world: 1, island: 0 },
       islandVersionId: 'island:' + islandId + ':v1',
       gameRulesVersionId: 'game-rules-v1'
     };

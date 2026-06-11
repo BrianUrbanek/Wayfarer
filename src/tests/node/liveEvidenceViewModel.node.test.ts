@@ -18,6 +18,7 @@ describe('canonical live evidence view model', () => {
         rating: -1,
         source: 'organic',
         raterSignalWeights: weights,
+        epoch: { world: 0, island: 0 },
         islandVersionId: 'island:island-1:v0',
         gameRulesVersionId: 'game-rules-v0'
       },
@@ -31,6 +32,7 @@ describe('canonical live evidence view model', () => {
         raterSignalWeights: weights,
         revisionReason: 'gamePatchRefresh',
         supersedesEventId: 'rating-0',
+        epoch: { world: 1, island: 0 },
         islandVersionId: 'island:island-1:v1',
         gameRulesVersionId: 'game-rules-v1'
       }
@@ -63,7 +65,8 @@ describe('canonical live evidence view model', () => {
           islandId: 'island-1',
           rating: 1,
           source: 'organic',
-          raterSignalWeights: weights
+          raterSignalWeights: weights,
+          epoch: { world: 0, island: 0 }
         },
         {
           id: 'rating-after-update',
@@ -72,7 +75,8 @@ describe('canonical live evidence view model', () => {
           islandId: 'island-1',
           rating: -1,
           source: 'organic',
-          raterSignalWeights: weights
+          raterSignalWeights: weights,
+          epoch: { world: 0, island: 1 }
         }
       ],
       inferredRatingEvidence: [],
@@ -83,9 +87,12 @@ describe('canonical live evidence view model', () => {
     assert.equal(view.explicitStated.current?.id, 'rating-after-update');
     assert.deepEqual(view.explicitStated.historical.map((event) => event.id), ['rating-before-update']);
     assert.equal(view.explicitStated.state, 'canonical');
+    assert.deepEqual(view.explicitStated.currentEpoch, { world: 0, island: 1 });
+    assert.deepEqual(view.explicitStated.currentIslandEpoch, { world: 0, island: 1 });
+    assert.equal(view.explicitStated.freshness, 'current-context');
   });
 
-  it('does not invent a pseudo-current explicit category when version fields are missing', () => {
+  it('preserves latest stated rating as prior-context after refresh when no current re-rating exists', () => {
     const view = buildPairEvidenceViewModel({
       userId: 'user-1',
       islandId: 'island-1',
@@ -97,7 +104,8 @@ describe('canonical live evidence view model', () => {
           islandId: 'island-1',
           rating: 1,
           source: 'organic',
-          raterSignalWeights: weights
+          raterSignalWeights: weights,
+          epoch: { world: 0, island: 0 }
         }
       ],
       inferredRatingEvidence: [],
@@ -105,9 +113,11 @@ describe('canonical live evidence view model', () => {
       refreshEvents: [{ id: 'update-1', turn: 1, kind: 'gamePatch' }]
     });
 
-    assert.equal(view.explicitStated.current, null);
+    assert.equal(view.explicitStated.current?.id, 'rating-before-update');
     assert.deepEqual(view.explicitStated.historical.map((event) => event.id), ['rating-before-update']);
-    assert.equal(view.explicitStated.state, 'degraded');
+    assert.equal(view.explicitStated.state, 'canonical');
+    assert.equal(view.explicitStated.freshness, 'prior-world-context');
+    assert.match(view.explicitStated.note, /prior/i);
   });
 
   it('keeps inferred revealed evidence and synthetic observed behavior distinct', () => {
@@ -122,7 +132,8 @@ describe('canonical live evidence view model', () => {
         sourceSystem: 'upstream',
         sourceVersion: 'v1',
         confidence: 0.99,
-        provenance: 'older upstream inference'
+        provenance: 'older upstream inference',
+        epoch: { world: 0, island: 0 }
       },
       {
         id: 'inferred-current',
@@ -134,7 +145,8 @@ describe('canonical live evidence view model', () => {
         sourceSystem: 'upstream',
         sourceVersion: 'v2',
         confidence: 0.7,
-        provenance: 'current upstream inference'
+        provenance: 'current upstream inference',
+        epoch: { world: 0, island: 0 }
       }
     ];
 
@@ -178,6 +190,7 @@ describe('canonical live evidence view model', () => {
         sourceVersion: 'v1',
         confidence: 0.99,
         provenance: 'old upstream read',
+        epoch: { world: 0, island: 0 },
         gameRulesVersionId: 'game-rules-v0',
         islandVersionId: 'island:island-1:v0'
       },
@@ -192,6 +205,7 @@ describe('canonical live evidence view model', () => {
         sourceVersion: 'v1',
         confidence: 0.5,
         provenance: 'current upstream read',
+        epoch: { world: 1, island: 0 },
         gameRulesVersionId: 'game-rules-v3',
         islandVersionId: 'island:island-1:v3'
       }
@@ -206,12 +220,12 @@ describe('canonical live evidence view model', () => {
       refreshEvents: [{ id: 'patch-3', turn: 3, kind: 'gamePatch' }]
     });
 
-    assert.equal(view.inferredRevealed.current, null);
-    assert.deepEqual(view.inferredRevealed.historical.map((entry) => entry.id), ['stale-inferred', 'current-inferred']);
-    assert.equal(view.inferredRevealed.state, 'degraded');
+    assert.equal(view.inferredRevealed.current?.id, 'current-inferred');
+    assert.deepEqual(view.inferredRevealed.historical.map((entry) => entry.id), ['stale-inferred']);
+    assert.equal(view.inferredRevealed.freshness, 'current-context');
   });
 
-  it('keeps inferred evidence without version context current when no refresh boundary excludes it', () => {
+  it('marks inferred evidence without epoch as context unknown', () => {
     const view = buildPairEvidenceViewModel({
       userId: 'user-1',
       islandId: 'island-1',
@@ -235,7 +249,8 @@ describe('canonical live evidence view model', () => {
     });
 
     assert.equal(view.inferredRevealed.current?.id, 'legacy-inferred');
-    assert.equal(view.inferredRevealed.state, 'canonical');
+    assert.equal(view.inferredRevealed.state, 'compatibility');
+    assert.equal(view.inferredRevealed.freshness, 'context-unknown');
   });
 
   it('keeps explicit ratings without version context current when no refresh boundary excludes them', () => {
@@ -260,6 +275,7 @@ describe('canonical live evidence view model', () => {
 
     assert.equal(view.explicitStated.current?.id, 'legacy-rating');
     assert.equal(view.explicitStated.state, 'canonical');
-    assert.match(view.explicitStated.note, /event log/i);
+    assert.deepEqual(view.explicitStated.currentEpoch, { world: 0, island: 0 });
+    assert.equal(view.explicitStated.freshness, 'current-context');
   });
 });
