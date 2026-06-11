@@ -74,7 +74,6 @@ const CONTRADICTION_RD_BOOST = 0.16;
 const CONTRADICTION_VOLATILITY_BOOST = 0.08;
 const CONSISTENT_VOLATILITY_SHRINK = 0.025;
 const REFRESH_RD_BOOST = 0.24;
-const REFRESH_VOLATILITY_BOOST = 0.02;
 
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
@@ -177,11 +176,12 @@ export function advanceIslandCohortRatingState(
 
   const supportGain = turnWeight * SUPPORT_EVIDENCE_WEIGHT;
   const nextSupport = previous.support + supportGain;
-  const supportDamping = clamp01(SUPPORT_MATURITY / (SUPPORT_MATURITY + nextSupport));
-  const evidenceStrength = clamp01(turnWeight / (turnWeight + 1.5)) * supportDamping;
+  const priorSupportDamping = clamp01(SUPPORT_MATURITY / (SUPPORT_MATURITY + previous.support));
+  const nextSupportDamping = clamp01(SUPPORT_MATURITY / (SUPPORT_MATURITY + nextSupport));
+  const evidenceStrength = clamp01(turnWeight / (turnWeight + 1.5)) * priorSupportDamping;
   const behaviorInfluence = clamp(evidence.behaviorSupport * BEHAVIOR_INFLUENCE, -BEHAVIOR_INFLUENCE, BEHAVIOR_INFLUENCE);
   const targetRating = clamp(evidence.primaryEvidenceMean + behaviorInfluence, -1, 1);
-  const movementScale = clamp01(previous.ratingDeviation + previous.volatility * 0.35 + supportDamping * CONVERGENCE_WEIGHT);
+  const movementScale = clamp01(previous.ratingDeviation + previous.volatility * 0.35 + priorSupportDamping * CONVERGENCE_WEIGHT);
   const nextRating = clamp(
     previous.rating + (targetRating - previous.rating) * evidenceStrength * movementScale,
     -1,
@@ -194,8 +194,8 @@ export function advanceIslandCohortRatingState(
   const contradiction = alignment < 0 ? 1 : 0;
   const consistency = alignment > 0 ? 1 : 0;
   const contradictionPressure = contradiction * clamp01(previous.confidence + previous.ratingDeviation * 0.5 + turnWeight);
-  const consistencyPressure = consistency * clamp01(previous.ratingDeviation + supportDamping);
-  const splitPressure = clamp01((evidence.splitPressure ?? 0) * clamp01(previous.confidence + supportDamping));
+  const consistencyPressure = consistency * clamp01(previous.ratingDeviation + nextSupportDamping);
+  const splitPressure = clamp01((evidence.splitPressure ?? 0) * clamp01(previous.confidence + priorSupportDamping));
   const supportDerivedRD = clamp01(1 / (1 + nextSupport * SUPPORT_RD_MULTIPLIER));
 
   const ratingDeviation = clamp(
@@ -366,7 +366,7 @@ function resetForRefresh(
 
   return softResetIslandCohortRatingState(previous, {
     ratingDeviationBoost: REFRESH_RD_BOOST,
-    volatilityBoost: REFRESH_VOLATILITY_BOOST
+    volatilityBoost: 0
   });
 }
 
