@@ -536,7 +536,7 @@ describe('simulation layer', () => {
     assert.equal(after!.turn, 1);
   });
 
-  it('manual refresh reopens event-backed island RD snapshots instead of preserving stale confidence', () => {
+  it('manual refresh event creates an RD boundary even without a turn summary', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
     const islandId = bootstrap.islands[0].id;
@@ -559,11 +559,11 @@ describe('simulation layer', () => {
       islands: state.islands,
       ratingEvents: [preRefreshEvent],
       refreshEvents: [],
-      turnHistory: [makeTurnSummary(0), makeTurnSummary(1)],
+      turnHistory: [makeTurnSummary(0)],
       hiddenTasteCohorts: state.hiddenTasteCohorts
     });
     const before = eventBackedState.islandCohortRatingSnapshots.find(
-      (snapshot) => snapshot.turn === 1 && snapshot.islandId === islandId && snapshot.cohortId === cohortId
+      (snapshot) => snapshot.turn === 0 && snapshot.islandId === islandId && snapshot.cohortId === cohortId
     );
     const refreshed = appendRefreshEvent(eventBackedState, {
       id: 'manual-rd-refresh:island-update',

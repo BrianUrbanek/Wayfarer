@@ -214,10 +214,16 @@ interface AggregatedTurnEvidence {
   evidenceCount: number;
 }
 
-function ensureTurnList(turnHistory: readonly { turn: number }[], ratingEvents: readonly IslandCohortRatingRatingEvent[]): number[] {
-  const turns = turnHistory.length > 0
-    ? turnHistory.map((entry) => entry.turn)
-    : Array.from(new Set(ratingEvents.map((event) => event.turn)));
+function ensureTurnList(
+  turnHistory: readonly { turn: number }[],
+  ratingEvents: readonly IslandCohortRatingRatingEvent[],
+  refreshEvents: readonly RatingRefreshEvent[] | undefined
+): number[] {
+  const turns = [
+    ...turnHistory.map((entry) => entry.turn),
+    ...ratingEvents.map((event) => event.turn),
+    ...(refreshEvents ?? []).map((event) => event.turn)
+  ];
 
   return Array.from(new Set(turns)).sort((left, right) => left - right);
 }
@@ -328,7 +334,7 @@ function resetForRefresh(
 export function buildIslandCohortRatingSnapshots(
   input: BuildIslandCohortRatingSnapshotsInput
 ): IslandCohortRatingState[] {
-  const turns = ensureTurnList(input.turnHistory, input.ratingEvents);
+  const turns = ensureTurnList(input.turnHistory, input.ratingEvents, input.refreshEvents);
   const behaviorLookup = buildBehaviorLookup(input.observedBehaviorEvents);
   const latestByPair = new Map<string, IslandCohortRatingState>();
   const snapshots: IslandCohortRatingState[] = [];
