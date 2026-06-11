@@ -139,7 +139,7 @@ export function softResetIslandCohortRatingState(
   options: { ratingDeviationBoost?: number; volatilityBoost?: number } = {}
 ): IslandCohortRatingState {
   const ratingDeviationBoost = options.ratingDeviationBoost ?? 0.24;
-  const volatilityBoost = options.volatilityBoost ?? 0.03;
+  const volatilityBoost = options.volatilityBoost ?? 0;
 
   const ratingDeviation = clamp(state.ratingDeviation + ratingDeviationBoost, MIN_RD, MAX_RD);
   const volatility = clamp(state.volatility + volatilityBoost, MIN_VOLATILITY, MAX_VOLATILITY);

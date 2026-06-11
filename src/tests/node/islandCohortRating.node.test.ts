@@ -324,7 +324,7 @@ describe('island/cohort rating substrate', () => {
     assert.ok(negative.confidence > lowEvidence.confidence);
   });
 
-  it('reopens RD on refresh without deleting accumulated support', () => {
+  it('reopens RD on reset without deleting accumulated support or raising volatility by default', () => {
     const base = createIslandCohortRatingState({ islandId: 'island-1', cohortId: 'cohort-1' });
     let current = base;
 
@@ -342,7 +342,7 @@ describe('island/cohort rating substrate', () => {
     const reset = softResetIslandCohortRatingState(current);
     assert.equal(reset.support, current.support);
     assert.ok(reset.ratingDeviation > current.ratingDeviation);
-    assert.ok(reset.volatility >= current.volatility);
+    assert.equal(reset.volatility, current.volatility);
   });
 
   it('builds turn snapshots from event history', () => {
