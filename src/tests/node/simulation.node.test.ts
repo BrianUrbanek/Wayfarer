@@ -536,6 +536,54 @@ describe('simulation layer', () => {
     assert.equal(after!.turn, 1);
   });
 
+  it('manual refresh reopens event-backed island RD snapshots instead of preserving stale confidence', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const islandId = bootstrap.islands[0].id;
+    const cohortId = bootstrap.cohorts[0].id;
+    const preRefreshEvent: RatingEvent = {
+      id: 'manual-rd-refresh:event-0',
+      turn: 0,
+      userId: bootstrap.latentUsers[0].id,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 1])) as Record<string, number>,
+      epoch: { world: 0, island: 0 }
+    };
+    const eventBackedState = recomputeSimulationStateFromCanonicalEvents({
+      seed: state.seed,
+      allTags: state.allTags,
+      latentUsers: state.latentUsers,
+      cohorts: state.cohorts,
+      islands: state.islands,
+      ratingEvents: [preRefreshEvent],
+      refreshEvents: [],
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(1)],
+      hiddenTasteCohorts: state.hiddenTasteCohorts
+    });
+    const before = eventBackedState.islandCohortRatingSnapshots.find(
+      (snapshot) => snapshot.turn === 1 && snapshot.islandId === islandId && snapshot.cohortId === cohortId
+    );
+    const refreshed = appendRefreshEvent(eventBackedState, {
+      id: 'manual-rd-refresh:island-update',
+      turn: 1,
+      kind: 'islandUpdate',
+      islandId,
+      reason: 'manual creator update'
+    });
+    const reopened = refreshed.islandCohortRatingSnapshots.find(
+      (snapshot) => snapshot.turn === 1 && snapshot.islandId === islandId && snapshot.cohortId === cohortId
+    );
+
+    assert.ok(before);
+    assert.ok(reopened);
+    assert.equal(reopened!.ratingDeviation > before!.ratingDeviation, true);
+    assert.equal(reopened!.effectiveWeight, before!.effectiveWeight);
+    assert.equal(reopened!.evidenceCount, before!.evidenceCount);
+    assert.equal(reopened!.volatility, before!.volatility);
+  });
+
   it('keeps explicit ratings separate from inferred evidence and surfaces a contradiction diagnostic', () => {
     const bootstrap = buildBootstrap();
     const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
@@ -891,6 +939,68 @@ describe('simulation layer', () => {
       hydrated.islandAffinityReports.get(islandId)?.estimates.every((estimate) => estimate.rawCount === 1),
       true
     );
+  });
+
+  it('rebuilds island support from the full event trail across refresh boundaries', () => {
+    const bootstrap = buildBootstrap();
+    const state = createInitialSimulationState({ ...bootstrap, initialRatingsPerUser: 0 });
+    const islandId = bootstrap.islands[3].id;
+    const firstUserId = bootstrap.latentUsers[0].id;
+    const secondUserId = bootstrap.latentUsers[1].id;
+    const preRefreshEvent: RatingEvent = {
+      id: 'full-trail:event-0',
+      turn: 0,
+      userId: firstUserId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 1])) as Record<string, number>,
+      epoch: { world: 0, island: 0 }
+    };
+    const refreshEvent: RatingRefreshEvent = {
+      id: 'full-trail:island-update-1',
+      turn: 1,
+      kind: 'islandUpdate',
+      islandId,
+      reason: 'creator update'
+    };
+    const postRefreshEvent: RatingEvent = {
+      id: 'full-trail:event-2',
+      turn: 2,
+      userId: secondUserId,
+      islandId,
+      rating: 1,
+      source: 'organic',
+      raterSignalWeights: Object.fromEntries(bootstrap.cohorts.map((cohort) => [cohort.id, 1])) as Record<string, number>,
+      epoch: { world: 0, island: 1 }
+    };
+    const rebuilt = recomputeSimulationStateFromCanonicalEvents({
+      seed: state.seed,
+      allTags: state.allTags,
+      latentUsers: state.latentUsers,
+      cohorts: state.cohorts,
+      islands: state.islands,
+      ratingEvents: [preRefreshEvent, postRefreshEvent],
+      refreshEvents: [refreshEvent],
+      turnHistory: [makeTurnSummary(0), makeTurnSummary(1), makeTurnSummary(2)],
+      hiddenTasteCohorts: state.hiddenTasteCohorts
+    });
+    const beforeRefresh = rebuilt.islandCohortRatingSnapshots.find(
+      (snapshot) => snapshot.turn === 0 && snapshot.islandId === islandId && snapshot.cohortId === bootstrap.cohorts[0].id
+    );
+    const afterRefresh = rebuilt.islandCohortRatingSnapshots.find(
+      (snapshot) => snapshot.turn === 1 && snapshot.islandId === islandId && snapshot.cohortId === bootstrap.cohorts[0].id
+    );
+    const afterPostRefresh = rebuilt.islandCohortRatingSnapshots.find(
+      (snapshot) => snapshot.turn === 2 && snapshot.islandId === islandId && snapshot.cohortId === bootstrap.cohorts[0].id
+    );
+
+    assert.ok(beforeRefresh);
+    assert.ok(afterRefresh);
+    assert.ok(afterPostRefresh);
+    assert.equal(afterRefresh!.effectiveWeight >= beforeRefresh!.effectiveWeight, true);
+    assert.equal(afterPostRefresh!.effectiveWeight > afterRefresh!.effectiveWeight, true);
+    assert.equal(rebuilt.islandAffinityReports.get(islandId)?.estimates[0]?.rawCount ?? 0, 1);
   });
 
   it('appends turn-boundary snapshots without rebuilding earlier turns', () => {

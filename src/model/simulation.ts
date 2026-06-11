@@ -844,7 +844,7 @@ function recomputeState(
     buildIslandCohortRatingSnapshots({
       islands,
       cohorts,
-      ratingEvents: activeRatingEvents,
+      ratingEvents: normalizedRatingEvents,
       turnHistory,
       refreshEvents,
       observedBehaviorEvents: normalizedObservedBehaviorEvents,
@@ -946,6 +946,7 @@ function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulatio
   const normalizedSnapshots = snapshot.confidenceSnapshots?.map((entry) => ({ ...entry }));
   const normalizedHiddenTasteCohorts = snapshot.hiddenTasteCohorts?.map((entry) => cloneHiddenTasteCohort(entry));
   const normalizedRefreshEvents = snapshot.refreshEvents?.map((entry) => ({ ...entry })) ?? [];
+  const shouldReuseStoredSnapshots = normalizedRefreshEvents.length === 0;
 
   const state = recomputeState(
     snapshot.seed,
@@ -959,8 +960,8 @@ function hydrateSimulationStateFromStoredSnapshots(snapshot: SerializedSimulatio
     snapshot.allTags,
     normalizedRefreshEvents,
     normalizedObservedBehaviorEvents,
-    normalizedIslandCohortRatingSnapshots,
-    normalizedSnapshots
+    shouldReuseStoredSnapshots ? normalizedIslandCohortRatingSnapshots : undefined,
+    shouldReuseStoredSnapshots ? normalizedSnapshots : undefined
   );
   return state;
 }
@@ -1025,9 +1026,7 @@ export function appendRefreshEvent(state: SimulationState, refreshEvent: RatingR
     state.turnHistory,
     state.allTags,
     state.refreshEvents.concat(refreshEvent),
-    state.observedBehaviorEvents,
-    state.islandCohortRatingSnapshots,
-    state.confidenceSnapshots
+    state.observedBehaviorEvents
   );
 }
 
