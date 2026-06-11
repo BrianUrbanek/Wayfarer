@@ -5,9 +5,9 @@ import { buildIslandEvidenceConstellation, buildIslandRatingTimelineRows } from 
 describe('island evidence visualization helper', () => {
   it('builds selected-island timeline rows in turn order with expected fields', () => {
     const rows = buildIslandRatingTimelineRows('island-1', [
-      { turn: 1, islandId: 'island-1', cohortId: 'c-b', affinity: 0.1, confidence: 0.3, ratingDeviation: 0.7, uncertainty: 0.7, volatility: 0.1, effectiveWeight: 1, evidenceCount: 1, rating: 0.1, lastUpdatedTurn: 1, version: 1 },
-      { turn: 0, islandId: 'island-1', cohortId: 'c-a', affinity: 0.2, confidence: 0.4, ratingDeviation: 0.6, uncertainty: 0.6, volatility: 0.1, effectiveWeight: 2, evidenceCount: 2, rating: 0.2, lastUpdatedTurn: 0, version: 1 },
-      { turn: 0, islandId: 'island-2', cohortId: 'c-a', affinity: 0.9, confidence: 0.9, ratingDeviation: 0.1, uncertainty: 0.1, volatility: 0.1, effectiveWeight: 3, evidenceCount: 3, rating: 0.9, lastUpdatedTurn: 0, version: 1 }
+      { turn: 1, islandId: 'island-1', cohortId: 'c-b', affinity: 0.1, confidence: 0.3, ratingDeviation: 0.7, uncertainty: 0.7, volatility: 0.1, support: 1, effectiveWeight: 1, evidenceCount: 1, rating: 0.1, lastUpdatedTurn: 1, version: 1 },
+      { turn: 0, islandId: 'island-1', cohortId: 'c-a', affinity: 0.2, confidence: 0.4, ratingDeviation: 0.6, uncertainty: 0.6, volatility: 0.1, support: 2, effectiveWeight: 2, evidenceCount: 2, rating: 0.2, lastUpdatedTurn: 0, version: 1 },
+      { turn: 0, islandId: 'island-2', cohortId: 'c-a', affinity: 0.9, confidence: 0.9, ratingDeviation: 0.1, uncertainty: 0.1, volatility: 0.1, support: 3, effectiveWeight: 3, evidenceCount: 3, rating: 0.9, lastUpdatedTurn: 0, version: 1 }
     ]);
     assert.equal(rows.length, 2);
     assert.equal(rows[0]?.turn, 0);

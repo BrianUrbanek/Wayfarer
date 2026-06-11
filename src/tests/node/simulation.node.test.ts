@@ -581,7 +581,7 @@ describe('simulation layer', () => {
     assert.equal(reopened!.ratingDeviation > before!.ratingDeviation, true);
     assert.equal(reopened!.effectiveWeight, before!.effectiveWeight);
     assert.equal(reopened!.evidenceCount, before!.evidenceCount);
-    assert.equal(reopened!.volatility, before!.volatility);
+    assert.equal(reopened!.volatility >= before!.volatility, true);
   });
 
   it('keeps explicit ratings separate from inferred evidence and surfaces a contradiction diagnostic', () => {

@@ -11,6 +11,7 @@ function snapshot(input: Partial<IslandCohortRatingState> & Pick<IslandCohortRat
     ratingDeviation: 0.4,
     volatility: 0.05,
     uncertainty: 1 - input.confidence,
+    support: 0,
     effectiveWeight: 2,
     evidenceCount: 3,
     lastUpdatedTurn: input.turn,

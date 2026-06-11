@@ -13,6 +13,7 @@ export interface IslandCohortRatingState {
   affinity: number;
   confidence: number;
   uncertainty: number;
+  support: number;
   effectiveWeight: number;
   evidenceCount: number;
   lastUpdatedTurn: number;
@@ -24,6 +25,7 @@ export interface IslandCohortRatingTurnEvidence {
   primaryEvidenceMean: number;
   primaryEvidenceWeight: number;
   behaviorSupport: number;
+  splitPressure: number;
   evidenceCount: number;
 }
 
@@ -63,7 +65,16 @@ const MAX_RD = 1;
 const MIN_VOLATILITY = 0.02;
 const MAX_VOLATILITY = 0.35;
 const BEHAVIOR_INFLUENCE = 0.12;
-const EVIDENCE_RD_REDUCTION_RATE = 0.28;
+const SUPPORT_EVIDENCE_WEIGHT = 1.1;
+const SUPPORT_MATURITY = 6;
+const SUPPORT_RD_MULTIPLIER = 0.9;
+const CONVERGENCE_WEIGHT = 0.7;
+const PRIOR_RD_BLEND = 0.02;
+const CONTRADICTION_RD_BOOST = 0.16;
+const CONTRADICTION_VOLATILITY_BOOST = 0.08;
+const CONSISTENT_VOLATILITY_SHRINK = 0.025;
+const REFRESH_RD_BOOST = 0.24;
+const REFRESH_VOLATILITY_BOOST = 0.02;
 
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
@@ -112,6 +123,7 @@ function createBlankState(islandId: IslandId, cohortId: CohortId): IslandCohortR
     affinity: 0,
     confidence: 0,
     uncertainty: 1,
+    support: 0,
     effectiveWeight: 0,
     evidenceCount: 0,
     lastUpdatedTurn: -1,
@@ -141,6 +153,7 @@ export function softResetIslandCohortRatingState(
     volatility,
     confidence,
     uncertainty: 1 - confidence,
+    support: state.support,
     affinity: clamp(state.rating, -1, 1),
     effectiveWeight: state.effectiveWeight,
     lastUpdatedTurn: state.lastUpdatedTurn,
@@ -152,11 +165,23 @@ export function advanceIslandCohortRatingState(
   previous: IslandCohortRatingState,
   evidence: IslandCohortRatingTurnEvidence
 ): IslandCohortRatingState {
-  const turnWeight = clamp01(evidence.primaryEvidenceWeight);
-  const evidenceStrength = clamp01(turnWeight / (turnWeight + 4));
+  const turnWeight = Math.max(0, evidence.primaryEvidenceWeight);
+  const noEvidence = evidence.primaryEvidenceWeight <= 0;
+  if (noEvidence) {
+    return {
+      ...previous,
+      turn: evidence.turn,
+      version: 1
+    };
+  }
+
+  const supportGain = turnWeight * SUPPORT_EVIDENCE_WEIGHT;
+  const nextSupport = previous.support + supportGain;
+  const supportDamping = clamp01(SUPPORT_MATURITY / (SUPPORT_MATURITY + nextSupport));
+  const evidenceStrength = clamp01(turnWeight / (turnWeight + 1.5)) * supportDamping;
   const behaviorInfluence = clamp(evidence.behaviorSupport * BEHAVIOR_INFLUENCE, -BEHAVIOR_INFLUENCE, BEHAVIOR_INFLUENCE);
   const targetRating = clamp(evidence.primaryEvidenceMean + behaviorInfluence, -1, 1);
-  const movementScale = clamp01(previous.ratingDeviation + previous.volatility * 0.5);
+  const movementScale = clamp01(previous.ratingDeviation + previous.volatility * 0.35 + supportDamping * CONVERGENCE_WEIGHT);
   const nextRating = clamp(
     previous.rating + (targetRating - previous.rating) * evidenceStrength * movementScale,
     -1,
@@ -168,22 +193,26 @@ export function advanceIslandCohortRatingState(
   const alignment = previousDirection === 0 || targetDirection === 0 ? 0 : previousDirection === targetDirection ? 1 : -1;
   const contradiction = alignment < 0 ? 1 : 0;
   const consistency = alignment > 0 ? 1 : 0;
-  const noEvidence = evidence.primaryEvidenceWeight <= 0;
+  const contradictionPressure = contradiction * clamp01(previous.confidence + previous.ratingDeviation * 0.5 + turnWeight);
+  const consistencyPressure = consistency * clamp01(previous.ratingDeviation + supportDamping);
+  const splitPressure = clamp01((evidence.splitPressure ?? 0) * clamp01(previous.confidence + supportDamping));
+  const supportDerivedRD = clamp01(1 / (1 + nextSupport * SUPPORT_RD_MULTIPLIER));
 
   const ratingDeviation = clamp(
-    previous.ratingDeviation -
-      evidenceStrength * EVIDENCE_RD_REDUCTION_RATE +
-      contradiction * 0.11 -
-      consistency * 0.04,
+    supportDerivedRD * (1 - PRIOR_RD_BLEND) + previous.ratingDeviation * PRIOR_RD_BLEND +
+      splitPressure * 0.08 +
+      contradictionPressure * CONTRADICTION_RD_BOOST -
+      consistencyPressure * 0.005,
     MIN_RD,
     MAX_RD
   );
 
   const volatility = clamp(
     previous.volatility +
-      contradiction * 0.06 +
+      splitPressure * 0.06 +
+      contradictionPressure * CONTRADICTION_VOLATILITY_BOOST +
       (evidence.behaviorSupport < 0 ? 0.02 : 0) -
-      consistency * 0.03 -
+      consistencyPressure * CONSISTENT_VOLATILITY_SHRINK -
       (evidence.behaviorSupport > 0 ? 0.01 : 0),
     MIN_VOLATILITY,
     MAX_VOLATILITY
@@ -200,6 +229,7 @@ export function advanceIslandCohortRatingState(
     affinity: nextRating,
     confidence,
     uncertainty: 1 - confidence,
+    support: nextSupport,
     effectiveWeight: previous.effectiveWeight + evidence.primaryEvidenceWeight,
     evidenceCount: previous.evidenceCount + evidence.evidenceCount,
     lastUpdatedTurn: noEvidence ? previous.lastUpdatedTurn : evidence.turn,
@@ -211,6 +241,7 @@ interface AggregatedTurnEvidence {
   primaryEvidenceMean: number;
   primaryEvidenceWeight: number;
   behaviorSupport: number;
+  splitPressure: number;
   evidenceCount: number;
 }
 
@@ -260,6 +291,7 @@ function aggregateTurnEvidence(
   let primaryEvidenceWeight = 0;
   let behaviorSupportSum = 0;
   let behaviorSupportWeight = 0;
+  let ratingMagnitudeSum = 0;
   let evidenceCount = 0;
 
   for (const event of events) {
@@ -280,13 +312,20 @@ function aggregateTurnEvidence(
     primaryEvidenceWeight += eventWeight;
     behaviorSupportSum += behaviorAgreement * eventWeight;
     behaviorSupportWeight += eventWeight;
+    ratingMagnitudeSum += Math.abs(event.rating) * eventWeight;
     evidenceCount += 1;
   }
 
+  const primaryEvidenceMean = primaryEvidenceWeight > 0 ? weightedRatingSum / primaryEvidenceWeight : 0;
+  const splitPressure = primaryEvidenceWeight > 0
+    ? clamp01(ratingMagnitudeSum / primaryEvidenceWeight - Math.abs(primaryEvidenceMean))
+    : 0;
+
   return {
-    primaryEvidenceMean: primaryEvidenceWeight > 0 ? weightedRatingSum / primaryEvidenceWeight : 0,
+    primaryEvidenceMean,
     primaryEvidenceWeight,
     behaviorSupport: behaviorSupportWeight > 0 ? behaviorSupportSum / behaviorSupportWeight : 0,
+    splitPressure,
     evidenceCount
   };
 }
@@ -326,8 +365,8 @@ function resetForRefresh(
   }
 
   return softResetIslandCohortRatingState(previous, {
-    ratingDeviationBoost: 0.24,
-    volatilityBoost: 0
+    ratingDeviationBoost: REFRESH_RD_BOOST,
+    volatilityBoost: REFRESH_VOLATILITY_BOOST
   });
 }
 

@@ -28,6 +28,7 @@ function makeSnapshot(overrides: Partial<IslandCohortRatingState> & Pick<IslandC
     affinity: 0,
     confidence: 0.5,
     uncertainty: 0.5,
+    support: 0,
     effectiveWeight: 1,
     evidenceCount: 1,
     lastUpdatedTurn: overrides.turn,
