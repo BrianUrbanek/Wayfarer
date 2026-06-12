@@ -83,5 +83,6 @@ describe('system health formula specs', () => {
 
     assert.equal(Math.abs(summary.systemCoverage - expectedCoverage) < 1e-9, true);
     assert.equal(Math.abs(summary.systemConfidence - expectedConfidence) < 1e-9, true);
+    assert.equal(summary.systemHealthIndex, summary.systemConfidence);
   });
 });

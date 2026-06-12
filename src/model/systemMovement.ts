@@ -9,6 +9,7 @@ export type SystemMovementSignalType =
   | 'polarized-appeal'
   | 'coverage-gap'
   | 'contradiction'
+  | 'movement'
   | 'volatility';
 
 export interface SystemMovementPoint {
@@ -48,6 +49,7 @@ export interface SystemMovementFrame {
     movingIslandCount: number;
     coverageGapCount: number;
     contradictionCount: number;
+    movementCount: number;
     volatilityCount: number;
     averageLegibility: number;
     totalEvidenceWeight: number;
@@ -91,6 +93,7 @@ const SIGNAL_TYPES: SystemMovementSignalType[] = [
   'polarized-appeal',
   'coverage-gap',
   'contradiction',
+  'movement',
   'volatility'
 ];
 
@@ -235,7 +238,11 @@ function classifySignal(input: {
     return 'contradiction';
   }
 
-  if (averageVolatility >= 0.18 || centroidMovement >= 0.2) {
+  if (centroidMovement >= 0.2) {
+    return 'movement';
+  }
+
+  if (averageVolatility >= 0.18) {
     return 'volatility';
   }
 
@@ -359,6 +366,7 @@ export function buildSystemMovementAnalysis(
         movingIslandCount: points.filter((point) => point.trail.some((trailPoint) => Math.abs(trailPoint.profilePosition - point.profilePosition) >= 0.08)).length,
         coverageGapCount: signalCount('coverage-gap'),
         contradictionCount: signalCount('contradiction'),
+        movementCount: signalCount('movement'),
         volatilityCount: signalCount('volatility'),
         averageLegibility: mean(points.map((point) => point.legibility)),
         totalEvidenceWeight: points.reduce((sum, point) => sum + point.evidenceWeight, 0)

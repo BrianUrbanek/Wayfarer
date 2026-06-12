@@ -38,10 +38,10 @@ describe('selected user summary', () => {
         behaviorDistributionChart={<div>Behavior chart</div>}
         liveEvidenceRead={{
           state: 'compatibility',
-          headline: 'Compatibility proxy only',
+          headline: 'Modeling-core trace available for this run',
           sourceAuthority: 'Legacy cohort-similarity proxy remains in use for User 1; it is not source authority.',
           provenance: 'Visible ratings and inference are available, but the live app cannot yet surface canonical source-class or projection provenance here.',
-          compatibilityNote: 'This readout is explicitly a compatibility/degraded bridge, not canonical modeling-core evidence.',
+          compatibilityNote: 'Trace availability does not make this selected-user surface a canonical projection view.',
           laneSignalSummary: 'Legacy cohort weights exist for 1 cohorts.',
           rdSummary: 'Observed rating evidence: 0.456',
           volatilitySummary: 'Behavior specificity: 0.432'
@@ -122,9 +122,9 @@ describe('selected user summary', () => {
     expect(html).toContain('Signal-source read');
     expect(html).toContain('Compatibility bridge for live-app evidence');
     expect(html).toContain('Evidence state');
-    expect(html).toContain('Compatibility proxy only');
+    expect(html).toContain('trace available for this run');
     expect(html).toContain('Legacy cohort-similarity proxy remains in use');
-    expect(html).toContain('canonical modeling-core evidence');
+    expect(html).toContain('canonical projection view');
     expect(html).toContain('Stated vs revealed');
     expect(html).toContain('stated-negative-revealed-positive');
     expect(html).toContain('Canonical pair evidence');

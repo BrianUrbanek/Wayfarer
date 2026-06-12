@@ -102,6 +102,7 @@ describe('system health helper', () => {
     const summary = buildSystemHealthSummary(buildState());
     assert.equal(summary.systemCoverage >= 0 && summary.systemCoverage <= 1, true);
     assert.equal(summary.systemConfidence >= 0 && summary.systemConfidence <= 1, true);
+    assert.equal(summary.systemHealthIndex, summary.systemConfidence);
   });
 
   it('returns turn-ordered bounded trend points', () => {
@@ -111,6 +112,7 @@ describe('system health helper', () => {
     }
     assert.equal(summary.trend.every((point) => point.systemCoverage >= 0 && point.systemCoverage <= 1), true);
     assert.equal(summary.trend.every((point) => point.systemConfidence >= 0 && point.systemConfidence <= 1), true);
+    assert.equal(summary.trend.every((point) => point.systemHealthIndex === point.systemConfidence), true);
   });
 
   it('uses comparable cumulative trend values for both deltas', () => {
@@ -118,6 +120,7 @@ describe('system health helper', () => {
     const first = summary.trend[0] ?? summary;
     assert.equal(summary.coverageDelta, summary.systemCoverage - first.systemCoverage);
     assert.equal(summary.confidenceDelta, summary.systemConfidence - first.systemConfidence);
+    assert.equal(summary.healthDelta, summary.systemHealthIndex - first.systemHealthIndex);
   });
 
   it('coverage and confidence are distinct values', () => {

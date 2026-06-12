@@ -8,29 +8,40 @@ export interface SystemHealthPoint {
   turn: number;
   systemCoverage: number;
   systemConfidence: number;
+  systemHealthIndex: number;
   playerCoverage: number;
   islandCoverage: number;
   cohortCoverage: number;
   tagCoverage: number;
   playerConfidence: number;
+  playerHealthIndex: number;
   islandConfidence: number;
+  islandHealthIndex: number;
   cohortConfidence: number;
+  cohortHealthIndex: number;
   tagConfidence: number;
+  tagHealthIndex: number;
 }
 
 export interface SystemHealthSummary {
   systemCoverage: number;
   systemConfidence: number;
+  systemHealthIndex: number;
   coverageDelta: number;
   confidenceDelta: number;
+  healthDelta: number;
   playerCoverage: number;
   islandCoverage: number;
   cohortCoverage: number;
   tagCoverage: number;
   playerConfidence: number;
+  playerHealthIndex: number;
   islandConfidence: number;
+  islandHealthIndex: number;
   cohortConfidence: number;
+  cohortHealthIndex: number;
   tagConfidence: number;
+  tagHealthIndex: number;
   trend: SystemHealthPoint[];
 }
 
@@ -139,18 +150,28 @@ function computeAtTurn(state: SimulationState, turnLimit: number): Omit<SystemHe
       (cohortConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.composite[2].weight) +
       (tagConfidence * SYSTEM_HEALTH_FORMULA_SPEC.confidence.composite[3].weight)
   );
+  const systemHealthIndex = systemConfidence;
+  const playerHealthIndex = playerConfidence;
+  const islandHealthIndex = islandConfidence;
+  const cohortHealthIndex = cohortConfidence;
+  const tagHealthIndex = tagConfidence;
 
   return {
     systemCoverage,
     systemConfidence,
+    systemHealthIndex,
     playerCoverage,
     islandCoverage,
     cohortCoverage,
     tagCoverage,
     playerConfidence,
+    playerHealthIndex,
     islandConfidence,
+    islandHealthIndex,
     cohortConfidence,
-    tagConfidence
+    cohortHealthIndex,
+    tagConfidence,
+    tagHealthIndex
   };
 }
 
@@ -164,6 +185,7 @@ export function buildSystemHealthSummary(state: SimulationState): SystemHealthSu
     ...current,
     coverageDelta: current.systemCoverage - first.systemCoverage,
     confidenceDelta: current.systemConfidence - first.systemConfidence,
+    healthDelta: current.systemHealthIndex - first.systemHealthIndex,
     trend
   };
 }

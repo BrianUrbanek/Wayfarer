@@ -51,10 +51,10 @@ describe('selected island evidence summary', () => {
         islandLabel="Island 1"
         liveEvidenceRead={{
           state: 'compatibility',
-          headline: 'Compatibility proxy only',
+          headline: 'Modeling-core trace available for this run',
           sourceAuthority: 'Legacy affinity snapshots remain the active live-app read for island-1; they are not modeling-core source authority.',
           provenance: 'Ratings and observed behavior are visible, but projection provenance is not canonical here.',
-          compatibilityNote: 'This readout is explicitly a compatibility/degraded bridge, not canonical modeling-core evidence.',
+          compatibilityNote: 'Trace availability does not make this panel a canonical projection viewer.',
           affinitySummary: 'Visible affinity estimates: 1',
           rdSummary: 'Top confidence: 0.500',
           volatilitySummary: 'Top volatility: 0.080'
@@ -138,7 +138,7 @@ describe('selected island evidence summary', () => {
     expect(html).toContain('Evidence provenance');
     expect(html).toContain('Evidence state');
     expect(html).toContain('Legacy affinity snapshots remain the active live-app read');
-    expect(html).toContain('Compatibility proxy only');
+    expect(html).toContain('trace available for this run');
     expect(html).toContain('Hidden proxy rows:');
     expect(html).toContain('hidden constellation points:');
     expect(html).toContain('>1<');

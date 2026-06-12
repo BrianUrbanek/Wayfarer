@@ -13,6 +13,7 @@ export interface ModelingRunSummary {
   validationPassed: boolean | null;
   hiddenTruthPolicy: string;
   unsupportedConcepts: string[];
+  unsupportedConceptsNote: string;
 }
 
 export interface ModelingAuthorityRow {
@@ -122,7 +123,8 @@ export function buildModelingRunViewModel(trace: ModelingTraceRun): ModelingRunV
       stepCount: trace.steps.length,
       validationPassed: trace.scenarioAuthorityValidation?.passed ?? null,
       hiddenTruthPolicy: summarizeHiddenTruthPolicy(trace),
-      unsupportedConcepts: unsupportedConcepts(trace)
+      unsupportedConcepts: unsupportedConcepts(trace),
+      unsupportedConceptsNote: 'No unsupported concepts were emitted by this trace.'
     },
     authorityRows: (trace.authoritySummary ?? []).map((summary: InferredActorAuthoritySummary) =>
       buildAuthorityRow(summary, expectedActors.get(summary.actorId), validations.get(summary.actorId))

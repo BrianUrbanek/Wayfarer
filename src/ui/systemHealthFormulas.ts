@@ -15,7 +15,7 @@ export interface FormulaFactor {
 export const SYSTEM_HEALTH_FORMULA_SPEC = {
   caveats: {
     overview: 'Deterministic v1 proxies for structure/evidence. Not prediction accuracy or validated statistical truth.',
-    tagConfidence: 'Tag Confidence is a weak proxy and should be interpreted as experimental.'
+    tagConfidence: 'Tag diagnostic confidence is a weak proxy and should be interpreted as experimental.'
   },
   coverage: {
     composite: [
@@ -39,10 +39,10 @@ export const SYSTEM_HEALTH_FORMULA_SPEC = {
   },
   confidence: {
     composite: [
-      { key: 'player', label: 'Player Confidence', weight: 0.4 },
-      { key: 'island', label: 'Island Confidence', weight: 0.35 },
-      { key: 'cohort', label: 'Cohort Confidence', weight: 0.2 },
-      { key: 'tag', label: 'Tag Confidence', weight: 0.05 }
+      { key: 'player', label: 'Player Health Index', weight: 0.4 },
+      { key: 'island', label: 'Island Health Index', weight: 0.35 },
+      { key: 'cohort', label: 'Cohort Health Index', weight: 0.2 },
+      { key: 'tag', label: 'Tag Diagnostic Proxy', weight: 0.05 }
     ] as WeightedComponent[],
     player: {
       evidenceGate: 'ratingEvidence',

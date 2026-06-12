@@ -157,7 +157,7 @@ export function ModelingLabPanel({ evidence = null }: ModelingLabPanelProps) {
             <MetricCard
               label="Unsupported concepts"
               value={summary?.unsupportedConcepts.length ?? 0}
-              explanation="Trace concepts deliberately marked as unavailable rather than silently approximated."
+              explanation={summary?.unsupportedConceptsNote ?? 'Trace concepts deliberately marked as unavailable rather than silently approximated.'}
             />
           </div>
 

@@ -57,11 +57,11 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
 
   const trendLines = useMemo(
     () => ({
-      system: buildLinePath(summary.trend.map((point) => point.systemConfidence), 760, 220, 16),
-      player: buildLinePath(summary.trend.map((point) => point.playerConfidence), 760, 220, 16),
-      island: buildLinePath(summary.trend.map((point) => point.islandConfidence), 760, 220, 16),
-      cohort: buildLinePath(summary.trend.map((point) => point.cohortConfidence), 760, 220, 16),
-      tag: buildLinePath(summary.trend.map((point) => point.tagConfidence), 760, 220, 16)
+      system: buildLinePath(summary.trend.map((point) => point.systemHealthIndex), 760, 220, 16),
+      player: buildLinePath(summary.trend.map((point) => point.playerHealthIndex), 760, 220, 16),
+      island: buildLinePath(summary.trend.map((point) => point.islandHealthIndex), 760, 220, 16),
+      cohort: buildLinePath(summary.trend.map((point) => point.cohortHealthIndex), 760, 220, 16),
+      tag: buildLinePath(summary.trend.map((point) => point.tagHealthIndex), 760, 220, 16)
     }),
     [summary.trend]
   );
@@ -105,21 +105,21 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           <p className="muted">{formatSigned(summary.coverageDelta * 100)} pts over this run.</p>
 
           <div className="system-health-metric-header-row">
-            <p className="eyebrow">System confidence</p>
+            <p className="eyebrow">System health index</p>
             <button
               type="button"
               className="system-health-affordance"
               onClick={() => setOpenPopover((current) => (current === 'systemConfidence' ? null : 'systemConfidence'))}
-              aria-label="Open System Confidence explanation and formula"
+              aria-label="Open system health index explanation and formula"
               aria-expanded={openPopover === 'systemConfidence'}
             >
               ?ƒ
             </button>
             {openPopover === 'systemConfidence' ? (
-              <div className="system-health-popover" role="dialog" aria-label="System Confidence details">
+              <div className="system-health-popover" role="dialog" aria-label="System health index details">
                 <section className="system-health-popover__section">
                   <h5>What this means</h5>
-                  <p>Confidence tracks evidence-weighted coherence and trustworthiness of current structure, not ground-truth accuracy.</p>
+                  <p>The health index tracks evidence-weighted coherence and trustworthiness of current structure, not ground-truth accuracy.</p>
                 </section>
                 <section className="system-health-popover__section">
                   <h5>Formula</h5>
@@ -135,12 +135,12 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               </div>
             ) : null}
           </div>
-          <p className="muted">{formatPercent(summary.systemConfidence)} ({formatSigned(summary.confidenceDelta * 100)} pts)</p>
+          <p className="muted">{formatPercent(summary.systemHealthIndex)} ({formatSigned(summary.healthDelta * 100)} pts)</p>
         </div>
         <aside className="system-confidence-header__howto" aria-label="How to read system health">
           <p className="muted">
             Coverage tracks evidence spread across players, islands, cohorts, and tags. Confidence here is a dashboard-level
-            health proxy, not the novice composite shown in overview recap rows. It tracks whether the current structure is
+            health proxy, not the canonical model confidence used elsewhere. It tracks whether the current structure is
             coherent and trustworthy given available evidence.
           </p>
         </aside>
@@ -151,7 +151,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           <button
             type="button"
             className="system-confidence-card__toggle-hitbox"
-            aria-label={showConfidenceSeries.player ? 'Hide Player Confidence trend line' : 'Show Player Confidence trend line'}
+            aria-label={showConfidenceSeries.player ? 'Hide player health trend line' : 'Show player health trend line'}
             aria-pressed={showConfidenceSeries.player}
             onClick={() => onToggleSeries('player')}
           />
@@ -162,17 +162,17 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               event.stopPropagation();
               setOpenPopover((current) => (current === 'playerConfidence' ? null : 'playerConfidence'));
             }}
-            aria-label="Open Player Confidence explanation and formula"
+            aria-label="Open player health index explanation and formula"
             aria-expanded={openPopover === 'playerConfidence'}
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Player Confidence (proxy)</div>
+          <div className="metric-card__label">Player health index (proxy)</div>
           {openPopover === 'playerConfidence' ? (
-            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Player Confidence details">
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Player health index details">
               <section className="system-health-popover__section">
                 <h5>What this means</h5>
-                <p>High-confidence mismatch and inverse patterns can still raise Player Confidence when rating evidence is strong.</p>
+                <p>High-confidence mismatch and inverse patterns can still raise the player health index when rating evidence is strong.</p>
               </section>
               <section className="system-health-popover__section">
                 <h5>Formula</h5>
@@ -191,7 +191,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               </section>
             </div>
           ) : null}
-          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.playerConfidence)}</div>
+          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.playerHealthIndex)}</div>
           <div className="metric-card__helper">Legacy proxy. Mismatch/inverse profiles can still score high.</div>
         </article>
 
@@ -199,7 +199,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           <button
             type="button"
             className="system-confidence-card__toggle-hitbox"
-            aria-label={showConfidenceSeries.island ? 'Hide Island Confidence trend line' : 'Show Island Confidence trend line'}
+            aria-label={showConfidenceSeries.island ? 'Hide island health trend line' : 'Show island health trend line'}
             aria-pressed={showConfidenceSeries.island}
             onClick={() => onToggleSeries('island')}
           />
@@ -210,17 +210,17 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               event.stopPropagation();
               setOpenPopover((current) => (current === 'islandConfidence' ? null : 'islandConfidence'));
             }}
-            aria-label="Open Island Confidence explanation and formula"
+            aria-label="Open island health index explanation and formula"
             aria-expanded={openPopover === 'islandConfidence'}
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Island Confidence (proxy)</div>
+          <div className="metric-card__label">Island health index (proxy)</div>
           {openPopover === 'islandConfidence' ? (
-            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Island Confidence details">
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Island health index details">
               <section className="system-health-popover__section">
                 <h5>What this means</h5>
-                <p>Island Confidence reflects affinity interpretability weighted by observed evidence volume.</p>
+                <p>The island health index reflects affinity interpretability weighted by observed evidence volume.</p>
               </section>
               <section className="system-health-popover__section">
                 <h5>Formula</h5>
@@ -231,7 +231,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               </section>
             </div>
           ) : null}
-          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.islandConfidence)}</div>
+          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.islandHealthIndex)}</div>
           <div className="metric-card__helper">Legacy proxy. Island affinity confidence with evidence weighting.</div>
         </article>
 
@@ -239,7 +239,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           <button
             type="button"
             className="system-confidence-card__toggle-hitbox"
-            aria-label={showConfidenceSeries.cohort ? 'Hide Cohort Confidence trend line' : 'Show Cohort Confidence trend line'}
+            aria-label={showConfidenceSeries.cohort ? 'Hide cohort health trend line' : 'Show cohort health trend line'}
             aria-pressed={showConfidenceSeries.cohort}
             onClick={() => onToggleSeries('cohort')}
           />
@@ -250,17 +250,17 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               event.stopPropagation();
               setOpenPopover((current) => (current === 'cohortConfidence' ? null : 'cohortConfidence'));
             }}
-            aria-label="Open Cohort Confidence explanation and formula"
+            aria-label="Open cohort health index explanation and formula"
             aria-expanded={openPopover === 'cohortConfidence'}
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Cohort Confidence (proxy)</div>
+          <div className="metric-card__label">Cohort health index (proxy)</div>
           {openPopover === 'cohortConfidence' ? (
-            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Cohort Confidence details">
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Cohort health index details">
               <section className="system-health-popover__section">
                 <h5>What this means</h5>
-                <p>Cohort Confidence tracks whether cohorts remain useful explanatory structures in observed behavior.</p>
+                <p>The cohort health index tracks whether cohorts remain useful explanatory structures in observed behavior.</p>
               </section>
               <section className="system-health-popover__section">
                 <h5>Formula</h5>
@@ -272,7 +272,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               </section>
             </div>
           ) : null}
-          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.cohortConfidence)}</div>
+          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.cohortHealthIndex)}</div>
           <div className="metric-card__helper">Legacy proxy. Cohort usefulness as explanatory structure.</div>
         </article>
 
@@ -280,7 +280,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
           <button
             type="button"
             className="system-confidence-card__toggle-hitbox"
-            aria-label={showConfidenceSeries.tag ? 'Hide Tag Confidence trend line' : 'Show Tag Confidence trend line'}
+            aria-label={showConfidenceSeries.tag ? 'Hide tag proxy trend line' : 'Show tag proxy trend line'}
             aria-pressed={showConfidenceSeries.tag}
             onClick={() => onToggleSeries('tag')}
           />
@@ -291,17 +291,17 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               event.stopPropagation();
               setOpenPopover((current) => (current === 'tagConfidence' ? null : 'tagConfidence'));
             }}
-            aria-label="Open Tag Confidence explanation and formula"
+            aria-label="Open tag diagnostic proxy explanation and formula"
             aria-expanded={openPopover === 'tagConfidence'}
           >
             ?ƒ
           </button>
-          <div className="metric-card__label">Tag Confidence (proxy)</div>
+          <div className="metric-card__label">Tag diagnostic proxy</div>
           {openPopover === 'tagConfidence' ? (
-            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Tag Confidence details">
+            <div className="system-health-popover system-health-popover--card" role="dialog" aria-label="Tag diagnostic proxy details">
               <section className="system-health-popover__section">
                 <h5>What this means</h5>
-                <p>Tag Confidence is experimental and proxy-based. It should not be treated as a strong standalone truth metric.</p>
+                <p>The tag diagnostic proxy is experimental and proxy-based. It should not be treated as a strong standalone truth metric.</p>
               </section>
               <section className="system-health-popover__section">
                 <h5>Formula</h5>
@@ -313,14 +313,14 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
               </section>
             </div>
           ) : null}
-          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.tagConfidence)}</div>
+          <div className="metric-card__value metric-card__value--text">{formatPercent(summary.tagHealthIndex)}</div>
           <div className="metric-card__helper">Approximate proxy. Toggle tag confidence series.</div>
         </article>
       </div>
 
       <div className="system-confidence-trend">
-        <p className="muted system-confidence-trend__hint">Click a confidence card to toggle its chart line.</p>
-        <svg viewBox="0 0 760 220" role="img" aria-label="System confidence over time">
+        <p className="muted system-confidence-trend__hint">Click a health card to toggle its chart line.</p>
+        <svg viewBox="0 0 760 220" role="img" aria-label="System health over time">
           <rect x="0" y="0" width="760" height="220" className="system-confidence-trend__bg" />
           {[0, 0.5, 1].map((tick) => (
             <g key={tick}>
@@ -344,7 +344,7 @@ export function SystemHealthPanel({ id, summary, showConfidenceSeries, onToggleS
         </svg>
         <div className="system-confidence-trend__legend">
           <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--system">
-            System Confidence (health proxy)
+            System Health Index (proxy)
           </span>
           <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--player">Player</span>
           <span className="system-confidence-trend__legend-item system-confidence-trend__legend-item--island">Island</span>

@@ -34,12 +34,12 @@ function formatPercent(value: number): string {
 
 function stateLabel(state: LiveEvidenceState): string {
   switch (state) {
-    case 'canonical':
-      return 'canonical';
     case 'compatibility':
       return 'compatibility/proxy';
     case 'degraded':
       return 'degraded';
+    case 'canonical':
+      return 'canonical';
   }
 }
 
@@ -57,11 +57,11 @@ export function buildLiveUserEvidenceRead(input: {
 
   if (canonicalTrace) {
     return {
-      state: 'canonical',
-      headline: 'Modeling-core trace attached for this run',
-      sourceAuthority: 'Canonical modeling-core data is available in Modeling Lab, but not projected into this selected-user readout.',
+      state: 'compatibility',
+      headline: 'Modeling-core trace available for this run',
+      sourceAuthority: 'Canonical modeling-core data is available in Modeling Lab, but this selected-user readout remains a live-app bridge.',
       provenance: 'Use the attached trace for source-class, authority-basis, and projection detail.',
-      compatibilityNote: 'This selected-user surface remains a live-app readout, not a trace viewer.',
+      compatibilityNote: 'Trace availability does not make this selected-user surface a canonical projection view.',
       laneSignalSummary: input.signalProfile ? `Legacy cohort-similarity proxy remains available at ${formatPercent(input.signalProfile.overallSignal)}` : 'No live signal profile available.',
       rdSummary: 'RD is not exposed by the live selected-user path yet.',
       volatilitySummary: 'Volatility is not exposed by the live selected-user path yet.'
@@ -93,11 +93,11 @@ export function buildLiveIslandEvidenceRead(input: {
 
   if (canonicalTrace) {
     return {
-      state: 'canonical',
-      headline: 'Modeling-core trace attached for this run',
+      state: 'compatibility',
+      headline: 'Modeling-core trace available for this run',
       sourceAuthority: 'Canonical evidence exists in Modeling Lab, but the selected-island view remains a live-app projection surface.',
       provenance: 'Use the trace viewer for source class, authority basis, and supersession detail.',
-      compatibilityNote: 'This panel is not a modeling-core trace viewer.',
+      compatibilityNote: 'Trace availability does not make this panel a canonical projection viewer.',
       affinitySummary: input.affinityReport ? `Legacy affinity report still computes ${input.affinityReport.estimates.length} cohort estimates.` : 'No affinity report available.',
       rdSummary: input.affinityReport ? `Top estimate confidence: ${input.affinityReport.topPositive?.confidence.toFixed(3) ?? 'n/a'}` : 'No RD proxy available.',
       volatilitySummary: input.affinityReport ? `Top estimate volatility: ${input.affinityReport.topPositive?.volatility?.toFixed(3) ?? 'n/a'}` : 'No volatility proxy available.'

@@ -38,6 +38,7 @@ describe('SystemMovementPanel', () => {
         'polarized-appeal': 0,
         'coverage-gap': 0,
         contradiction: 0,
+        movement: 0,
         volatility: 0
       },
       frames: [
@@ -49,6 +50,7 @@ describe('SystemMovementPanel', () => {
             movingIslandCount: 1,
             coverageGapCount: 0,
             contradictionCount: 0,
+            movementCount: 0,
             volatilityCount: 0,
             averageLegibility: 0.71,
             totalEvidenceWeight: 8
@@ -79,6 +81,7 @@ describe('SystemMovementPanel', () => {
 
     expect(html).toContain('System Movement');
     expect(html).toContain('Total movement in learned audience fit and legibility');
+    expect(html).toContain('Movement');
     expect(html).toContain('Dominant signal type legend');
     expect(html).toContain('Narrow Appeal');
     expect(html).toContain('Coverage Gap');

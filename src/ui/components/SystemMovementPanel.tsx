@@ -33,10 +33,15 @@ const signalMeta: Record<SystemMovementSignalType, { label: string; color: strin
     color: '#ff8b8b',
     description: 'Behavior is pushing against the rating-derived read.'
   },
+  movement: {
+    label: 'Movement',
+    color: '#d1a1ff',
+    description: 'The centroid moved between turns without evidence of elevated snapshot volatility.'
+  },
   volatility: {
     label: 'Volatility',
     color: '#c79cff',
-    description: 'The learned profile is moving too much to treat as stable.'
+    description: 'The underlying snapshot volatility is high enough to treat the read as unstable.'
   }
 };
 
@@ -164,7 +169,7 @@ export function SystemMovementPanel({ analysis, collapsed = false }: SystemMovem
             <span>coverage gaps</span>
           </span>
           <span>
-            <strong>{(selectedFrame?.summary.contradictionCount ?? 0) + (selectedFrame?.summary.volatilityCount ?? 0)}</strong>
+            <strong>{(selectedFrame?.summary.contradictionCount ?? 0) + (selectedFrame?.summary.movementCount ?? 0) + (selectedFrame?.summary.volatilityCount ?? 0)}</strong>
             <span>unstable / split reads</span>
           </span>
         </div>

@@ -64,7 +64,7 @@ describe('system movement analysis', () => {
     assert.equal(analysis.auditRows.length, 4);
   });
 
-  it('prioritizes contradiction and volatility as dominant system movement signals', () => {
+  it('separates centroid movement from volatility as dominant system movement signals', () => {
     const observedBehaviorEvents: ObservedBehaviorEvent[] = [
       {
         id: 'behavior-1',
@@ -101,7 +101,7 @@ describe('system movement analysis', () => {
     const volatileTrail = frame?.points.find((point) => point.islandId === 'volatile')?.trail ?? [];
 
     assert.equal(signalByIsland.get('contradiction'), 'contradiction');
-    assert.equal(signalByIsland.get('volatile'), 'volatility');
+    assert.equal(signalByIsland.get('volatile'), 'movement');
     assert.deepEqual(volatileTrail.map((point) => point.turn), [1]);
     assert.deepEqual(
       analysis.auditRows
@@ -109,8 +109,30 @@ describe('system movement analysis', () => {
         .map((row) => [row.islandId, row.dominantSignal, row.profileDelta !== null, row.moverReason.includes('dominant delta')]),
       [
         ['contradiction', 'contradiction', true, true],
-        ['volatile', 'volatility', true, true]
+        ['volatile', 'movement', true, true]
       ]
     );
+  });
+
+  it('marks a moving but low-volatility island as movement instead of volatility', () => {
+    const analysis = buildSystemMovementAnalysis({
+      islands: [
+        { id: 'mover', label: 'Mover' }
+      ],
+      cohorts: [cohort('c1'), cohort('c2')],
+      observedBehaviorEvents: [],
+      islandCohortRatingSnapshots: [
+        snapshot({ turn: 1, islandId: 'mover', cohortId: 'c1', affinity: -0.45, confidence: 0.72, volatility: 0.04 }),
+        snapshot({ turn: 1, islandId: 'mover', cohortId: 'c2', affinity: -0.4, confidence: 0.7, volatility: 0.04 }),
+        snapshot({ turn: 2, islandId: 'mover', cohortId: 'c1', affinity: 0.22, confidence: 0.72, volatility: 0.04 }),
+        snapshot({ turn: 2, islandId: 'mover', cohortId: 'c2', affinity: 0.18, confidence: 0.7, volatility: 0.04 })
+      ]
+    });
+
+    const point = analysis.frames.find((entry) => entry.turn === 2)?.points[0];
+
+    assert.equal(point?.dominantSignal, 'movement');
+    assert.equal(analysis.signalCounts.movement > 0, true);
+    assert.equal(analysis.signalCounts.volatility, 0);
   });
 });

@@ -11,6 +11,8 @@ describe('modeling lab view model', () => {
     expect(viewModel.runSummary.stepCount).toBe(63);
     expect(viewModel.runSummary.validationPassed).toBe(true);
     expect(viewModel.runSummary.hiddenTruthPolicy).toContain('Hidden truth may generate events');
+    expect(viewModel.runSummary.unsupportedConcepts).toEqual([]);
+    expect(viewModel.runSummary.unsupportedConceptsNote).toContain('No unsupported concepts');
 
     expect(viewModel.authorityRows).toEqual([
       expect.objectContaining({ actorId: 'matrix-alice', visibleRelation: 'seed', validationResult: 'PASS' }),

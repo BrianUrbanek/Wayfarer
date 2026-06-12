@@ -18,7 +18,7 @@ describe('live evidence adapter', () => {
     assert.match(userRead.compatibilityNote, /compatibility\/degraded bridge/);
   });
 
-  it('reports canonical state when an attached modeling trace exists', () => {
+  it('reports a compatibility state when an attached modeling trace exists', () => {
     const activeRunEvidence = buildActiveRunModelEvidence({ scenarioPreset: getScenarioPresetMetadata('golden-demo') });
     const userRead = buildLiveUserEvidenceRead({
       user: null,
@@ -32,9 +32,9 @@ describe('live evidence adapter', () => {
       activeRunEvidence
     });
 
-    assert.equal(userRead.state, 'canonical');
-    assert.equal(islandRead.state, 'canonical');
-    assert.match(userRead.headline, /Modeling-core trace attached/);
-    assert.match(islandRead.headline, /Modeling-core trace attached/);
+    assert.equal(userRead.state, 'compatibility');
+    assert.equal(islandRead.state, 'compatibility');
+    assert.match(userRead.headline, /trace available/i);
+    assert.match(islandRead.headline, /trace available/i);
   });
 });
