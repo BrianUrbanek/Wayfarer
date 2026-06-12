@@ -21,6 +21,9 @@ describe('discovery routing summary', () => {
             discoveryValue: 0.1,
             recommendationScore: 0.85,
             recommendationKind: 'SAFE_FIT',
+            canonicalRecommendationKind: 'SAFE_FIT',
+            canonicalRoutingReason: 'safeFit',
+            compatibilityOnlyRoutingKind: false,
             explanation: 'safe recommendation',
             unrated: true,
             topCohorts: []

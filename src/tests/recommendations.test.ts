@@ -5,6 +5,7 @@ import {
   recommendIslandsForUser,
   scoreIslandRecommendation
 } from '../model/recommendations';
+import { mapLiveRecommendationKindToCanonical } from '../modeling-core/routingTaxonomy';
 import type { CohortAnchor, Island, MaybeRating, User } from '../model/types';
 import { computeInference } from '../model/inference';
 
@@ -421,8 +422,35 @@ describe('recommendation scoring', () => {
     );
 
     expect(safe?.recommendationKind).toBe('SAFE_FIT');
+    expect(safe?.canonicalRecommendationKind).toBe('SAFE_FIT');
+    expect(safe?.canonicalRoutingReason).toBe('safeFit');
+    expect(safe?.compatibilityOnlyRoutingKind).toBe(false);
     expect(gamble?.recommendationKind).toBe('SMART_GAMBLE');
+    expect(gamble?.canonicalRecommendationKind).toBe('SMART_GAMBLE');
+    expect(gamble?.canonicalRoutingReason).toBe('smartGamble');
+    expect(gamble?.compatibilityOnlyRoutingKind).toBe(false);
     expect(probe?.recommendationKind).toBe('DISCOVERY_PROBE');
+    expect(probe?.canonicalRecommendationKind).toBe('DISCOVERY_PROBE');
+    expect(probe?.canonicalRoutingReason).toBe('discoveryProbe');
+    expect(probe?.compatibilityOnlyRoutingKind).toBe(false);
+  });
+
+  it('maps the live compatibility subset through the shared routing taxonomy helper', () => {
+    expect(mapLiveRecommendationKindToCanonical('SAFE_FIT')).toEqual({
+      recommendationKind: 'SAFE_FIT',
+      routingReason: 'safeFit',
+      compatibilityOnly: false
+    });
+    expect(mapLiveRecommendationKindToCanonical('SMART_GAMBLE')).toEqual({
+      recommendationKind: 'SMART_GAMBLE',
+      routingReason: 'smartGamble',
+      compatibilityOnly: false
+    });
+    expect(mapLiveRecommendationKindToCanonical('DISCOVERY_PROBE')).toEqual({
+      recommendationKind: 'DISCOVERY_PROBE',
+      routingReason: 'discoveryProbe',
+      compatibilityOnly: false
+    });
   });
 
   it('exposes audit counters for recommendation eligibility and rejection', () => {

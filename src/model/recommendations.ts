@@ -1,6 +1,10 @@
 import type { CohortId, Island, IslandId, User, UserId } from './types.js';
 import type { CohortAffinityEstimate, IslandAffinityReport } from './affinity.js';
 import type { RaterSignalProfile } from './raterSignal.js';
+import {
+  mapLiveRecommendationKindToCanonical,
+  type LiveRecommendationKind
+} from '../modeling-core/routingTaxonomy.js';
 
 export type RecommendationKind = 'SAFE_FIT' | 'SMART_GAMBLE' | 'DISCOVERY_PROBE';
 
@@ -23,6 +27,9 @@ export interface IslandRecommendation {
   discoveryValue: number;
   recommendationScore: number;
   recommendationKind: RecommendationKind;
+  canonicalRecommendationKind: LiveRecommendationKind;
+  canonicalRoutingReason: 'safeFit' | 'smartGamble' | 'discoveryProbe';
+  compatibilityOnlyRoutingKind: boolean;
   explanation: string;
   unrated: boolean;
   topCohorts: Array<{
@@ -228,6 +235,7 @@ export function scoreIslandRecommendation(
   const coverageGapValue = Math.max(uncertainty, underReviewedScore);
   const discoveryValue = clamp01(uncertainty * 0.45 + underReviewedScore * 0.35 + coverageGapValue * 0.2);
   const recommendationKind = classifyRecommendationKind(predictedFit, affinitySupport, underReviewedScore, mergedOptions);
+  const routingTaxonomy = mapLiveRecommendationKindToCanonical(recommendationKind);
   const recommendationScore = recommendationScoreForKind(
     recommendationKind,
     predictedFit,
@@ -255,6 +263,9 @@ export function scoreIslandRecommendation(
     discoveryValue,
     recommendationScore,
     recommendationKind,
+    canonicalRecommendationKind: routingTaxonomy.recommendationKind,
+    canonicalRoutingReason: routingTaxonomy.routingReason,
+    compatibilityOnlyRoutingKind: routingTaxonomy.compatibilityOnly,
     explanation: buildExplanation(predictedFit, affinitySupport, discoveryValue, recommendationKind),
     unrated,
     topCohorts
