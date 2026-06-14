@@ -24,6 +24,9 @@ describe('discovery routing summary', () => {
             canonicalRecommendationKind: 'SAFE_FIT',
             canonicalRoutingReason: 'safeFit',
             compatibilityOnlyRoutingKind: false,
+            localSafetyScore: 0.78,
+            evidenceMaturityScore: 0.25,
+            sourceBasisSummary: '2 cohort-local estimates',
             explanation: 'safe recommendation',
             unrated: true,
             topCohorts: []
@@ -53,6 +56,8 @@ describe('discovery routing summary', () => {
     expect(html).toContain('Guided routing candidates for');
     expect(html).toContain('Bad-fit guard');
     expect(html).toContain('Rejects only likely bounce-offs');
+    expect(html).toContain('Local safety');
+    expect(html).toContain('Maturity');
     expect(html).toContain('Negative-fit candidates for');
     expect(html).toContain('Island 1');
     expect(html).toContain('Island 2');

@@ -76,6 +76,8 @@ describe('golden demo report', () => {
       first.routingSummary.safeFitVolume,
       state.turnHistory.reduce((sum, turn) => sum + turn.recommendationKinds.SAFE_FIT, 0)
     );
+    assert.equal(first.scenario.configuredSeed, getScenarioPreset('golden-demo').generatorConfig.seed);
+    assert.equal(first.scenario.runSeed, state.seed);
     assert.equal(first.caveats.length, 3);
   });
 
@@ -110,6 +112,8 @@ describe('golden demo report', () => {
     assert.ok(markdown.includes('## Discovery Signal highlights'));
     assert.ok(markdown.includes('## Routing and deprioritization summary'));
     assert.ok(markdown.includes('Routing scope: Across run'));
+    assert.ok(markdown.includes('Configured seed:'));
+    assert.ok(markdown.includes('Run seed:'));
     assert.ok(markdown.includes('Hidden truth is toy-world audit data'));
     assert.ok(markdown.includes('Observed behavior is synthetic and proxy-derived'));
     assert.ok(markdown.includes('The Glicko-shaped substrate is not canonical Glicko-2'));

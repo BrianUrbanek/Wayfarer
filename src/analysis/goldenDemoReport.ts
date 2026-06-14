@@ -29,7 +29,8 @@ export interface GoldenDemoReport {
     readonly label: string;
     readonly description: string;
     readonly goodFor: string;
-    readonly seed: number;
+    readonly configuredSeed: number;
+    readonly runSeed: number;
     readonly numUsers: number;
     readonly numIslands: number;
     readonly bootstrapRatingsPerUser: number;
@@ -200,7 +201,8 @@ export function buildGoldenDemoReport(input: {
         `Preset: ${scenario.label} (${scenario.id})`,
         scenario.description,
         `Good for: ${scenario.goodFor}`,
-        `Seed: ${scenario.generatorConfig.seed}`,
+        `Configured seed: ${scenario.generatorConfig.seed}`,
+        `Run seed: ${state.seed}`,
         `Users: ${scenario.generatorConfig.numUsers}, islands: ${scenario.generatorConfig.numIslands}, bootstrap ratings / user: ${scenario.generatorConfig.bootstrapRatingsPerUser}`,
         `Turn policy: ${scenario.turnPolicy.turnMode} with ${scenario.turnPolicy.participatingUsersPerTurn} participating users/turn, ${scenario.turnPolicy.organicRatingsPerUser} organic ratings/user, ${scenario.turnPolicy.guidedRecommendationsPerUser} guided recommendations/user, routing risk ${scenario.turnPolicy.routingRiskProfile}`,
         `Turns to run: ${scenario.turnsToRun}`
@@ -272,7 +274,8 @@ export function buildGoldenDemoReport(input: {
       label: scenario.label,
       description: scenario.description,
       goodFor: scenario.goodFor,
-      seed: scenario.generatorConfig.seed,
+      configuredSeed: scenario.generatorConfig.seed,
+      runSeed: state.seed,
       numUsers: scenario.generatorConfig.numUsers,
       numIslands: scenario.generatorConfig.numIslands,
       bootstrapRatingsPerUser: scenario.generatorConfig.bootstrapRatingsPerUser,

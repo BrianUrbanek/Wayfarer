@@ -78,7 +78,14 @@ export function DiscoveryRoutingSummary({
       label: 'Predicted fit',
       render: (row) => <ProgressBar value={(row.predictedFit + 1) / 2} label={formatSignedDecimal(row.predictedFit)} tone={row.predictedFit >= 0 ? 'success' : 'danger'} />
     },
+    {
+      key: 'local-safety',
+      label: 'Local safety',
+      render: (row) => formatPercent(row.localSafetyScore),
+      align: 'right'
+    },
     { key: 'support', label: 'Support', render: (row) => formatPercent(row.affinitySupport), align: 'right' },
+    { key: 'maturity', label: 'Maturity', render: (row) => formatPercent(row.evidenceMaturityScore), align: 'right' },
     { key: 'discovery', label: 'Discovery', render: (row) => formatPercent(row.discoveryValue), align: 'right' },
     { key: 'score', label: 'Score', render: (row) => formatDecimal(row.recommendationScore), align: 'right' }
   ];
@@ -134,7 +141,8 @@ export function DiscoveryRoutingSummary({
       <section className="detail-block">
         <h4>Recommended unrated islands</h4>
         <p className="muted">
-          Guided routing candidates for {selectedUserLabel}. Unknown and uncertain islands can route unless they look confidently bad.
+          Guided routing candidates for {selectedUserLabel}. Local safety and evidence maturity are shown separately so a cohort-local fit
+          can be discussed without implying global maturity.
         </p>
         {recommendations.length > 0 ? (
           <ReportTable

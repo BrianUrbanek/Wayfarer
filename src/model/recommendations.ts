@@ -30,6 +30,9 @@ export interface IslandRecommendation {
   canonicalRecommendationKind: LiveRecommendationKind;
   canonicalRoutingReason: 'safeFit' | 'smartGamble' | 'discoveryProbe';
   compatibilityOnlyRoutingKind: boolean;
+  localSafetyScore: number;
+  evidenceMaturityScore: number;
+  sourceBasisSummary: string;
   explanation: string;
   unrated: boolean;
   topCohorts: Array<{
@@ -236,6 +239,8 @@ export function scoreIslandRecommendation(
   const discoveryValue = clamp01(uncertainty * 0.45 + underReviewedScore * 0.35 + coverageGapValue * 0.2);
   const recommendationKind = classifyRecommendationKind(predictedFit, affinitySupport, underReviewedScore, mergedOptions);
   const routingTaxonomy = mapLiveRecommendationKindToCanonical(recommendationKind);
+  const localSafetyScore = clamp01(((predictedFit + 1) / 2) * affinitySupport);
+  const evidenceMaturityScore = clamp01(1 - underReviewedScore);
   const recommendationScore = recommendationScoreForKind(
     recommendationKind,
     predictedFit,
@@ -266,6 +271,11 @@ export function scoreIslandRecommendation(
     canonicalRecommendationKind: routingTaxonomy.recommendationKind,
     canonicalRoutingReason: routingTaxonomy.routingReason,
     compatibilityOnlyRoutingKind: routingTaxonomy.compatibilityOnly,
+    localSafetyScore,
+    evidenceMaturityScore,
+    sourceBasisSummary: activeCohortEstimates.length > 0
+      ? `${activeCohortEstimates.length} cohort-local estimate${activeCohortEstimates.length === 1 ? '' : 's'}`
+      : 'No cohort-local estimates',
     explanation: buildExplanation(predictedFit, affinitySupport, discoveryValue, recommendationKind),
     unrated,
     topCohorts

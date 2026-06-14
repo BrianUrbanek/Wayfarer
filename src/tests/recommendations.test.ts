@@ -425,14 +425,21 @@ describe('recommendation scoring', () => {
     expect(safe?.canonicalRecommendationKind).toBe('SAFE_FIT');
     expect(safe?.canonicalRoutingReason).toBe('safeFit');
     expect(safe?.compatibilityOnlyRoutingKind).toBe(false);
+    expect(safe?.localSafetyScore ?? 0).toBeGreaterThan(0.7);
+    expect(safe?.evidenceMaturityScore ?? 0).toBeGreaterThanOrEqual(0);
+    expect(safe?.sourceBasisSummary).toContain('cohort-local');
     expect(gamble?.recommendationKind).toBe('SMART_GAMBLE');
     expect(gamble?.canonicalRecommendationKind).toBe('SMART_GAMBLE');
     expect(gamble?.canonicalRoutingReason).toBe('smartGamble');
     expect(gamble?.compatibilityOnlyRoutingKind).toBe(false);
+    expect(gamble?.localSafetyScore ?? 0).toBeGreaterThanOrEqual(0);
+    expect(gamble?.sourceBasisSummary).toContain('cohort-local');
     expect(probe?.recommendationKind).toBe('DISCOVERY_PROBE');
     expect(probe?.canonicalRecommendationKind).toBe('DISCOVERY_PROBE');
     expect(probe?.canonicalRoutingReason).toBe('discoveryProbe');
     expect(probe?.compatibilityOnlyRoutingKind).toBe(false);
+    expect(probe?.evidenceMaturityScore ?? 0).toBeGreaterThanOrEqual(0);
+    expect(probe?.sourceBasisSummary).toContain('cohort-local');
   });
 
   it('maps the live compatibility subset through the shared routing taxonomy helper', () => {
